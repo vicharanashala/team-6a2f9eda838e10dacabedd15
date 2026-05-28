@@ -146,10 +146,37 @@ export default function QuestionDetailPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Duplicate Notice */}
+      {question.isDuplicate && question.duplicateOf && (
+        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-center gap-2 text-yellow-800">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="font-semibold">This question has been marked as a duplicate</span>
+          </div>
+          <Link href={`/questions/${question.duplicateOf._id || question.duplicateOf}`} className="text-primary-600 hover:text-primary-700 text-sm mt-1 inline-block">
+            View the original question →
+          </Link>
+        </div>
+      )}
+
+      {/* Closed Notice */}
+      {question.status === 'closed' && !question.isDuplicate && (
+        <div className="mb-4 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+          <div className="flex items-center gap-2 text-gray-700">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span className="font-semibold">This question is closed: {question.closedReason || 'No reason given'}</span>
+          </div>
+        </div>
+      )}
+
       {/* Question Header */}
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{question.title}</h1>
+          <h1 className={`text-2xl sm:text-3xl font-bold text-gray-900 ${question.status === 'closed' ? 'opacity-60' : ''}`}>{question.title}</h1>
           <div className="flex items-center gap-2 shrink-0">
             <button onClick={handleSave} className="btn-secondary btn-sm">
               {saved ? 'Saved' : 'Save'}

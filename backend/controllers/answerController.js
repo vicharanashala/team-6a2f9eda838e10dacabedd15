@@ -6,6 +6,7 @@ const Notification = require('../models/Notification');
 const { AppError } = require('../middleware/errorHandler');
 const { paginate, buildPaginationMeta } = require('../utils/helpers');
 const { emitToUser, emitToQuestion } = require('../socket');
+const { indexQuestion } = require('../services/searchService');
 
 exports.createAnswer = async (req, res, next) => {
   try {
@@ -166,7 +167,14 @@ exports.acceptAnswer = async (req, res, next) => {
     await answer.save();
 
     question.acceptedAnswer = answer._id;
+    question.isFAQ = true;
+    question.resolvedAt = new Date();
     await question.save();
+
+    const populatedQuestion = await Question.findById(question._id)
+      .populate('author', 'username displayName avatar reputation')
+      .populate('tags', 'name color');
+    await indexQuestion(populatedQuestion);
 
     // Reward answer author
     await User.findByIdAndUpdate(answer.author, { $inc: { reputation: 15 } });

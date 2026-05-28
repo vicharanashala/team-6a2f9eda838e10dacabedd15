@@ -24,7 +24,7 @@ export default function Navbar({ onSearch }) {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <Link href="/" className="text-xl font-bold text-primary-600">
-              QuoraFAQ
+              PrashnaSārathi
             </Link>
             <div className="hidden md:flex items-center gap-1">
               <Link href="/questions" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg">

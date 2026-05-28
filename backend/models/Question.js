@@ -37,11 +37,27 @@ const questionSchema = new mongoose.Schema({
     default: null,
   },
 
+  // FAQ status (becomes searchable when resolved)
+  isFAQ: { type: Boolean, default: false },
+  resolvedAt: { type: Date },
+
   // Duplicate detection
   isDuplicate: { type: Boolean, default: false },
   duplicateOf: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Question',
+  },
+
+  // Already asked tracking
+  isAlreadyAsked: { type: Boolean, default: false },
+  relatedQuestions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Question',
+  }],
+  scopeMatch: {
+    type: String,
+    enum: ['exact', 'similar', 'tag', null],
+    default: null,
   },
 
   // Moderation

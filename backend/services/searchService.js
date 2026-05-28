@@ -28,6 +28,8 @@ const initIndices = async () => {
         viewCount: { type: 'integer' },
         createdAt: { type: 'date' },
         status: { type: 'keyword' },
+        isFAQ: { type: 'boolean' },
+        resolvedAt: { type: 'date' },
       },
     },
   });
@@ -78,6 +80,8 @@ const indexQuestion = async (question) => {
         viewCount: question.viewCount,
         createdAt: question.createdAt,
         status: question.status,
+        isFAQ: question.isFAQ || false,
+        resolvedAt: question.resolvedAt || null,
       },
     });
   } catch (err) {
@@ -130,6 +134,20 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
     const indices = type === 'faqs' ? INDEX_FAQS
       : type === 'users' ? INDEX_USERS
       : [INDEX_QUESTIONS, INDEX_FAQS, INDEX_USERS];
+
+    // Only show resolved FAQs when searching questions (not faqs or users type)
+    // For "all" search, only apply isFAQ filter to the questions index
+    if (!type || (type !== 'faqs' && type !== 'users')) {
+      must.push({
+        bool: {
+          should: [
+            { term: { isFAQ: true } },
+            { terms: { _index: [INDEX_FAQS, INDEX_USERS] } },
+          ],
+          minimum_should_match: 1,
+        },
+      });
+    }
 
     const body = {
       from: (page - 1) * limit,

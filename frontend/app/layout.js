@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata = {
-  title: 'QuoraFAQ - Community Q&A and FAQ Platform',
+  title: 'PrashnaSārathi - Community Q&A and FAQ Platform',
   description: 'A community-driven Q&A and FAQ platform for knowledge sharing',
 };
 
