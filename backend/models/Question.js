@@ -41,6 +41,12 @@ const questionSchema = new mongoose.Schema({
   isFAQ: { type: Boolean, default: false },
   resolvedAt: { type: Date },
 
+  // Verification / outdated status
+  lastVerifiedAt: { type: Date },
+  isOutdated: { type: Boolean, default: false },
+  outdatedReason: { type: String },
+  verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
   // Duplicate detection
   isDuplicate: { type: Boolean, default: false },
   duplicateOf: {
@@ -89,5 +95,6 @@ questionSchema.index({ upvotes: -1 });
 questionSchema.index({ viewCount: -1 });
 questionSchema.index({ lastActivity: -1 });
 questionSchema.index({ title: 1 }, { collation: { locale: 'en', strength: 2 } });
+questionSchema.index({ isFAQ: 1, isOutdated: 1, lastVerifiedAt: -1 });
 
 module.exports = mongoose.model('Question', questionSchema);

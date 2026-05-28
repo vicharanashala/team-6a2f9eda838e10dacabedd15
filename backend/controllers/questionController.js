@@ -309,6 +309,59 @@ exports.getRelatedQuestions = async (req, res, next) => {
   }
 };
 
+exports.verifyQuestion = async (req, res, next) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) throw new AppError('Question not found', 404);
+    if (!question.isFAQ) throw new AppError('Question is not a resolved FAQ', 400);
+
+    question.lastVerifiedAt = new Date();
+    question.verifiedBy = req.user._id;
+    question.isOutdated = false;
+    question.outdatedReason = null;
+    await question.save();
+
+    const populated = await Question.findById(question._id)
+      .populate('verifiedBy', 'username displayName');
+
+    res.json({ message: 'FAQ verified', question: populated });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.markOutdated = async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+    const question = await Question.findById(req.params.id);
+    if (!question) throw new AppError('Question not found', 404);
+    if (!question.isFAQ) throw new AppError('Question is not a resolved FAQ', 400);
+
+    question.isOutdated = true;
+    question.outdatedReason = reason || 'Information may be outdated';
+    await question.save();
+
+    res.json({ message: 'Marked as outdated', question });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.clearOutdated = async (req, res, next) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) throw new AppError('Question not found', 404);
+
+    question.isOutdated = false;
+    question.outdatedReason = null;
+    await question.save();
+
+    res.json({ message: 'Outdated status cleared', question });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.findSimilar = async (req, res, next) => {
   try {
     const { title, tags } = req.query;

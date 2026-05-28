@@ -130,6 +130,28 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const handleVerify = async () => {
+    try {
+      await api.patch(`/questions/${id}/verify`);
+      toast.success('FAQ verified');
+      fetchQuestion();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleMarkOutdated = async () => {
+    const reason = prompt('Reason for marking outdated (optional):');
+    if (reason === null) return;
+    try {
+      await api.patch(`/questions/${id}/outdated`, { reason });
+      toast.success('Marked as outdated');
+      fetchQuestion();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   if (loading && !question) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -173,6 +195,32 @@ export default function QuestionDetailPage() {
         </div>
       )}
 
+      {/* Outdated Notice */}
+      {question.isFAQ && question.isOutdated && (
+        <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center gap-2 text-orange-800">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="font-semibold">This FAQ may be outdated</span>
+          </div>
+          {question.outdatedReason && (
+            <p className="text-sm text-orange-700 mt-1">{question.outdatedReason}</p>
+          )}
+          <p className="text-xs text-orange-600 mt-1">Last verified: {question.lastVerifiedAt ? formatDate(question.lastVerifiedAt) : 'Never'}</p>
+        </div>
+      )}
+
+      {/* FAQ Verified Badge */}
+      {question.isFAQ && !question.isOutdated && question.lastVerifiedAt && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-800 text-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Verified on {formatDate(question.lastVerifiedAt)}</span>
+        </div>
+      )}
+
       {/* Question Header */}
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
@@ -183,6 +231,12 @@ export default function QuestionDetailPage() {
             </button>
             {(user?._id === question.author?._id || user?.role === 'admin') && (
               <button onClick={handleDelete} className="btn-danger btn-sm">Delete</button>
+            )}
+            {question.isFAQ && (user?.role === 'admin' || user?.role === 'moderator') && (
+              <button onClick={handleVerify} className="btn-secondary btn-sm">Verify FAQ</button>
+            )}
+            {question.isFAQ && (user?.role === 'admin' || user?.role === 'moderator') && (
+              <button onClick={() => handleMarkOutdated()} className="btn-secondary btn-sm">Mark Outdated</button>
             )}
           </div>
         </div>
