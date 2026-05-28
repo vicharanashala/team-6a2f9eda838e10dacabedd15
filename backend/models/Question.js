@@ -41,6 +41,18 @@ const questionSchema = new mongoose.Schema({
   isFAQ: { type: Boolean, default: false },
   resolvedAt: { type: Date },
 
+  // Resolution tracking
+  resolutionStatus: {
+    type: String,
+    enum: ['unresolved', 'resolved', 'escalated'],
+    default: 'unresolved',
+  },
+  resolvedByStudent: { type: Boolean, default: false },
+  resolvedAtStudent: { type: Date },
+  escalatedAt: { type: Date },
+  escalationReason: { type: String },
+  escalatedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+
   // Verification / outdated status
   lastVerifiedAt: { type: Date },
   isOutdated: { type: Boolean, default: false },
@@ -96,5 +108,7 @@ questionSchema.index({ viewCount: -1 });
 questionSchema.index({ lastActivity: -1 });
 questionSchema.index({ title: 1 }, { collation: { locale: 'en', strength: 2 } });
 questionSchema.index({ isFAQ: 1, isOutdated: 1, lastVerifiedAt: -1 });
+questionSchema.index({ resolutionStatus: 1, createdAt: -1 });
+questionSchema.index({ escalatedTo: 1, escalatedAt: -1 });
 
 module.exports = mongoose.model('Question', questionSchema);

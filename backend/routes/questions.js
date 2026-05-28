@@ -14,6 +14,10 @@ router.patch('/:id/duplicate', auth, ctrl.markAsDuplicate);
 router.patch('/:id/verify', auth, ctrl.verifyQuestion);
 router.patch('/:id/outdated', auth, ctrl.markOutdated);
 router.patch('/:id/outdated/clear', auth, ctrl.clearOutdated);
+router.patch('/:id/confirm-resolution', auth, ctrl.confirmResolution);
+router.patch('/:id/escalate', auth, ctrl.escalateQuestion);
+router.patch('/:id/escalate/resolve', auth, ctrl.resolveEscalation);
+router.get('/escalated', auth, ctrl.getEscalatedQuestions);
 router.delete('/:id', auth, ctrl.deleteQuestion);
 
 module.exports = router;

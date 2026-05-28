@@ -404,3 +404,126 @@ exports.findSimilar = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.confirmResolution = async (req, res, next) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) throw new AppError('Question not found', 404);
+    if (question.author.toString() !== req.user._id.toString()) {
+      throw new AppError('Only the author can confirm resolution', 403);
+    }
+
+    question.resolutionStatus = 'resolved';
+    question.resolvedByStudent = true;
+    question.resolvedAtStudent = new Date();
+    await question.save();
+
+    res.json({ message: 'Resolution confirmed', question });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.escalateQuestion = async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+    const question = await Question.findById(req.params.id);
+    if (!question) throw new AppError('Question not found', 404);
+    if (question.author.toString() !== req.user._id.toString()) {
+      throw new AppError('Only the author can escalate', 403);
+    }
+    if (!question.acceptedAnswer) {
+      throw new AppError('No accepted answer to escalate from', 400);
+    }
+
+    question.resolutionStatus = 'escalated';
+    question.escalatedAt = new Date();
+    question.escalationReason = reason || 'Student still needs help';
+    await question.save();
+
+    // Notify moderators/admins
+    const Notification = require('../models/Notification');
+    const User = require('../models/User');
+    const moderators = await User.find({ role: { $in: ['admin', 'moderator'] } });
+    await Promise.all(moderators.map(mod =>
+      Notification.create({
+        recipient: mod._id,
+        type: 'escalation',
+        title: 'Question escalated - needs attention',
+        message: `Question "${question.title}" was escalated by the student: ${reason || 'No reason provided'}`,
+        link: `/questions/${question._id}`,
+        referenceType: 'Question',
+        reference: question._id,
+      })
+    ));
+
+    res.json({ message: 'Question escalated', question });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.resolveEscalation = async (req, res, next) => {
+  try {
+    const { resolutionNote } = req.body;
+    const question = await Question.findById(req.params.id);
+    if (!question) throw new AppError('Question not found', 404);
+    if (question.resolutionStatus !== 'escalated') {
+      throw new AppError('Question is not escalated', 400);
+    }
+    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+      throw new AppError('Only moderators can resolve escalations', 403);
+    }
+
+    question.resolutionStatus = 'resolved';
+    question.escalatedTo = req.user._id;
+    if (resolutionNote) {
+      question.escalationReason = resolutionNote;
+    }
+    await question.save();
+
+    // Notify the student
+    const Notification = require('../models/Notification');
+    await Notification.create({
+      recipient: question.author,
+      type: 'escalation_resolved',
+      title: 'Your escalated question has been addressed',
+      message: `Your question "${question.title}" has been reviewed and addressed.`,
+      link: `/questions/${question._id}`,
+      referenceType: 'Question',
+      reference: question._id,
+    });
+
+    res.json({ message: 'Escalation resolved', question });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getEscalatedQuestions = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+      throw new AppError('Not authorized', 403);
+    }
+
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const [questions, total] = await Promise.all([
+      Question.find({ resolutionStatus: 'escalated' })
+        .sort({ escalatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .select('title escalationReason escalatedAt answerCount tagNames')
+        .populate('author', 'username displayName'),
+      Question.countDocuments({ resolutionStatus: 'escalated' }),
+    ]);
+
+    res.json({
+      questions,
+      pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / limit) },
+    });
+  } catch (err) {
+    next(err);
+  }
+};

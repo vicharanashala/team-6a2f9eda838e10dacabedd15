@@ -166,6 +166,39 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const handleConfirmResolved = async () => {
+    try {
+      await api.patch(`/questions/${id}/confirm-resolution`);
+      toast.success('Thanks for confirming! Glad we could help.');
+      fetchQuestion();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleEscalate = async () => {
+    const reason = prompt('Why is the answer not working for you?');
+    if (reason === null) return;
+    try {
+      await api.patch(`/questions/${id}/escalate`, { reason });
+      toast.success('Question escalated. A moderator will review it.');
+      fetchQuestion();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleResolveEscalation = async () => {
+    const note = prompt('Resolution note (optional):');
+    try {
+      await api.patch(`/questions/${id}/escalate/resolve`, { resolutionNote: note });
+      toast.success('Escalation resolved');
+      fetchQuestion();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   if (loading && !question) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -232,6 +265,63 @@ export default function QuestionDetailPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>Verified on {formatDate(question.lastVerifiedAt)}</span>
+        </div>
+      )}
+
+      {/* Resolution Tracking - for question author with accepted answer */}
+      {user?._id === question.author?._id && question.acceptedAnswer && question.resolutionStatus === 'unresolved' && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-blue-800 mb-1">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-semibold">Did this answer resolve your problem?</span>
+              </div>
+              <p className="text-sm text-blue-700">Your question has an accepted answer. Please let us know if it actually solved your issue.</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <button onClick={handleConfirmResolved} className="btn-primary btn-sm bg-green-600 hover:bg-green-700">
+                Yes, Resolved
+              </button>
+              <button onClick={handleEscalate} className="btn-secondary btn-sm">
+                Still Need Help
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Escalated Notice */}
+      {question.resolutionStatus === 'escalated' && (
+        <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <div className="flex items-center gap-2 text-purple-800">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span className="font-semibold">This question has been escalated</span>
+          </div>
+          {question.escalationReason && (
+            <p className="text-sm text-purple-700 mt-1">Reason: {question.escalationReason}</p>
+          )}
+          {user?.role === 'admin' || user?.role === 'moderator' ? (
+            <button onClick={handleResolveEscalation} className="mt-2 btn-secondary btn-sm">
+              Mark as Resolved
+            </button>
+          ) : (
+            <p className="text-xs text-purple-600 mt-1">A moderator will review your case soon.</p>
+          )}
+        </div>
+      )}
+
+      {/* Resolved by Student Badge */}
+      {question.resolvedByStudent && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-800 text-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <span>Marked as resolved by student on {formatDate(question.resolvedAtStudent)}</span>
         </div>
       )}
 
