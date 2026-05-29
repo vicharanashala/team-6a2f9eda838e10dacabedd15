@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const Question = require('../models/Question');
 const Tag = require('../models/Tag');
+const QuestionView = require('../models/QuestionView');
 const { AppError } = require('../middleware/errorHandler');
 const { paginate, buildPaginationMeta } = require('../utils/helpers');
 const { indexQuestion, deleteQuestionIndex } = require('../services/searchService');
@@ -169,7 +170,24 @@ exports.getQuestion = async (req, res, next) => {
 
     if (!question) throw new AppError('Question not found', 404);
 
-    await Question.findByIdAndUpdate(question._id, { $inc: { viewCount: 1 } });
+    if (req.user) {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const existingView = await QuestionView.findOne({
+        question: question._id,
+        user: req.user._id,
+        viewedAt: { $gte: oneHourAgo },
+      });
+      if (!existingView) {
+        await QuestionView.findOneAndUpdate(
+          { question: question._id, user: req.user._id },
+          { viewedAt: new Date() },
+          { upsert: true, new: true }
+        );
+        await Question.findByIdAndUpdate(question._id, { $inc: { viewCount: 1 } });
+      }
+    } else {
+      await Question.findByIdAndUpdate(question._id, { $inc: { viewCount: 1 } });
+    }
 
     res.json({ question });
   } catch (err) {

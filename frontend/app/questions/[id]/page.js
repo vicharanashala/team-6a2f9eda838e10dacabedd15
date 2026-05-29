@@ -21,6 +21,7 @@ export default function QuestionDetailPage() {
   const [answering, setAnswering] = useState(false);
   const [userVotes, setUserVotes] = useState({});
   const [saved, setSaved] = useState(false);
+  const [recentlyPostedId, setRecentlyPostedId] = useState(null);
 
   const fetchQuestion = useCallback(async () => {
     try {
@@ -48,9 +49,10 @@ export default function QuestionDetailPage() {
     if (socket && id) {
       socket.emit('join:question', id);
       socket.on('answer:new', (data) => {
-        if (data.answer) {
+        if (data.answer && data.answer._id !== recentlyPostedId) {
           setAnswers(prev => [data.answer, ...prev]);
         }
+        setRecentlyPostedId(null);
       });
       return () => {
         socket.emit('leave:question', id);
@@ -98,6 +100,7 @@ export default function QuestionDetailPage() {
     setAnswering(true);
     try {
       const data = await api.post(`/answers/question/${id}`, { body: newAnswer });
+      setRecentlyPostedId(data.answer._id);
       setAnswers(prev => [data.answer, ...prev]);
       setNewAnswer('');
       toast.success('Answer posted!');
