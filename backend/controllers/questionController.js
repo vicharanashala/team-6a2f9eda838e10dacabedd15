@@ -5,6 +5,7 @@ const { AppError } = require('../middleware/errorHandler');
 const { paginate, buildPaginationMeta } = require('../utils/helpers');
 const { indexQuestion, deleteQuestionIndex } = require('../services/searchService');
 const { emitToQuestion } = require('../socket');
+const { canDeleteQuestion, hasPermission, PERMISSIONS } = require('../utils/permissions');
 
 exports.createQuestion = async (req, res, next) => {
   try {
@@ -217,8 +218,8 @@ exports.deleteQuestion = async (req, res, next) => {
   try {
     const question = await Question.findById(req.params.id);
     if (!question || question.isDeleted) throw new AppError('Question not found', 404);
-    if (question.author.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      throw new AppError('Not authorized', 403);
+    if (!canDeleteQuestion(req.user, question)) {
+      throw new AppError('Not authorized to delete this question', 403);
     }
 
     question.status = 'deleted';
