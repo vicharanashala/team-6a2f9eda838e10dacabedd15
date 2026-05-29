@@ -129,3 +129,23 @@ exports.getVoteStatus = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getBatchVoteStatus = async (req, res, next) => {
+  try {
+    const { ids, targetType } = req.query;
+    if (!req.user || !ids) return res.json({});
+
+    const idArray = ids.split(',').slice(0, 50);
+    const votes = await Vote.find({
+      user: req.user._id,
+      target: { $in: idArray },
+      targetType,
+    });
+
+    const voteMap = {};
+    votes.forEach(v => { voteMap[v.target.toString()] = v.voteType; });
+    res.json(voteMap);
+  } catch (err) {
+    next(err);
+  }
+};

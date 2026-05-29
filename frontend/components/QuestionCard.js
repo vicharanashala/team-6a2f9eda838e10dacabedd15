@@ -14,9 +14,9 @@ export default function QuestionCard({ question }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      api.get(`/votes/Question/${question._id}`)
-        .then(data => setUserVote(data.vote))
+    if (user && question._id) {
+      api.get(`/votes/batch`, { ids: question._id, targetType: 'Question' })
+        .then(data => setUserVote(data[question._id] || null))
         .catch(() => {});
     }
   }, [user, question._id]);

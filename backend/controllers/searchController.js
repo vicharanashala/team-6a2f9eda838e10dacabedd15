@@ -9,6 +9,14 @@ exports.search = async (req, res, next) => {
       return res.json({ results: [], total: 0, suggestions: [] });
     }
 
+    const cacheKey = `search:${q}:${tags}:${type}:${page}:${limit}`;
+
+    const redis = getRedis();
+    const cached = await redis.get(cacheKey).catch(() => null);
+    if (cached) {
+      return res.json(JSON.parse(cached));
+    }
+
     await recordSearch(q || '');
 
     const result = await searchAll({
@@ -19,24 +27,18 @@ exports.search = async (req, res, next) => {
       limit: parseInt(limit),
     });
 
-    // Mark as success if results found
     if (result.total > 0) {
       await recordSearchSuccess(q || '');
     }
 
-    // Get search suggestions from cache
     let suggestions = [];
     try {
-      const redis = getRedis();
-      const suggestionsKey = 'search:suggestions';
-      const raw = await redis.lrange(suggestionsKey, 0, 9);
+      const raw = await redis.lrange('search:suggestions', 0, 9);
       suggestions = raw.map(r => JSON.parse(r));
     } catch (_) {}
 
-    // Store query for future suggestions
     if (q && q.length >= 3) {
       try {
-        const redis = getRedis();
         const suggestionsKey = 'search:suggestions';
         const exists = await redis.lpos(suggestionsKey, JSON.stringify({ query: q }));
         if (exists === null) {
@@ -46,7 +48,9 @@ exports.search = async (req, res, next) => {
       } catch (_) {}
     }
 
-    res.json({ ...result, suggestions });
+    const response = { ...result, suggestions };
+    redis.setex(cacheKey, 60, JSON.stringify(response)).catch(() => {});
+    res.json(response);
   } catch (err) {
     next(err);
   }

@@ -193,6 +193,40 @@ export default function QuestionDetailPage() {
   if (!question) return null;
 
   return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'QAPage',
+            mainEntity: {
+              '@type': 'Question',
+              name: question.title,
+              text: question.body,
+              dateCreated: question.createdAt,
+              author: { '@type': 'Person', name: question.author?.displayName || question.author?.username },
+              answerCount: question.answerCount,
+              upvoteCount: question.upvotes,
+              acceptedAnswer: question.acceptedAnswer ? {
+                '@type': 'Answer',
+                text: question.acceptedAnswer.body,
+                dateCreated: question.acceptedAnswer.createdAt,
+                author: { '@type': 'Person', name: question.acceptedAnswer.author?.displayName || question.acceptedAnswer.author?.username },
+                upvoteCount: question.acceptedAnswer.upvotes,
+                text: question.acceptedAnswer.body,
+              } : undefined,
+              suggestedAnswer: answers.filter(a => !a.isAccepted).slice(0, 5).map(a => ({
+                '@type': 'Answer',
+                text: a.body,
+                dateCreated: a.createdAt,
+                author: { '@type': 'Person', name: a.author?.displayName || a.author?.username },
+                upvoteCount: a.upvotes,
+              })),
+            },
+          })
+        }}
+      />
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Duplicate Notice */}
       {question.isDuplicate && question.duplicateOf && (
@@ -418,5 +452,6 @@ export default function QuestionDetailPage() {
         </div>
       )}
     </div>
+    </>
   );
 }
