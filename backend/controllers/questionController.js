@@ -186,28 +186,26 @@ exports.getQuestions = async (req, res, next) => {
       Question.countDocuments(filter),
     ]);
 
-    const anonymized = questions.map(q => {
-      if (q.isAnonymous && !isModOrAdmin) {
-        return {
-          ...q.toObject(),
-          author: {
-            _id: 'anonymous',
-            username: 'Anonymous Student',
-            displayName: 'Anonymous Student',
-            avatar: null,
-            reputation: 0,
-          },
-        };
-      }
-      return q;
+    const withOwner = questions.map(q => {
+      const isAuthor = req.user && q.author && q.author._id && q.author._id.toString() === req.user._id.toString();
+      const anonymized = q.isAnonymous && !isModOrAdmin ? {
+        ...q.toObject(),
+        author: {
+          _id: 'anonymous',
+          username: 'Anonymous Student',
+          displayName: 'Anonymous Student',
+          avatar: null,
+          reputation: 0,
+        },
+      } : q.toObject();
+      return {
+        ...anonymized,
+        hasMeToo: req.user ? q.meTooUsers && q.meTooUsers.some(u => u.toString() === req.user._id.toString()) : false,
+        isOwner: isAuthor,
+      };
     });
 
-    const withMeToo = anonymized.map(q => ({
-      ...q,
-      hasMeToo: req.user ? q.meTooUsers && q.meTooUsers.some(u => u.toString() === req.user._id.toString()) : false,
-    }));
-
-    res.json({ questions: withMeToo, pagination: buildPaginationMeta(total, page, limit) });
+    res.json({ questions: withOwner, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     next(err);
   }

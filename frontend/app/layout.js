@@ -2,6 +2,7 @@ import '@/styles/globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { SocketProvider } from '@/context/SocketContext';
 import { KeyboardProvider } from '@/context/KeyboardContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
@@ -23,12 +24,14 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <SocketProvider>
             <KeyboardProvider>
-              <Navbar />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
-              <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+              <ThemeProvider>
+                <Navbar />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
+                <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+              </ThemeProvider>
             </KeyboardProvider>
           </SocketProvider>
         </AuthProvider>

@@ -61,25 +61,40 @@ const users = [
 
 async function seed() {
   try {
-    await mongoose.connect('mongodb://localhost:27017/quorafaq');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/quorafaq');
     console.log('Connected to MongoDB');
 
+    const Question = require('../models/Question');
+    const oldToNewIdMap = new Map();
+
+    // First pass: find existing users and build a map of old->new IDs for questions
     for (const u of users) {
       const existingByEmail = await User.findOne({ email: u.email });
       const existingByUsername = await User.findOne({ username: u.username });
+
       if (existingByEmail || existingByUsername) {
-        console.log('User already exists:', u.username, '- updating if needed');
-        if (existingByEmail && existingByEmail.username !== u.username) {
-          console.log('  Email conflict with user:', existingByEmail.username);
-        }
-        if (existingByUsername && existingByUsername.email !== u.email) {
-          console.log('  Updating email for:', u.username);
-          existingByUsername.email = u.email;
-          await existingByUsername.save();
+        // Use the email match as primary
+        const existing = existingByEmail || existingByUsername;
+        console.log('User already exists:', u.username, '- using existing user ID:', existing._id);
+
+        // If there's a username match that's different from email match, update question authors
+        if (existingByUsername && existingByUsername._id.toString() !== existing._id.toString()) {
+          oldToNewIdMap.set(existingByUsername._id.toString(), existing._id.toString());
         }
       } else {
         await User.create(u);
         console.log('Created user:', u.username);
+      }
+    }
+
+    // Second pass: update question author IDs
+    for (const [oldId, newId] of oldToNewIdMap) {
+      const result = await Question.updateMany(
+        { author: oldId },
+        { $set: { author: newId } }
+      );
+      if (result.modifiedCount > 0) {
+        console.log('  Migrated', result.modifiedCount, 'questions from', oldId, 'to', newId);
       }
     }
 
