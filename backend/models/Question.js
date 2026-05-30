@@ -17,6 +17,7 @@ const questionSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  isAnonymous: { type: Boolean, default: false },
   tags: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tag',

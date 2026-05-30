@@ -306,12 +306,19 @@ export default function QuestionDetailPage() {
           ))}
         </div>
         <div className="flex items-center gap-3 mt-3 text-sm text-gray-500">
-          <Link href={`/users/${question.author?.username}`} className="flex items-center gap-1 hover:text-primary-600">
-            <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-medium">
-              {(question.author?.displayName || question.author?.username || '?')[0]}
-            </div>
-            <span>{question.author?.displayName || question.author?.username}</span>
-          </Link>
+          {question.author?._id === 'anonymous' ? (
+            <span className="flex items-center gap-1">
+              <div className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] font-medium">?</div>
+              <span>Anonymous Student</span>
+            </span>
+          ) : (
+            <Link href={`/users/${question.author?.username}`} className="flex items-center gap-1 hover:text-primary-600">
+              <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-medium">
+                {(question.author?.displayName || question.author?.username || '?')[0]}
+              </div>
+              <span>{question.author?.displayName || question.author?.username}</span>
+            </Link>
+          )}
           <span>asked {formatDate(question.createdAt)}</span>
           <span>{question.viewCount} views</span>
           {canEscalate() && (

@@ -93,16 +93,23 @@ export default function QuestionCard({ question }) {
             ))}
           </div>
           <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-            <Link href={`/users/${question.author?.username}`} className="flex items-center gap-1 hover:text-primary-600">
-              {question.author?.avatar ? (
-                <img src={question.author?.avatar} alt="" className="w-4 h-4 rounded-full" />
-              ) : (
-                <span className="w-4 h-4 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-medium">
-                  {(question.author?.displayName || question.author?.username || '?')[0]}
-                </span>
-              )}
-              <span>{question.author?.displayName || question.author?.username}</span>
-            </Link>
+            {question.author?._id === 'anonymous' ? (
+              <span className="flex items-center gap-1">
+                <span className="w-4 h-4 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] font-medium">?</span>
+                <span>Anonymous Student</span>
+              </span>
+            ) : (
+              <Link href={`/users/${question.author?.username}`} className="flex items-center gap-1 hover:text-primary-600">
+                {question.author?.avatar ? (
+                  <img src={question.author?.avatar} alt="" className="w-4 h-4 rounded-full" />
+                ) : (
+                  <span className="w-4 h-4 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-medium">
+                    {(question.author?.displayName || question.author?.username || '?')[0]}
+                  </span>
+                )}
+                <span>{question.author?.displayName || question.author?.username}</span>
+              </Link>
+            )}
             <span>asked {formatDate(question.createdAt)}</span>
           </div>
         </div>

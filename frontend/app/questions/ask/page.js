@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 export default function AskQuestionPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [form, setForm] = useState({ title: '', body: '', tagInput: '' });
+  const [form, setForm] = useState({ title: '', body: '', tagInput: '', anonymous: false });
   const [tags, setTags] = useState([]);
   const [tagSuggestions, setTagSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -84,7 +84,7 @@ export default function AskQuestionPage() {
 
     setLoading(true);
     try {
-      const data = await api.post('/questions', { title: form.title, body: form.body, tags });
+      const data = await api.post('/questions', { title: form.title, body: form.body, tags, anonymous: form.anonymous });
       if (data.alreadyAsked) {
         setAlreadyAskedInfo(data.alreadyAsked);
         toast.success('Question posted and flagged as already asked');
@@ -231,6 +231,21 @@ export default function AskQuestionPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.anonymous}
+                onChange={(e) => setForm({ ...form, anonymous: e.target.checked })}
+                className="w-4 h-4 text-primary-600 rounded border-gray-300 focus:ring-primary-500"
+              />
+              <div>
+                <span className="text-sm font-medium text-gray-900">Ask anonymously</span>
+                <p className="text-xs text-gray-500">Your name will be shown as "Anonymous Student"</p>
+              </div>
+            </label>
           </div>
         </div>
 

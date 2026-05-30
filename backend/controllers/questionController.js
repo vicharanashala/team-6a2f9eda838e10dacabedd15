@@ -13,7 +13,7 @@ exports.createQuestion = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
-    const { title, body, tags } = req.body;
+    const { title, body, tags, anonymous } = req.body;
     let tagIds = [];
     let tagNames = [];
 
@@ -43,6 +43,7 @@ exports.createQuestion = async (req, res, next) => {
       tags: tagIds,
       tagNames,
       lastActivity: new Date(),
+      isAnonymous: !!anonymous,
     };
 
     if (existingQuestion) {
@@ -139,6 +140,8 @@ exports.getQuestions = async (req, res, next) => {
       default: sort.createdAt = -1;
     }
 
+    const isModOrAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'moderator');
+
     const [questions, total] = await Promise.all([
       Question.find(filter)
         .sort(sort)
@@ -149,7 +152,23 @@ exports.getQuestions = async (req, res, next) => {
       Question.countDocuments(filter),
     ]);
 
-    res.json({ questions, pagination: buildPaginationMeta(total, page, limit) });
+    const anonymized = questions.map(q => {
+      if (q.isAnonymous && !isModOrAdmin) {
+        return {
+          ...q.toObject(),
+          author: {
+            _id: 'anonymous',
+            username: 'Anonymous Student',
+            displayName: 'Anonymous Student',
+            avatar: null,
+            reputation: 0,
+          },
+        };
+      }
+      return q;
+    });
+
+    res.json({ questions: anonymized, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     next(err);
   }
@@ -187,6 +206,19 @@ exports.getQuestion = async (req, res, next) => {
       }
     } else {
       await Question.findByIdAndUpdate(question._id, { $inc: { viewCount: 1 } });
+    }
+
+    const isModOrAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'moderator');
+    const isAuthor = req.user && question.author && question.author._id.toString() === req.user._id.toString();
+
+    if (question.isAnonymous && !isModOrAdmin && !isAuthor) {
+      question.author = {
+        _id: 'anonymous',
+        username: 'Anonymous Student',
+        displayName: 'Anonymous Student',
+        avatar: null,
+        reputation: 0,
+      };
     }
 
     res.json({ question });
@@ -293,10 +325,21 @@ exports.getSimilarQuestions = async (req, res, next) => {
     })
       .sort({ upvotes: -1 })
       .limit(5)
-      .select('title upvotes answerCount viewCount tagNames')
+      .select('title upvotes answerCount viewCount tagNames isAnonymous')
       .populate('author', 'username displayName');
 
-    res.json({ similar });
+    const isModOrAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'moderator');
+    const anonymized = similar.map(q => {
+      if (q.isAnonymous && !isModOrAdmin) {
+        return {
+          ...q.toObject(),
+          author: { _id: 'anonymous', username: 'Anonymous Student', displayName: 'Anonymous Student' },
+        };
+      }
+      return q;
+    });
+
+    res.json({ similar: anonymized });
   } catch (err) {
     next(err);
   }
@@ -412,8 +455,7 @@ exports.findSimilar = async (req, res, next) => {
     const questions = await Question.find(filter)
       .sort({ upvotes: -1, createdAt: -1 })
       .limit(10)
-      .select('title upvotes answerCount viewCount tagNames status isDuplicate duplicateOf')
-      .populate('author', 'username displayName');
+      .select('title upvotes answerCount viewCount tagNames status isDuplicate duplicateOf');
 
     const duplicates = questions.filter(q => q.status === 'closed' && q.isDuplicate);
     const similar = questions.filter(q => !q.isDuplicate || q.status !== 'closed');
