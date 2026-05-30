@@ -134,7 +134,7 @@ PrashnaSārathi
   - Quick stats: "You've asked X doubts, Y solved, Z unanswered"
   - *Why:* Students currently have no way to see the status of their doubts at a glance
 
-- [ ] ### 5. Answer Confidence Badge
+- [x] ### 5. Answer Confidence Badge
   - When answering, the student picks a confidence level:
     - `I think so` (low confidence)
     - `Pretty sure` (medium)
