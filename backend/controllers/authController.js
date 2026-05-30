@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const config = require('../config');
 const { AppError } = require('../middleware/errorHandler');
+const { indexUser } = require('../services/searchService');
 
 const generateToken = (user) => {
   return jwt.sign({ id: user._id, role: user.role }, config.jwt.secret, {
@@ -23,6 +24,7 @@ exports.register = async (req, res, next) => {
     }
 
     const user = await User.create({ username, email, password, displayName: username });
+    await indexUser(user);
     const token = generateToken(user);
 
     res.status(201).json({
@@ -74,6 +76,7 @@ exports.updateProfile = async (req, res, next) => {
     if (req.file) updates.avatar = `/uploads/${req.file.filename}`;
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true });
+    await indexUser(user);
     res.json({ user: user.toPublicJSON() });
   } catch (err) {
     next(err);
