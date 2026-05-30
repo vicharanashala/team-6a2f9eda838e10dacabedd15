@@ -115,7 +115,7 @@ View all \u2192
 
         {/* Stats */}
         <section className="card p-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 text-center">
             <div>
               <p className="text-3xl font-bold text-primary-600">13</p>
               <p className="text-sm text-gray-500 mt-1">Categories</p>
@@ -127,10 +127,6 @@ View all \u2192
             <div>
               <p className="text-3xl font-bold text-primary-600">v21.0.0</p>
               <p className="text-sm text-gray-500 mt-1">Version</p>
-            </div>
-            <div>
-              <p className="text-3xl font-bold text-primary-600">IIT Ropar</p>
-              <p className="text-sm text-gray-500 mt-1">Vicharanashala Lab</p>
             </div>
           </div>
         </section>
