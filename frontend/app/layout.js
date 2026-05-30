@@ -5,6 +5,7 @@ import { KeyboardProvider } from '@/context/KeyboardContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import OnboardingModal from '@/components/OnboardingModal';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({ children }) {
             <KeyboardProvider>
               <ThemeProvider>
                 <Navbar />
+                <OnboardingModal />
                 <main className="flex-1">
                   {children}
                 </main>

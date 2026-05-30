@@ -1,120 +1,97 @@
-PrashnaSārathi
+# PrashnaSārathi — Feature Roadmap
 
 **Objective:** Every student should feel safe asking doubts, get answers fast, and feel their problem was genuinely solved.
 
 ---
-### Authentication & User Management
-- [x] User registration (username/email/password)
-- [x] User login (JWT-based)
-- [x] Session persistence on page reload
-- [x] Logout
-- [x] Profile update (display name, bio, avatar, website, location)
-- [x] User profile page (public, with stats)
-- [x] User questions/answers tabs
-- [x] Role badges (admin/moderator on profile)
-- [x] User badge system (earned badges on profile)
 
-### Questions
-- [x] Ask question (title, body, tags)
-- [x] Duplicate detection while typing title (debounced ES search)
-- [x] Paginated listing with sort tabs (Newest / Active / Most Voted / Most Viewed)
-- [x] Filter by tag (?tag= query param)
-- [x] Question detail page (body, answers, voting, comments)
-- [x] Upvote/downvote on questions and answers
-- [x] Save/bookmark questions
-- [x] Post answers with Markdown body
-- [x] Accept answer (+15 reputation, green highlight)
-- [x] Add/remove tags inline on question detail
-- [x] Report duplicate (modal with ES search + reason)
-- [x] Resolve duplicate (admin/moderator: close + link original)
-- [x] Delete question (author or admin, soft-delete)
-- [x] Real-time new answers via Socket.IO
+## Currently Implemented
 
-### Comments
-- [x] Nested comment threads on answers (depth up to 2)
-- [x] Reply to existing comments
-- [x] @mention autocomplete with keyboard navigation
-- [x] Delete comment (author or admin)
-- [x] Real-time new comments via Socket.IO
+### Core Q&A
+- [x] Ask questions (title, body, tags, anonymous option)
+- [x] Answer questions (markdown, confidence levels)
+- [x] Voting (upvote/downvote on questions and answers)
+- [x] Accept answer (moderators/admins only, +15 rep)
+- [x] Me Too button (bump question priority, real-time updates)
+- [x] Solved My Doubt button (on answers, real-time updates)
+- [x] Confidence levels on answers (🤔 "I think so" / 👍 "Pretty sure" / 💯 "I know this")
+- [x] Duplicate detection on question creation
+- [x] Question escalation (no-response after 24h)
+- [x] Anonymous question asking
+- [x] Real-time updates via Socket.IO (new answers, me-too, solved counts)
 
-### Tags
-- [x] Tag listing page (filterable, sorted by question count)
-- [x] Tag detail page (metadata + questions list)
-- [x] Tag autocomplete when adding tags to questions
-- [x] Click tag badge to filter question list
-- [x] Auto-upsert tags on first use (Instagram-style)
+### FAQ System
+- [x] Browse FAQ pages by category
+- [x] FAQ detail with sidebar navigation
+- [x] Item-level Yes/No feedback
+- [x] Save/unsave FAQ pages
+- [x] Official badges, categories, tags
 
-### FAQ
-- [x] FAQ listing (paginated, filterable by category)
-- [x] FAQ detail page with multi-item navigation
-- [x] "On this page" sidebar table of contents with smooth scroll
-- [x] Helpful / Not Helpful feedback per item with counts
-- [x] FAQ item tags (linked to tag pages)
-- [x] Official / category badges on FAQ cards
+### Search & Discovery
+- [x] Full-text search across questions, FAQs, users
+- [x] SearchModal (Ctrl+K or /)
+- [x] Trending searches (Redis)
+- [x] Search result caching (Redis 60s)
+- [x] Tag browsing and filtering
+- [x] Sort options (newest, active, votes, views, etc.)
 
-### Search
-- [x] Full-text search across questions, FAQs, and users (Elasticsearch)
-- [x] Type filter (All / Questions / FAQs / Users)
-- [x] Trending search suggestions (Redis-cached)
-- [x] Relevance scores on results
+### User System
+- [x] Registration / Login / Logout
+- [x] JWT-based authentication
+- [x] User profiles (avatar, bio, reputation, badges)
+- [x] Saved questions with notes and custom tags
+- [x] Saved FAQs with notes and custom tags
+- [x] Notification system (new answer, answer accepted, upvotes, etc.)
+- [x] Role system (user, moderator, admin)
+- [x] Ban/unban users (admin)
 
-### Notifications
-- [x] Notification inbox with unread count
-- [x] Mark all as read
-- [x] Archive individual notification
-- [x] Click-to-mark-read on navigation
-- [x] 10+ notification types with distinct icons
-- [x] Real-time push via Socket.IO
+### Admin / Moderation
+- [x] Admin dashboard with stats
+- [x] User management (role, ban)
+- [x] Flagged content view
+- [x] Delete questions/answers
+- [x] Verify / Mark outdated FAQ questions
+- [x] Accept answer on any question
 
-### Admin Panel
-- [x] Dashboard stats (8 metric cards)
-- [x] User management (list all, change role, ban/unban with reason)
-- [x] Flagged content review (questions and answers)
-- [x] Clear server cache
-
-### UI / UX
-- [x] Dark mode (localStorage + prefers-color-scheme, Tailwind class strategy)
-- [x] Responsive design (mobile hamburger menu, adaptive grids)
-- [x] Markdown rendering (react-markdown + GFM + Tailwind Typography)
-- [x] Pagination (smart sliding window)
-- [x] Loading skeleton placeholders on every page
-- [x] Empty states on all list pages
-- [x] Toast notifications (react-hot-toast)
-- [x] Inline SVG icons (no icon library dependency)
-- [x] Sticky navbar and footer
-- [x] Ctrl+Enter to post comments, arrow/enter/escape for mention autocomplete
+### UI/UX
+- [x] Dark mode toggle (localStorage, system preference)
+- [x] Student onboarding walkthrough (4-step modal)
+- [x] Keyboard shortcuts (j/k navigation, / search, Esc close)
+- [x] Responsive mobile layout
+- [x] Rich text editor (TipTap)
+- [x] Markdown rendering (GFM)
+- [x] Confetti celebration on answer accepted
+- [x] View count tracking
+- [x] SEO structured data (JSON-LD)
 
 ### Infrastructure
-- [x] JWT authentication middleware
-- [x] Role-based access control (user / moderator / admin)
-- [x] Elasticsearch indexing + full-text search
-- [x] Redis caching (analytics, recommendations, suggestions)
-- [x] Centralized API client with auto JWT injection
-- [x] Socket.IO with JWT auth, per-user and per-question rooms
-- [x] Multer file upload (avatar images, max 5MB)
-- [x] Helmet security headers + CORS + rate limiting
-- [x] Express-validator input validation
-- [x] Docker / Podman deployment (multi-stage builds, compose)
-- [x] **Bookmarks / Collections** — organize saved questions into named folders
-- [x] **Keyboard Shortcuts** — `Ctrl+K`/`/` search, `j`/`k` navigate, `Enter` view, `Esc` close (Yet to implement elastisearch)
+- [x] Docker/Podman deployment
+- [x] Nginx reverse proxy
+- [x] Elasticsearch full-text search
+- [x] Redis caching (search results, trending)
+- [x] Kafka events (optional)
+- [x] Seed data integrity check
 
-## Phase 1: Eliminate the Fear of Asking (Foundation)
+---
 
-- [x] ### 1. Anonymous Question Asking
+## Planned Features
+
+### Phase 1: Eliminate the Fear of Asking (Foundation)
+
+- [ ] ### 1. Anonymous Question Asking
   - Toggle "Ask anonymously" when posting a question
   - Question author shows as "Anonymous Student" instead of username
   - The author can still see & interact with their own question (they're authenticated)
   - Author's identity is visible to moderators/admins only
   - *Why:* Many students hesitate to ask "dumb" questions publicly. This removes that barrier completely.
 
-- [x] ### 2. "I Have the Same Doubt" (+1 / Me Too) Button
+- [x] ### 2. "I Have the Same Doubt" (+1 / Me Too) Button — **IMPLEMENTED**
   - A button on every question: "Me Too (X students)"
   - Instead of asking the same question again, students just click this
   - Question gets bumped in priority when it has many "Me Too"s
   - When an answer is accepted, all "Me Too" students get a notification
   - *Why:* Eliminates duplicate questions and shows students they're not alone in their doubt
 
-- [x] ### 3. "Solved My Doubt" Button (Distinct from Upvote)
+- [x] ### 3. "Solved My Doubt" Button (Distinct from Upvote) — **IMPLEMENTED**
   - Each answer gets a "Solved My Doubt" button
   - Track `solvedMyDoubtCount` separately from upvotes
   - Answers with many "solved" markers get a special badge
@@ -134,11 +111,11 @@ PrashnaSārathi
   - Quick stats: "You've asked X doubts, Y solved, Z unanswered"
   - *Why:* Students currently have no way to see the status of their doubts at a glance
 
-- [x] ### 5. Answer Confidence Badge
+- [x] ### 5. Answer Confidence Badge — **IMPLEMENTED**
   - When answering, the student picks a confidence level:
-    - `I think so` (low confidence)
-    - `Pretty sure` (medium)
-    - `I know this` (high/verified)
+    - `🤔 I think so` (low confidence)
+    - `👍 Pretty sure` (medium)
+    - `💯 I know this` (high/verified)
   - Displayed prominently on the answer card
   - Helps questioners gauge how much to trust an answer
   - *Why:* An answer from a fellow student might be wrong — confidence signaling helps
@@ -158,7 +135,7 @@ PrashnaSārathi
   - Badge shown next to the username on answers
   - *Why:* Recognizes peer-to-peer help and builds trust in answers
 
-- [ ] ### 8. Doubt Resolved Celebration
+- [x] ### 8. Doubt Resolved Celebration — **IMPLEMENTED**
   - When a student marks an answer as "Solved My Doubt" or accepts an answer:
     - A small confetti animation (CSS only, no library needed)
     - A toast: "Your doubt has been solved by [username]!"
@@ -175,7 +152,7 @@ PrashnaSārathi
 
 ## Phase 4: Advanced Experience
 
-- [ ] ### 10. Student Onboarding Walkthrough
+- [x] ### 10. Student Onboarding Walkthrough — **IMPLEMENTED**
   - On first visit (detected by `localStorage` flag or `firstLogin`):
     - Step 1: "Welcome to PrashnaSārathi! Your doubts are welcome here."
     - Step 2: "Browse FAQs for common questions" → point to /faqs
@@ -183,7 +160,7 @@ PrashnaSārathi
     - Step 4: "Ask your first question — anonymously if you prefer"
   - *Why:* New students don't know where to start — this guides them
 
-- [x] ### 11. Dark Mode
+- [x] ### 11. Dark Mode — **IMPLEMENTED**
   - Toggle in navbar or user preferences
   - CSS variables for light/dark themes
   - Persists choice in `localStorage` and user profile
@@ -196,7 +173,7 @@ PrashnaSārathi
   - *Why:* Students don't just need the answer — they need to *understand* it
 
 ---
-g
+
 ## Phase 5: Power User Features (Optional)
 
 - [ ] ### 13. Threaded Follow-up Discussions
@@ -222,25 +199,25 @@ g
 
 ---
 
-## Recommended Implementation Order
+## Implementation Status Summary
 
 | Done? | # | Feature | Phase | Effort | Impact |
 |-------|---|---------|-------|--------|--------|
-|  | 1 | Anonymous Asking | 1 | 2 days | High |
-|  | 2 | "Me Too" Button | 1 | 2 days | High |
-|  | 3 | "Solved My Doubt" Button | 1 | 2 days | Very High |
-|  | 4 | Doubt Resolution Dashboard | 2 | 3 days | Very High |
-|  | 5 | Answer Confidence Badge | 2 | 1 day | Medium |
-|  | 6 | Similar Solved Doubts Sidebar | 2 | 1 day | Medium |
-|  | 7 | Top Contributor Badges | 3 | 2 days | Medium |
-|  | 8 | Doubt Resolved Celebration | 3 | 1 day | High |
-|  | 9 | "This Helped Me" Button | 3 | 1 day | Medium |
-|  | 10 | Onboarding Walkthrough | 4 | 2 days | High |
-|  | 11 | Dark Mode | 4 | 2 days | Medium |
-|  | 12 | Related Learning Resources | 4 | 2 days | Low-Medium |
-|  | 13 | Threaded Follow-up Discussions | 5 | 3-5 days | Medium |
-|  | 14 | Weekly Doubt Digest | 5 | 3-5 days | Medium |
-|  | 15 | Request Answer from Contributor | 5 | 3-5 days | Medium |
-|  | 16 | PWA / Install Prompt | 5 | 3-5 days | Medium |
+| DONE | 1 | Anonymous Asking | 1 | done | High |
+| DONE | 2 | "Me Too" Button | 1 | done | High |
+| DONE | 3 | "Solved My Doubt" Button | 1 | done | Very High |
+| | 4 | Doubt Resolution Dashboard | 2 | 3 days | Very High |
+| DONE | 5 | Answer Confidence Badge | 2 | done | Medium |
+| | 6 | Similar Solved Doubts Sidebar | 2 | 1 day | Medium |
+| | 7 | Top Contributor Badges | 3 | 2 days | Medium |
+| DONE | 8 | Doubt Resolved Celebration | 3 | done | High |
+| | 9 | "This Helped Me" Button | 3 | 1 day | Medium |
+| DONE | 10 | Onboarding Walkthrough | 4 | done | High |
+| DONE | 11 | Dark Mode | 4 | done | Medium |
+| | 12 | Related Learning Resources | 4 | 2 days | Low-Medium |
+| | 13 | Threaded Follow-up Discussions | 5 | 3-5 days | Medium |
+| | 14 | Weekly Doubt Digest | 5 | 3-5 days | Medium |
+| | 15 | Request Answer from Contributor | 5 | 3-5 days | Medium |
+| | 16 | PWA / Install Prompt | 5 | 3-5 days | Medium |
 
-
+**Completed: 8/16 features**
