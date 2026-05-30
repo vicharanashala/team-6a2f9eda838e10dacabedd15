@@ -56,9 +56,13 @@ export default function QuestionDetailPage() {
         }
         setRecentlyPostedId(null);
       });
+      socket.on('meToo:updated', (data) => {
+        setQuestion(prev => prev ? { ...prev, meTooCount: data.meTooCount } : prev);
+      });
       return () => {
         socket.emit('leave:question', id);
         socket.off('answer:new');
+        socket.off('meToo:updated');
       };
     }
   }, [socket, id]);
@@ -89,6 +93,17 @@ export default function QuestionDetailPage() {
         setSaved(true);
         toast.success('Question saved');
       }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleMeToo = async () => {
+    if (!user) { toast.error('Please login to use this feature'); return; }
+    try {
+      const data = await api.patch(`/questions/${id}/me-too`);
+      setQuestion(prev => prev ? { ...prev, meTooCount: data.meTooCount, hasMeToo: data.hasMeToo } : prev);
+      toast.success(data.hasMeToo ? 'You\'ve been added to the list' : 'Removed from the list');
     } catch (err) {
       toast.error(err.message);
     }
@@ -352,6 +367,19 @@ export default function QuestionDetailPage() {
             <h2 className="text-lg font-semibold text-gray-900">
               {question.answerCount || 0} {(question.answerCount || 0) === 1 ? 'Answer' : 'Answers'}
             </h2>
+            <button
+              onClick={handleMeToo}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                question.hasMeToo
+                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                  : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Me Too {question.meTooCount > 0 && `(${question.meTooCount})`}
+            </button>
           </div>
 
           {/* Answers */}

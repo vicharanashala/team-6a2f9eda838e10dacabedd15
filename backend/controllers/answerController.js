@@ -192,6 +192,22 @@ exports.acceptAnswer = async (req, res, next) => {
     });
     emitToUser(answer.author.toString(), 'notification:new', { accepted: true });
 
+    if (question.meTooUsers && question.meTooUsers.length > 0) {
+      const meTooNotifications = question.meTooUsers.map(userId => ({
+        recipient: userId,
+        type: 'question_answered',
+        title: 'A question you follow has an answer',
+        message: `"${question.title}" now has an accepted answer`,
+        link: `/questions/${question._id}`,
+        referenceType: 'Question',
+        reference: question._id,
+      }));
+      await Notification.insertMany(meTooNotifications);
+      question.meTooUsers.forEach(userId => {
+        emitToUser(userId.toString(), 'notification:new', { questionAnswered: true });
+      });
+    }
+
     res.json({ answer, message: 'Answer accepted' });
   } catch (err) {
     next(err);

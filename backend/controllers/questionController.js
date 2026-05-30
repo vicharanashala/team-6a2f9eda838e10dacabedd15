@@ -5,8 +5,9 @@ const QuestionView = require('../models/QuestionView');
 const { AppError } = require('../middleware/errorHandler');
 const { paginate, buildPaginationMeta } = require('../utils/helpers');
 const { indexQuestion, deleteQuestionIndex } = require('../services/searchService');
-const { emitToQuestion } = require('../socket');
+const { emitToQuestion, emitToUser } = require('../socket');
 const { canDeleteQuestion, hasPermission, PERMISSIONS } = require('../utils/permissions');
+const Notification = require('../models/Notification');
 
 exports.createQuestion = async (req, res, next) => {
   try {
@@ -83,6 +84,38 @@ exports.createQuestion = async (req, res, next) => {
   }
 };
 
+exports.toggleMeToo = async (req, res, next) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question || question.isDeleted) throw new AppError('Question not found', 404);
+
+    const userId = req.user._id;
+    const alreadyMeToo = question.meTooUsers.some(u => u.toString() === userId.toString());
+
+    if (alreadyMeToo) {
+      question.meTooUsers = question.meTooUsers.filter(u => u.toString() !== userId.toString());
+      question.meTooCount = Math.max(0, question.meTooCount - 1);
+    } else {
+      question.meTooUsers.push(userId);
+      question.meTooCount += 1;
+    }
+
+    await question.save();
+
+    emitToQuestion(question._id.toString(), 'meToo:updated', {
+      meTooCount: question.meTooCount,
+      meTooUsers: question.meTooUsers.length,
+    });
+
+    res.json({
+      meTooCount: question.meTooCount,
+      hasMeToo: !alreadyMeToo,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 async function findExistingQuestion(title, tagNames) {
   const normalizedTitle = title.toLowerCase().trim();
 
@@ -137,6 +170,7 @@ exports.getQuestions = async (req, res, next) => {
       case 'votes':
       case 'liked': sort.upvotes = -1; break;
       case 'views': sort.viewCount = -1; break;
+      case 'me-too': sort.meTooCount = -1; break;
       default: sort.createdAt = -1;
     }
 
@@ -168,7 +202,12 @@ exports.getQuestions = async (req, res, next) => {
       return q;
     });
 
-    res.json({ questions: anonymized, pagination: buildPaginationMeta(total, page, limit) });
+    const withMeToo = anonymized.map(q => ({
+      ...q,
+      hasMeToo: req.user ? q.meTooUsers && q.meTooUsers.some(u => u.toString() === req.user._id.toString()) : false,
+    }));
+
+    res.json({ questions: withMeToo, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     next(err);
   }
@@ -221,7 +260,9 @@ exports.getQuestion = async (req, res, next) => {
       };
     }
 
-    res.json({ question });
+    const hasMeToo = req.user ? question.meTooUsers.some(u => u.toString() === req.user._id.toString()) : false;
+
+    res.json({ question: { ...question.toObject(), hasMeToo, meTooCount: question.meTooCount } });
   } catch (err) {
     next(err);
   }
