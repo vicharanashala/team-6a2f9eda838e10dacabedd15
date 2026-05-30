@@ -92,42 +92,5 @@ const recordSearchSuccess = async (query) => {
     await redis.incr('analytics:search:success');
   } catch (_) {}
 };
-// NEW: Daily Active Users (DAU) / Registrations over 30 days
-const getUserAnalytics = async () => {
-  return await User.aggregate([
-    {
-      $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-        newUsers: { $sum: 1 }
-      }
-    },
-    { $sort: { _id: 1 } },
-    { $limit: 30 }
-  ]);
-};
 
-// Added: Global FAQ Analytics (top 10 most helpful)
-const getGlobalFAQAnalytics = async () => {
-  return await FAQ.aggregate([
-    { $unwind: "$items" }, 
-    {
-      $project: {
-        category: 1,
-        question: "$items.question",
-        helpfulCount: "$items.helpfulCount",
-        notHelpfulCount: "$items.notHelpfulCount"
-      }
-    },
-    { $sort: { helpfulCount: -1 } },
-    { $limit: 10 }
-  ]);
-};
-module.exports = { 
-  getDashboardStats, 
-  getFAQAnalytics, 
-  getSearchSuccessRate, 
-  recordSearch, 
-  recordSearchSuccess,
-  getUserAnalytics,        
-  getGlobalFAQAnalytics    
-};
+module.exports = { getDashboardStats, getFAQAnalytics, getSearchSuccessRate, recordSearch, recordSearchSuccess };

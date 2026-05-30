@@ -122,12 +122,4 @@ const getGlobalFAQAnalytics = async () => {
     { $limit: 10 }
   ]);
 };
-module.exports = { 
-  getDashboardStats, 
-  getFAQAnalytics, 
-  getSearchSuccessRate, 
-  recordSearch, 
-  recordSearchSuccess,
-  getUserAnalytics,        
-  getGlobalFAQAnalytics    
-};
+module.exports = { getDashboardStats, getFAQAnalytics, getSearchSuccessRate, recordSearch, recordSearchSuccess };
