@@ -22,6 +22,7 @@ exports.createAnswer = async (req, res, next) => {
       body: req.body.body,
       question: question._id,
       author: req.user._id,
+      confidenceLevel: req.body.confidenceLevel || null,
     });
 
     question.answerCount += 1;
@@ -91,6 +92,8 @@ exports.getAnswers = async (req, res, next) => {
           downvotes: 1,
           isAccepted: 1,
           isOfficial: 1,
+          solvedMyDoubtCount: 1,
+          confidenceLevel: 1,
           createdAt: 1,
           updatedAt: 1,
           'author.username': 1,
@@ -192,7 +195,55 @@ exports.acceptAnswer = async (req, res, next) => {
     });
     emitToUser(answer.author.toString(), 'notification:new', { accepted: true });
 
+    if (question.meTooUsers && question.meTooUsers.length > 0) {
+      const meTooNotifications = question.meTooUsers.map(userId => ({
+        recipient: userId,
+        type: 'question_answered',
+        title: 'A question you follow has an answer',
+        message: `"${question.title}" now has an accepted answer`,
+        link: `/questions/${question._id}`,
+        referenceType: 'Question',
+        reference: question._id,
+      }));
+      await Notification.insertMany(meTooNotifications);
+      question.meTooUsers.forEach(userId => {
+        emitToUser(userId.toString(), 'notification:new', { questionAnswered: true });
+      });
+    }
+
     res.json({ answer, message: 'Answer accepted' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.toggleSolvedMyDoubt = async (req, res, next) => {
+  try {
+    const answer = await Answer.findById(req.params.id);
+    if (!answer || answer.isDeleted) throw new AppError('Answer not found', 404);
+
+    const userId = req.user._id;
+    const alreadySolved = answer.solvedByUsers.some(u => u.toString() === userId.toString());
+
+    if (alreadySolved) {
+      answer.solvedByUsers = answer.solvedByUsers.filter(u => u.toString() !== userId.toString());
+      answer.solvedMyDoubtCount = Math.max(0, answer.solvedMyDoubtCount - 1);
+    } else {
+      answer.solvedByUsers.push(userId);
+      answer.solvedMyDoubtCount += 1;
+    }
+
+    await answer.save();
+
+    emitToQuestion(answer.question.toString(), 'answer:solvedUpdated', {
+      answerId: answer._id,
+      solvedMyDoubtCount: answer.solvedMyDoubtCount,
+    });
+
+    res.json({
+      solvedMyDoubtCount: answer.solvedMyDoubtCount,
+      hasSolvedMyDoubt: !alreadySolved,
+    });
   } catch (err) {
     next(err);
   }

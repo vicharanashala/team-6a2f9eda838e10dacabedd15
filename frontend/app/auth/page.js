@@ -8,11 +8,16 @@ import toast from 'react-hot-toast';
 function AuthPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { login, register } = useAuth();
+  const { user, login, register } = useAuth();
   const [mode, setMode] = useState(searchParams.get('mode') || 'login');
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  if (user) {
+    router.push('/');
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();

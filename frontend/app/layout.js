@@ -2,6 +2,7 @@ import '@/styles/globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { SocketProvider } from '@/context/SocketContext';
 import { KeyboardProvider } from '@/context/KeyboardContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Toaster } from 'react-hot-toast';
@@ -14,16 +15,23 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="min-h-screen flex flex-col font-mono">
         <AuthProvider>
           <SocketProvider>
             <KeyboardProvider>
-              <Navbar />
-              <main className="flex-1">
-                {children}
-              </main>
-              <Footer />
-              <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+              <ThemeProvider>
+                <Navbar />
+                <main className="flex-1">
+                  {children}
+                </main>
+                <Footer />
+                <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+              </ThemeProvider>
             </KeyboardProvider>
           </SocketProvider>
         </AuthProvider>

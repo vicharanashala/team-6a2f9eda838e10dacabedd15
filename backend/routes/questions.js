@@ -11,6 +11,7 @@ router.get('/:id/related', ctrl.getRelatedQuestions);
 router.post('/', auth, questionValidation, ctrl.createQuestion);
 router.put('/:id', auth, ctrl.updateQuestion);
 router.patch('/:id/duplicate', auth, ctrl.markAsDuplicate);
+router.patch('/:id/me-too', auth, ctrl.toggleMeToo);
 router.patch('/:id/verify', auth, ctrl.verifyQuestion);
 router.patch('/:id/outdated', auth, ctrl.markOutdated);
 router.patch('/:id/outdated/clear', auth, ctrl.clearOutdated);

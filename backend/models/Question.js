@@ -17,6 +17,7 @@ const questionSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  isAnonymous: { type: Boolean, default: false },
   tags: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tag',
@@ -29,6 +30,11 @@ const questionSchema = new mongoose.Schema({
   answerCount: { type: Number, default: 0 },
   viewCount: { type: Number, default: 0 },
   saveCount: { type: Number, default: 0 },
+  meTooCount: { type: Number, default: 0 },
+  meTooUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
 
   // Accepted answer
   acceptedAnswer: {
@@ -118,6 +124,7 @@ questionSchema.index({ status: 1 });
 questionSchema.index({ createdAt: -1 });
 questionSchema.index({ upvotes: -1 });
 questionSchema.index({ viewCount: -1 });
+questionSchema.index({ meTooCount: -1 });
 questionSchema.index({ lastActivity: -1 });
 questionSchema.index({ title: 1 }, { collation: { locale: 'en', strength: 2 } });
 questionSchema.index({ isFAQ: 1, isOutdated: 1, lastVerifiedAt: -1 });

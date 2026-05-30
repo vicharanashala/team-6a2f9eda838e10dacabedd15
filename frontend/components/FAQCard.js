@@ -38,7 +38,7 @@ export default function FAQCard({ faq, isSelected, onSelect }) {
       key={faq._id}
       href={`/faqs/${faq.slug}`}
       className={`card-hover p-6 border-2 transition-all ${
-        isSelected ? 'border-primary-500 bg-primary-50' : 'border-transparent'
+        isSelected ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-transparent'
       }`}
       onClick={() => onSelect && onSelect(faq._id)}
     >
@@ -51,8 +51,8 @@ export default function FAQCard({ faq, isSelected, onSelect }) {
           onClick={handleSave}
           className={`p-1.5 rounded shrink-0 transition-colors ${
             isSaved
-              ? 'text-primary-600 bg-primary-50 hover:bg-primary-100'
-              : 'text-gray-400 hover:text-primary-600 hover:bg-gray-100'
+              ? 'text-primary-600 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30'
+              : 'text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
           title={isSaved ? 'Unsave' : 'Save'}
         >
@@ -61,9 +61,9 @@ export default function FAQCard({ faq, isSelected, onSelect }) {
           </svg>
         </button>
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">{faq.title}</h3>
-      <p className="text-sm text-gray-600 mb-4 line-clamp-2">{faq.description}</p>
-      <div className="flex items-center gap-3 text-xs text-gray-500">
+      <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">{faq.title}</h3>
+      <p className="text-sm text-[var(--color-text-secondary)] mb-4 line-clamp-2">{faq.description}</p>
+      <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
         <span>{faq.itemCount || 0} items</span>
         <span>{faq.viewCount || 0} views</span>
         {faq.saveCount > 0 && <span>{faq.saveCount} saves</span>}

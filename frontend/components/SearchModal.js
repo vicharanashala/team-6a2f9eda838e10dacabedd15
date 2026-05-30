@@ -98,8 +98,8 @@ export default function SearchModal({ isOpen, onClose }) {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="min-h-screen px-4 pt-20 pb-8 flex items-start justify-center">
         <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
-        <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
+        <div className="relative bg-[var(--color-bg-secondary)] rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+          <div className="p-4 border-b border-[var(--color-border)]">
             <div className="flex items-center gap-3">
               <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -127,7 +127,7 @@ export default function SearchModal({ isOpen, onClose }) {
                   key={t}
                   onClick={() => setType(t)}
                   className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
-                    type === t ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    type === t ? 'bg-primary-600 text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
                   }`}
                 >
                   {t || 'All'}
@@ -150,12 +150,12 @@ export default function SearchModal({ isOpen, onClose }) {
                       <button
                         onClick={() => handleResultClick(result)}
                         className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${
-                          selectedIndex === index ? 'bg-primary-50' : 'hover:bg-gray-50'
+                          selectedIndex === index ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-[var(--color-bg)]'
                         }`}
                       >
                         <span className="badge-gray text-xs capitalize mt-1 shrink-0">{typeLabel}</span>
                         <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-semibold text-gray-900 truncate">{title}</h4>
+                          <h4 className="text-sm font-semibold text-[var(--color-text)] truncate">{title}</h4>
                           {desc && <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{truncate(desc, 100)}</p>}
                           {result.tags?.length > 0 && (
                             <div className="flex gap-1 mt-1">

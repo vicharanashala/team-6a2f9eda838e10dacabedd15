@@ -45,6 +45,8 @@ if [ "$SKIP_SEED" != "1" ]; then
   if [ "$SEED_NEEDED" = "yes" ]; then
     echo "Seeding database..."
     node seeds/seed.js
+    echo "Seeding additional users..."
+    node seeds/createUsers.js
   else
     echo "Database already seeded."
   fi

@@ -8,5 +8,6 @@ router.post('/question/:questionId', auth, answerValidation, ctrl.createAnswer);
 router.put('/:id', auth, ctrl.updateAnswer);
 router.delete('/:id', auth, ctrl.deleteAnswer);
 router.post('/:id/accept', auth, ctrl.acceptAnswer);
+router.patch('/:id/solved-my-doubt', auth, ctrl.toggleSolvedMyDoubt);
 
 module.exports = router;

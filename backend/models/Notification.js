@@ -20,6 +20,8 @@ const notificationSchema = new mongoose.Schema({
       'system',
       'moderation',
       'faq_update',
+      'me_too',
+      'question_answered',
     ],
     required: true,
   },

@@ -24,6 +24,9 @@ export default function QuestionDetailPage() {
   const [recentlyPostedId, setRecentlyPostedId] = useState(null);
   const [escalateModal, setEscalateModal] = useState({ open: false });
   const [escalationReason, setEscalationReason] = useState('');
+  const [solvedDoubtAnswers, setSolvedDoubtAnswers] = useState({});
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [confidenceLevel, setConfidenceLevel] = useState(null);
 
   const fetchQuestion = useCallback(async () => {
     try {
@@ -56,9 +59,19 @@ export default function QuestionDetailPage() {
         }
         setRecentlyPostedId(null);
       });
+      socket.on('meToo:updated', (data) => {
+        setQuestion(prev => prev ? { ...prev, meTooCount: data.meTooCount } : prev);
+      });
+      socket.on('answer:solvedUpdated', (data) => {
+        setAnswers(prev => prev.map(a =>
+          a._id === data.answerId ? { ...a, solvedMyDoubtCount: data.solvedMyDoubtCount } : a
+        ));
+      });
       return () => {
         socket.emit('leave:question', id);
         socket.off('answer:new');
+        socket.off('meToo:updated');
+        socket.off('answer:solvedUpdated');
       };
     }
   }, [socket, id]);
@@ -94,6 +107,33 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const handleMeToo = async () => {
+    if (!user) { toast.error('Please login to use this feature'); return; }
+    try {
+      const data = await api.patch(`/questions/${id}/me-too`);
+      setQuestion(prev => prev ? { ...prev, meTooCount: data.meTooCount, hasMeToo: data.hasMeToo } : prev);
+      toast.success(data.hasMeToo ? 'You\'ve been added to the list' : 'Removed from the list');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleSolvedMyDoubt = async (answerId) => {
+    if (!user) { toast.error('Please login to use this feature'); return; }
+    try {
+      const data = await api.patch(`/answers/${answerId}/solved-my-doubt`);
+      setSolvedDoubtAnswers(prev => ({
+        ...prev,
+        [answerId]: { count: data.solvedMyDoubtCount, hasSolved: data.hasSolvedMyDoubt }
+      }));
+      if (data.hasSolvedMyDoubt) {
+        toast.success('Marked as solving your doubt!');
+      }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   const handleSubmitAnswer = async (e) => {
     e.preventDefault();
     if (!user) { toast.error('Please login to answer'); return; }
@@ -101,10 +141,11 @@ export default function QuestionDetailPage() {
 
     setAnswering(true);
     try {
-      const data = await api.post(`/answers/question/${id}`, { body: newAnswer });
+      const data = await api.post(`/answers/question/${id}`, { body: newAnswer, confidenceLevel });
       setRecentlyPostedId(data.answer._id);
       setAnswers(prev => [data.answer, ...prev]);
       setNewAnswer('');
+      setConfidenceLevel(null);
       toast.success('Answer posted!');
     } catch (err) {
       toast.error(err.message || 'Failed to post answer');
@@ -119,6 +160,8 @@ export default function QuestionDetailPage() {
       fetchQuestion();
       fetchAnswers();
       toast.success('Answer accepted');
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 3000);
     } catch (err) {
       toast.error(err.message);
     }
@@ -138,11 +181,11 @@ export default function QuestionDetailPage() {
 
   const canEscalate = () => {
     if (!user) return false;
-    const isAuthor = user._id === question.author?._id;
     const isModOrAdmin = user.role === 'admin' || user.role === 'moderator';
-    if (!isAuthor && !isModOrAdmin) return false;
     if (question.isEscalated || question.resolutionStatus === 'escalated') return false;
-    return true;
+    if (isModOrAdmin) return true;
+    if (question.isOwner) return true;
+    return false;
   };
 
   const handleDelete = async () => {
@@ -289,7 +332,7 @@ export default function QuestionDetailPage() {
             <button onClick={handleSave} className="btn-secondary btn-sm">
               {saved ? 'Saved' : 'Save'}
             </button>
-            {(user?._id === question.author?._id || user?.role === 'admin') && (
+            {(user?.role === 'admin' || user?.role === 'moderator') && (
               <button onClick={handleDelete} className="btn-danger btn-sm">Delete</button>
             )}
             {question.isFAQ && (user?.role === 'admin' || user?.role === 'moderator') && (
@@ -306,12 +349,19 @@ export default function QuestionDetailPage() {
           ))}
         </div>
         <div className="flex items-center gap-3 mt-3 text-sm text-gray-500">
-          <Link href={`/users/${question.author?.username}`} className="flex items-center gap-1 hover:text-primary-600">
-            <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-medium">
-              {(question.author?.displayName || question.author?.username || '?')[0]}
-            </div>
-            <span>{question.author?.displayName || question.author?.username}</span>
-          </Link>
+          {question.author?._id === 'anonymous' ? (
+            <span className="flex items-center gap-1">
+              <div className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-[10px] font-medium">?</div>
+              <span>Anonymous Student</span>
+            </span>
+          ) : (
+            <Link href={`/users/${question.author?.username}`} className="flex items-center gap-1 hover:text-primary-600">
+              <div className="w-5 h-5 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-medium">
+                {(question.author?.displayName || question.author?.username || '?')[0]}
+              </div>
+              <span>{question.author?.displayName || question.author?.username}</span>
+            </Link>
+          )}
           <span>asked {formatDate(question.createdAt)}</span>
           <span>{question.viewCount} views</span>
           {canEscalate() && (
@@ -345,6 +395,19 @@ export default function QuestionDetailPage() {
             <h2 className="text-lg font-semibold text-gray-900">
               {question.answerCount || 0} {(question.answerCount || 0) === 1 ? 'Answer' : 'Answers'}
             </h2>
+            <button
+              onClick={handleMeToo}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                question.hasMeToo
+                  ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                  : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Me Too {question.meTooCount > 0 && `(${question.meTooCount})`}
+            </button>
           </div>
 
           {/* Answers */}
@@ -381,7 +444,36 @@ export default function QuestionDetailPage() {
                         <div className="flex items-center gap-2">
                           {answer.isOfficial && <span className="badge-green">Official</span>}
                           {answer.isAccepted && <span className="badge-green">Accepted</span>}
-                          {question.author?._id === user?._id && !answer.isAccepted && (
+                          {answer.solvedMyDoubtCount >= 5 && <span className="badge-blue">Helpful ({answer.solvedMyDoubtCount})</span>}
+                          {answer.confidenceLevel === 'low' && (
+                            <span className="badge-gray flex items-center gap-1">
+                              <span>🤔</span><span>I think so</span>
+                            </span>
+                          )}
+                          {answer.confidenceLevel === 'medium' && (
+                            <span className="badge-yellow flex items-center gap-1">
+                              <span>👍</span><span>Pretty sure</span>
+                            </span>
+                          )}
+                          {answer.confidenceLevel === 'high' && (
+                            <span className="badge-green flex items-center gap-1">
+                              <span>💯</span><span>I know this</span>
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleSolvedMyDoubt(answer._id)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              solvedDoubtAnswers[answer._id]?.hasSolved
+                                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300'
+                            }`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Solved My Doubt {solvedDoubtAnswers[answer._id]?.count > 0 && `(${solvedDoubtAnswers[answer._id].count})`}
+                          </button>
+                          {(user?.role === 'admin' || user?.role === 'moderator') && !answer.isAccepted && (
                             <button onClick={() => handleAcceptAnswer(answer._id)} className="btn-secondary btn-sm">
                               Accept
                             </button>
@@ -408,6 +500,35 @@ export default function QuestionDetailPage() {
                   placeholder="Write your answer in Markdown..."
                   maxLength={50000}
                 />
+
+                {/* Confidence Level Picker */}
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600 mb-2">How confident are you?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 'low', label: 'I think so', icon: '🤔', color: 'gray' },
+                      { value: 'medium', label: 'Pretty sure', icon: '👍', color: 'yellow' },
+                      { value: 'high', label: 'I know this', icon: '💯', color: 'green' },
+                    ].map(({ value, label, icon, color }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setConfidenceLevel(confidenceLevel === value ? null : value)}
+                        className={`px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 transition-colors border ${
+                          confidenceLevel === value
+                            ? color === 'gray' ? 'bg-gray-200 border-gray-400 text-gray-800' :
+                              color === 'yellow' ? 'bg-yellow-100 border-yellow-400 text-yellow-800' :
+                              'bg-green-100 border-green-400 text-green-800'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        <span>{icon}</span>
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button type="submit" disabled={answering} className="btn-primary">
                   {answering ? 'Posting...' : 'Post Answer'}
                 </button>
@@ -448,6 +569,28 @@ export default function QuestionDetailPage() {
                 Escalate
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Celebration Animation */}
+      {showCelebration && (
+        <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50">
+          <div className="confetti-animation">
+            {[...Array(50)].map((_, i) => (
+              <div
+                key={i}
+                className="confetti-piece"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 0.5}s`,
+                  backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'][Math.floor(Math.random() * 5)],
+                }}
+              />
+            ))}
+          </div>
+          <div className="bg-green-500 text-white px-8 py-4 rounded-full text-xl font-bold shadow-lg animate-bounce">
+            Your doubt is resolved!
           </div>
         </div>
       )}
