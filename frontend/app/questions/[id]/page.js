@@ -8,6 +8,7 @@ import { useSocket } from '@/context/SocketContext';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import DownvoteReasonModal from '@/components/DownvoteReasonModal';
 
 export default function QuestionDetailPage() {
   const { id } = useParams();
@@ -27,6 +28,8 @@ export default function QuestionDetailPage() {
   const [solvedDoubtAnswers, setSolvedDoubtAnswers] = useState({});
   const [showCelebration, setShowCelebration] = useState(false);
   const [confidenceLevel, setConfidenceLevel] = useState(null);
+  const [showDownvoteModal, setShowDownvoteModal] = useState({ open: false, targetType: null, targetId: null });
+  const [downvoteFeedback, setDownvoteFeedback] = useState({ question: [], answers: {} });
 
   const fetchQuestion = useCallback(async () => {
     try {
@@ -49,6 +52,20 @@ export default function QuestionDetailPage() {
     fetchQuestion();
     fetchAnswers();
   }, [fetchQuestion, fetchAnswers]);
+
+  const fetchDownvoteFeedback = useCallback(async () => {
+    if (!user || !id) return;
+    try {
+      const qData = await api.get(`/votes/feedback/Question/${id}`);
+      if (qData.feedback && qData.feedback.length > 0) {
+        setDownvoteFeedback(prev => ({ ...prev, question: qData.feedback }));
+      }
+    } catch (_) {}
+  }, [user, id]);
+
+  useEffect(() => {
+    fetchDownvoteFeedback();
+  }, [fetchDownvoteFeedback]);
 
   useEffect(() => {
     if (socket && id) {
@@ -76,10 +93,15 @@ export default function QuestionDetailPage() {
     }
   }, [socket, id]);
 
-  const handleVote = async (targetType, targetId, voteType) => {
+  const handleVote = async (targetType, targetId, voteType, reasonData = null) => {
     if (!user) { toast.error('Please login to vote'); return; }
     try {
-      await api.post('/votes', { targetType, targetId, voteType });
+      const payload = { targetType, targetId, voteType };
+      if (voteType === 'downvote' && reasonData) {
+        payload.reason = reasonData.reason;
+        payload.reasonText = reasonData.reasonText;
+      }
+      await api.post('/votes', payload);
       if (targetType === 'Question') {
         fetchQuestion();
       } else {
@@ -88,6 +110,15 @@ export default function QuestionDetailPage() {
     } catch (err) {
       toast.error(err.message || 'Vote failed');
     }
+  };
+
+  const openDownvoteModal = (targetType, targetId) => {
+    setShowDownvoteModal({ open: true, targetType, targetId });
+  };
+
+  const submitDownvoteWithReason = (reasonData) => {
+    handleVote(showDownvoteModal.targetType, showDownvoteModal.targetId, 'downvote', reasonData);
+    setShowDownvoteModal({ open: false, targetType: null, targetId: null });
   };
 
   const handleSave = async () => {
@@ -370,6 +401,27 @@ export default function QuestionDetailPage() {
             </button>
           )}
         </div>
+
+        {downvoteFeedback.question.length > 0 && (
+          <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-semibold text-red-800 dark:text-red-200">
+                You received {downvoteFeedback.question.length} feedback{downvoteFeedback.question.length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {downvoteFeedback.question.map((f, i) => (
+                <div key={i} className="text-sm">
+                  <span className="font-medium text-red-700 dark:text-red-300 capitalize">{f.reason}: </span>
+                  <span className="text-red-600 dark:text-red-400">{f.reasonText || 'No additional details'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4">
@@ -379,7 +431,7 @@ export default function QuestionDetailPage() {
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
           </button>
           <span className="font-bold text-lg text-gray-900">{question.upvotes - question.downvotes}</span>
-          <button onClick={() => handleVote('Question', id, 'downvote')} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors">
+          <button onClick={() => openDownvoteModal('Question', id)} className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-red-600 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </button>
         </div>
@@ -425,7 +477,7 @@ export default function QuestionDetailPage() {
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
                       </button>
                       <span className="font-semibold text-sm">{answer.upvotes - answer.downvotes}</span>
-                      <button onClick={() => handleVote('Answer', answer._id, 'downvote')} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-red-600">
+                      <button onClick={() => openDownvoteModal('Answer', answer._id)} className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-red-600">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                       </button>
                     </div>
@@ -594,6 +646,13 @@ export default function QuestionDetailPage() {
           </div>
         </div>
       )}
+
+      <DownvoteReasonModal
+        isOpen={showDownvoteModal.open}
+        onClose={() => setShowDownvoteModal({ open: false, targetType: null, targetId: null })}
+        onSubmit={submitDownvoteWithReason}
+        targetType={showDownvoteModal.targetType}
+      />
     </div>
     </>
   );

@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { formatDate, truncate } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import DownvoteReasonModal from './DownvoteReasonModal';
 
 export default function QuestionCard({ question }) {
   const { user } = useAuth();
@@ -15,6 +16,8 @@ export default function QuestionCard({ question }) {
   const [meTooCount, setMeTooCount] = useState(question.meTooCount || 0);
   const [hasMeToo, setHasMeToo] = useState(question.hasMeToo || false);
   const [meTooLoading, setMeTooLoading] = useState(false);
+  const [showDownvoteModal, setShowDownvoteModal] = useState(false);
+  const [pendingDownvote, setPendingDownvote] = useState(false);
 
   useEffect(() => {
     if (user && question._id) {
@@ -24,7 +27,7 @@ export default function QuestionCard({ question }) {
     }
   }, [user, question._id]);
 
-  const handleVote = async (e, voteType) => {
+  const handleVote = async (e, voteType, reasonData = null) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user) { toast.error('Please login to vote'); return; }
@@ -32,7 +35,12 @@ export default function QuestionCard({ question }) {
 
     setLoading(true);
     try {
-      await api.post('/votes', { targetType: 'Question', targetId: question._id, voteType });
+      const payload = { targetType: 'Question', targetId: question._id, voteType };
+      if (voteType === 'downvote' && reasonData) {
+        payload.reason = reasonData.reason;
+        payload.reasonText = reasonData.reasonText;
+      }
+      await api.post('/votes', payload);
       const data = await api.get(`/votes/Question/${question._id}`);
       setUserVote(data.vote);
       const newQuestion = await api.get(`/questions/${question._id}`);
@@ -43,6 +51,11 @@ export default function QuestionCard({ question }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownvoteWithReason = (reasonData) => {
+    setPendingDownvote(true);
+    handleVote({ preventDefault: () => {}, stopPropagation: () => {} }, 'downvote', reasonData);
   };
 
   const handleMeToo = async (e) => {
@@ -80,7 +93,15 @@ export default function QuestionCard({ question }) {
           </span>
           <span className="text-xs text-[var(--color-text-secondary)]" title={`${upvotes} likes, ${downvotes} dislikes`}>score</span>
           <button
-            onClick={(e) => handleVote(e, 'downvote')}
+            onClick={(e) => {
+              if (userVote === 'downvote') {
+                handleVote(e, 'downvote');
+              } else {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowDownvoteModal(true);
+              }
+            }}
             className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${userVote === 'downvote' ? 'text-red-600' : 'text-gray-400 dark:text-gray-500 hover:text-red-600'} ${loading ? 'opacity-50' : ''}`}
             disabled={loading}
             title={`${downvotes} dislikes`}
@@ -148,6 +169,12 @@ export default function QuestionCard({ question }) {
           </div>
         </div>
       </div>
+      <DownvoteReasonModal
+        isOpen={showDownvoteModal}
+        onClose={() => setShowDownvoteModal(false)}
+        onSubmit={handleDownvoteWithReason}
+        targetType="Question"
+      />
     </div>
   );
 }

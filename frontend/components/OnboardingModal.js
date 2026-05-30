@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 
@@ -39,12 +39,10 @@ export default function OnboardingModal() {
   useEffect(() => {
     if (loading) return;
     const completed = localStorage.getItem('onboarding_completed');
-    const isFirstTime = !completed;
-    if (isFirstTime && !user) {
-      setIsOpen(true);
-    } else if (isFirstTime && user && user.role === 'user') {
-      setIsOpen(true);
-    }
+    if (completed) return;
+    if (!user) return;
+    if (user.role === 'admin' || user.role === 'moderator') return;
+    setIsOpen(true);
   }, [user, loading]);
 
   const handleDismiss = () => {
@@ -127,7 +125,7 @@ export default function OnboardingModal() {
               onClick={handleNext}
               className="text-sm font-medium text-primary-600 hover:text-primary-700"
             >
-              {isLast ? 'Get Started' : 'Next &rarr;'}
+              {isLast ? 'Get Started' : 'Next \u2192'}
             </button>
           </div>
 

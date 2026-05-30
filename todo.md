@@ -77,7 +77,7 @@
 
 ### Phase 1: Eliminate the Fear of Asking (Foundation)
 
-- [ ] ### 1. Anonymous Question Asking
+- [x] ### 1. Anonymous Question Asking
   - Toggle "Ask anonymously" when posting a question
   - Question author shows as "Anonymous Student" instead of username
   - The author can still see & interact with their own question (they're authenticated)
@@ -221,3 +221,74 @@
 | | 16 | PWA / Install Prompt | 5 | 3-5 days | Medium |
 
 **Completed: 8/16 features**
+
+1. Question Draft Auto-Save
+- Auto-save draft as student types (every 30s to localStorage)
+- Restore draft if they accidentally close tab or navigate away
+- Show "Draft saved" indicator while composing
+2. Following Questions (beyond accepted answer)
+- Follow a question → get notified of ALL new answers, not just accepted
+- "Following" toggle on question detail page
+- Email digest option for followed questions
+3. Anonymous Encouragement / Thank You
+- Send a private "this helped me" to an answerer without displaying publicly on the answer
+- Creates positive reinforcement without cluttering the UI
+- Distinct from public "This Helped Me" button
+4. Question Bounty System
+- Student can attach "bounty" points (from their reputation) to attract answers
+- Featured at top of question list
+- Expires after X days, auto-awarded to best answer
+5. Professor/Instructor Verification Badge
+- Moderators can mark users as "verified instructor"
+- Special badge displayed next to name on answers
+- Helps students trust the answer source
+6. Downvote Feedback (required)
+- When a question/answer gets a downvote, prompt the downvoter to optionally leave a one-line reason
+- Reason shown anonymously to author
+- Helps students improve rather than just getting rejected
+7. Quick Reaction Emojis on Answers
+- Beyond upvote/downvote: 😂 funny, 🙏 helpful, ❓ unclear
+- Aggregated as small icon counts below the answer
+- Low-friction feedback signal
+8. Search Filter Chips
+- Filter questions by: unanswered, has code, recent, unanswered + no response in 24h
+- "Help my question" filter = no answers + older than 24h
+- One-click filter buttons above question list
+Medium-Impact Quality of Life
+9. Edit History on Questions/Answers
+- See who edited when and what changed
+- Helps transparency, reduces "my answer was changed" confusion
+10. Mobile Bottom Navigation Bar
+- Bottom tabs: Home, Questions, Ask, Notifications, Profile
+- Standard mobile app pattern — avoids reaching for top navbar
+- Better thumb-zone navigation
+11. Code Syntax Highlighting
+- Dedicated code block rendering with language detection
+- Line numbers, copy button, dark/light theme toggle within code blocks
+- Most student questions involve code
+12. Question Difficulty Tags
+- Easy / Medium / Hard tags on questions
+- Helps other students gauge complexity, helps answerers know audience level
+13. Streak / Daily Login Gamification
+- Track consecutive days of visiting/asking/answering
+- Weekly streak badge on profile
+- Motivates habitual engagement without reputation pressure
+14. Voice-to-Text for Asking
+- Microphone button in question form
+- Useful for students who type slowly or prefer speaking
+- Especially helpful on mobile
+15. Share to Groups / Friends
+- Share a specific question/answer via link
+- Copy link with anchor to specific answer
+- Share to WhatsApp/Telegram directly from UI
+16. Personal Stats Dashboard
+- "This week: you asked 2 questions, got 5 answers, helped 3 students"
+- "Your top answered tags: Python (7), React (4)"
+- Motivates continued participation
+17. Related Documentation Links
+- When posting a question, auto-suggest relevant MDN/w3schools/official docs links based on tags
+- Helps students self-resolve before asking
+18. "No Answer Yet" Escalation Auto-Prompt
+- Questions with no answers for 48h get a gentle prompt to the author
+- "Still looking for an answer? Consider adding more details or simplifying your question"
+- Optional re-tag or bounty suggestion

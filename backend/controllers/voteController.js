@@ -106,6 +106,29 @@ exports.vote = async (req, res, next) => {
       emitToUser(target.author.toString(), 'notification:new', { upvote: true });
     }
 
+    if (voteType === 'downvote' && target.author.toString() !== req.user._id.toString()) {
+      const reasonLabels = {
+        incorrect: 'This is incorrect',
+        incomplete: 'This is incomplete',
+        unclear: 'This is unclear',
+        harmful: 'This is harmful',
+        spam: 'This is spam',
+        other: 'See feedback below',
+      };
+      await Notification.create({
+        recipient: target.author,
+        type: 'downvote',
+        title: 'You received feedback on your post',
+        message: reasonText
+          ? `${reasonLabels[reason] || 'Feedback'}: ${reasonText}`
+          : `${reasonLabels[reason] || 'Feedback'}: A downvote was received`,
+        link: `/${targetType === 'Question' ? 'questions' : 'questions'}/${targetId}`,
+        referenceType: targetType,
+        reference: targetId,
+      });
+      emitToUser(target.author.toString(), 'notification:new', { downvote: true });
+    }
+
     releaseVoteLock(req.user._id, targetId);
     res.status(201).json({ message: 'Voted', vote });
   } catch (err) {
@@ -145,6 +168,36 @@ exports.getBatchVoteStatus = async (req, res, next) => {
     const voteMap = {};
     votes.forEach(v => { voteMap[v.target.toString()] = v.voteType; });
     res.json(voteMap);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getDownvoteFeedback = async (req, res, next) => {
+  try {
+    if (!req.user) return next(new AppError('Unauthorized', 401));
+
+    const { targetType, targetId } = req.params;
+    if (!['Question', 'Answer'].includes(targetType)) {
+      return next(new AppError('Invalid target type', 400));
+    }
+
+    const Model = targetType === 'Question' ? Question : Answer;
+    const target = await Model.findById(targetId);
+    if (!target) return next(new AppError('Not found', 404));
+
+    if (target.author.toString() !== req.user._id.toString()) {
+      return next(new AppError('You can only see feedback on your own posts', 403));
+    }
+
+    const feedback = await Vote.find({
+      target: targetId,
+      targetType,
+      voteType: 'downvote',
+      reason: { $exists: true, $ne: null },
+    }).select('reason reasonText createdAt').sort({ createdAt: -1 });
+
+    res.json({ feedback });
   } catch (err) {
     next(err);
   }
