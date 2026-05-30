@@ -33,6 +33,7 @@ export function AuthProvider({ children }) {
     const data = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', data.token);
     setUser(data.user);
+    setLoading(false);
     toast.success('Logged in successfully');
     return data;
   };
@@ -41,6 +42,7 @@ export function AuthProvider({ children }) {
     const data = await api.post('/auth/register', { username, email, password });
     localStorage.setItem('token', data.token);
     setUser(data.user);
+    setLoading(false);
     toast.success('Account created successfully');
     return data;
   };

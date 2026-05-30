@@ -6,6 +6,9 @@ import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 
+const DRAFT_KEY = 'question_draft';
+const DRAFT_TAGS_KEY = 'question_draft_tags';
+
 export default function AskQuestionPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -18,14 +21,31 @@ export default function AskQuestionPage() {
   const [alreadyAskedInfo, setAlreadyAskedInfo] = useState(null);
   const [titleSuggestions, setTitleSuggestions] = useState([]);
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   useEffect(() => {
     if (!user) {
       router.push('/auth?mode=login');
       return;
     }
+    const savedTitle = localStorage.getItem(DRAFT_KEY);
+    const savedTags = localStorage.getItem(DRAFT_TAGS_KEY);
+    if (savedTitle) setForm(f => ({ ...f, title: savedTitle }));
+    if (savedTags) setTags(JSON.parse(savedTags));
     api.get('/tags').then(d => setTagSuggestions(d.tags || [])).catch(() => {});
   }, [user]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (form.title || form.body) {
+        localStorage.setItem(DRAFT_KEY, form.title);
+        localStorage.setItem(DRAFT_TAGS_KEY, JSON.stringify(tags));
+        setDraftSaved(true);
+        setTimeout(() => setDraftSaved(false), 2000);
+      }
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [form.title, form.body, tags]);
 
   const findSimilar = useCallback(async (title, currentTags) => {
     if (!title || title.length < 5) {
@@ -85,6 +105,8 @@ export default function AskQuestionPage() {
     setLoading(true);
     try {
       const data = await api.post('/questions', { title: form.title, body: form.body, tags, anonymous: form.anonymous });
+      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(DRAFT_TAGS_KEY);
       if (data.alreadyAsked) {
         setAlreadyAskedInfo(data.alreadyAsked);
         toast.success('Question posted and flagged as already asked');
@@ -250,6 +272,7 @@ export default function AskQuestionPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {draftSaved && <span className="text-xs text-green-600">Draft saved</span>}
           <button type="submit" disabled={loading} className="btn-primary px-6 py-2.5">
             {loading ? 'Posting...' : 'Post Your Question'}
           </button>

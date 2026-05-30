@@ -36,11 +36,9 @@ export default function OnboardingModal() {
   const [step, setStep] = useState(0);
   const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    if (loading) return;
-    const completed = localStorage.getItem('onboarding_completed');
-    if (completed) return;
-    if (!user) return;
+useEffect(() => {
+    if (!user || loading) return;
+    if (localStorage.getItem('onboarding_completed')) return;
     if (user.role === 'admin' || user.role === 'moderator') return;
     setIsOpen(true);
   }, [user, loading]);
