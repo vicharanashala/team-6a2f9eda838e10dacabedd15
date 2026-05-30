@@ -28,6 +28,7 @@ const userRoutes = require('./routes/users');
 const tagRoutes = require('./routes/tags');
 const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
+const recommendationRoutes = require('./routes/recommendations');
 
 const app = express();
 const server = http.createServer(app);
@@ -60,6 +61,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // 404 handler
 app.use((req, res) => {

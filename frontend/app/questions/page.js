@@ -24,13 +24,23 @@ function QuestionsPageContent() {
 
   useEffect(() => {
     setLoading(true);
-    api.get('/questions', { page, sort, tag })
-      .then(data => {
-        setQuestions(data.questions || []);
-        setPagination(data.pagination);
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    if (sort === 'recommended') {
+      api.get('/recommendations/recommended', { page, limit: 20 })
+        .then(data => {
+          setQuestions(data.questions || []);
+          setPagination(null);
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    } else {
+      api.get('/questions', { page, sort, tag })
+        .then(data => {
+          setQuestions(data.questions || []);
+          setPagination(data.pagination);
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
+    }
   }, [page, sort, tag]);
 
   useEffect(() => {
@@ -84,6 +94,7 @@ function QuestionsPageContent() {
           { value: 'votes', label: 'Most Voted' },
           { value: 'liked', label: 'Most Liked' },
           { value: 'views', label: 'Most Viewed' },
+          { value: 'recommended', label: 'For You' },
         ].map(s => (
           <button
             key={s.value}
@@ -122,7 +133,7 @@ function QuestionsPageContent() {
               <QuestionCard key={q._id} question={q} isSelected={selectedIndex === idx} />
             ))}
           </div>
-          <Pagination pagination={pagination} basePath="/questions" queryParams={{ sort, tag }} />
+          <Pagination pagination={pagination} basePath="/questions" queryParams={sort !== 'recommended' ? { sort, tag } : { tag }} />
         </>
       )}
     </div>

@@ -3,7 +3,7 @@ const Question = require('../models/Question');
 const Answer = require('../models/Answer');
 const { AppError } = require('../middleware/errorHandler');
 const { paginate, buildPaginationMeta } = require('../utils/helpers');
-const { getDashboardStats } = require('../services/analyticsService');
+const { getDashboardStats, getUserAnalytics, getGlobalFAQAnalytics } = require('../services/analyticsService');
 const { banUser, unbanUser } = require('../services/moderationService');
 const { getRedis } = require('../config/redis');
 
@@ -11,6 +11,24 @@ exports.getDashboard = async (req, res, next) => {
   try {
     const stats = await getDashboardStats();
     res.json({ stats });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getUserAnalytics = async (req, res, next) => {
+  try {
+    const data = await getUserAnalytics();
+    res.json({ data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getGlobalFAQAnalytics = async (req, res, next) => {
+  try {
+    const data = await getGlobalFAQAnalytics();
+    res.json({ data });
   } catch (err) {
     next(err);
   }

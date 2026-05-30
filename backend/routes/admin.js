@@ -3,6 +3,8 @@ const { auth, adminOnly } = require('../middleware/auth');
 const ctrl = require('../controllers/adminController');
 
 router.get('/dashboard', auth, adminOnly, ctrl.getDashboard);
+router.get('/user-analytics', auth, adminOnly, ctrl.getUserAnalytics);
+router.get('/faq-analytics', auth, adminOnly, ctrl.getGlobalFAQAnalytics);
 router.get('/users', auth, adminOnly, ctrl.getUsers);
 router.put('/users/:id/role', auth, adminOnly, ctrl.updateUserRole);
 router.post('/users/:id/ban', auth, adminOnly, ctrl.banUser);

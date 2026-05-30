@@ -5,6 +5,7 @@ import api from '@/lib/api';
 
 export default function HomePage() {
   const [faqs, setFaqs] = useState([]);
+  const [trending, setTrending] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -12,6 +13,10 @@ export default function HomePage() {
       .then(data => setFaqs(data.faqs || []))
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    api.get('/recommendations/trending', { limit: 5 })
+      .then(data => setTrending(data.questions || []))
+      .catch(console.error);
   }, []);
 
   return (
@@ -49,9 +54,9 @@ export default function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[1,2,3,4,5,6].map(i => (
                 <div key={i} className="card p-6 animate-pulse">
-                  <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
-                  <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-5 bg-[var(--color-border)] rounded w-1/2 mb-3" />
+                  <div className="h-4 bg-[var(--color-border)] rounded w-full mb-2" />
+                  <div className="h-4 bg-[var(--color-border)] rounded w-3/4" />
                 </div>
               ))}
             </div>
@@ -78,6 +83,35 @@ export default function HomePage() {
             </div>
           )}
         </section>
+
+        {/* Trending Questions */}
+        {trending.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-[var(--color-text)]">Trending This Week</h2>
+              <Link href="/questions?sort=votes" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+View all \u2192
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {trending.map((q, i) => (
+                <Link key={q._id} href={`/questions/${q._id}`} className="card-hover p-4 flex items-start gap-4">
+                  <div className="flex flex-col items-center min-w-[40px]">
+                    <span className="text-lg font-bold text-primary-600">{q.upvotes || 0}</span>
+                    <span className="text-xs text-[var(--color-text-secondary)]">upvotes</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-[var(--color-text)] line-clamp-1">{q.title}</h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-[var(--color-text-secondary)]">{q.answerCount || 0} answers</span>
+                      <span className="text-xs text-[var(--color-text-secondary)]">{q.viewCount || 0} views</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Stats */}
         <section className="card p-8">
