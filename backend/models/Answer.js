@@ -21,6 +21,11 @@ const answerSchema = new mongoose.Schema({
   // Stats
   upvotes: { type: Number, default: 0 },
   downvotes: { type: Number, default: 0 },
+  solvedMyDoubtCount: { type: Number, default: 0 },
+  solvedByUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
 
   // Moderation
   isDeleted: { type: Boolean, default: false },
@@ -41,6 +46,7 @@ const answerSchema = new mongoose.Schema({
 answerSchema.index({ question: 1, createdAt: 1 });
 answerSchema.index({ author: 1 });
 answerSchema.index({ upvotes: -1 });
+answerSchema.index({ solvedMyDoubtCount: -1 });
 answerSchema.index({ isAccepted: 1 });
 answerSchema.index({ isOfficial: 1 });
 

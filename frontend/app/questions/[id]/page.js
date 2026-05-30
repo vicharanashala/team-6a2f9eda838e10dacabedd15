@@ -24,6 +24,8 @@ export default function QuestionDetailPage() {
   const [recentlyPostedId, setRecentlyPostedId] = useState(null);
   const [escalateModal, setEscalateModal] = useState({ open: false });
   const [escalationReason, setEscalationReason] = useState('');
+  const [solvedDoubtAnswers, setSolvedDoubtAnswers] = useState({});
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const fetchQuestion = useCallback(async () => {
     try {
@@ -59,10 +61,16 @@ export default function QuestionDetailPage() {
       socket.on('meToo:updated', (data) => {
         setQuestion(prev => prev ? { ...prev, meTooCount: data.meTooCount } : prev);
       });
+      socket.on('answer:solvedUpdated', (data) => {
+        setAnswers(prev => prev.map(a =>
+          a._id === data.answerId ? { ...a, solvedMyDoubtCount: data.solvedMyDoubtCount } : a
+        ));
+      });
       return () => {
         socket.emit('leave:question', id);
         socket.off('answer:new');
         socket.off('meToo:updated');
+        socket.off('answer:solvedUpdated');
       };
     }
   }, [socket, id]);
@@ -109,6 +117,22 @@ export default function QuestionDetailPage() {
     }
   };
 
+  const handleSolvedMyDoubt = async (answerId) => {
+    if (!user) { toast.error('Please login to use this feature'); return; }
+    try {
+      const data = await api.patch(`/answers/${answerId}/solved-my-doubt`);
+      setSolvedDoubtAnswers(prev => ({
+        ...prev,
+        [answerId]: { count: data.solvedMyDoubtCount, hasSolved: data.hasSolvedMyDoubt }
+      }));
+      if (data.hasSolvedMyDoubt) {
+        toast.success('Marked as solving your doubt!');
+      }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
   const handleSubmitAnswer = async (e) => {
     e.preventDefault();
     if (!user) { toast.error('Please login to answer'); return; }
@@ -134,6 +158,8 @@ export default function QuestionDetailPage() {
       fetchQuestion();
       fetchAnswers();
       toast.success('Answer accepted');
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 3000);
     } catch (err) {
       toast.error(err.message);
     }
@@ -416,6 +442,20 @@ export default function QuestionDetailPage() {
                         <div className="flex items-center gap-2">
                           {answer.isOfficial && <span className="badge-green">Official</span>}
                           {answer.isAccepted && <span className="badge-green">Accepted</span>}
+                          {answer.solvedMyDoubtCount >= 5 && <span className="badge-blue">Helpful ({answer.solvedMyDoubtCount})</span>}
+                          <button
+                            onClick={() => handleSolvedMyDoubt(answer._id)}
+                            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              solvedDoubtAnswers[answer._id]?.hasSolved
+                                ? 'bg-blue-100 text-blue-700 border border-blue-300'
+                                : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300'
+                            }`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Solved My Doubt {solvedDoubtAnswers[answer._id]?.count > 0 && `(${solvedDoubtAnswers[answer._id].count})`}
+                          </button>
                           {question.author?._id === user?._id && !answer.isAccepted && (
                             <button onClick={() => handleAcceptAnswer(answer._id)} className="btn-secondary btn-sm">
                               Accept
@@ -483,6 +523,28 @@ export default function QuestionDetailPage() {
                 Escalate
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Celebration Animation */}
+      {showCelebration && (
+        <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50">
+          <div className="confetti-animation">
+            {[...Array(50)].map((_, i) => (
+              <div
+                key={i}
+                className="confetti-piece"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${Math.random() * 0.5}s`,
+                  backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'][Math.floor(Math.random() * 5)],
+                }}
+              />
+            ))}
+          </div>
+          <div className="bg-green-500 text-white px-8 py-4 rounded-full text-xl font-bold shadow-lg animate-bounce">
+            Your doubt is resolved!
           </div>
         </div>
       )}

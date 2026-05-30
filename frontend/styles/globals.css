@@ -63,6 +63,28 @@
   .badge-yellow {
     @apply badge bg-yellow-100 text-yellow-800;
   }
+  .badge-blue {
+    @apply badge bg-blue-100 text-blue-800;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  animation: confetti-fall 3s ease-in-out forwards;
 }
 
 @layer utilities {
