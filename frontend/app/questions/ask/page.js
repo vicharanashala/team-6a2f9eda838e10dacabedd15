@@ -22,6 +22,7 @@ export default function AskQuestionPage() {
   const [titleSuggestions, setTitleSuggestions] = useState([]);
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -36,15 +37,16 @@ export default function AskQuestionPage() {
   }, [user]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      if (form.title || form.body) {
-        localStorage.setItem(DRAFT_KEY, form.title);
-        localStorage.setItem(DRAFT_TAGS_KEY, JSON.stringify(tags));
-        setDraftSaved(true);
-        setTimeout(() => setDraftSaved(false), 2000);
-      }
-    }, 30000);
-    return () => clearInterval(timer);
+    if (!form.title && !form.body) return;
+    setHasUnsavedChanges(true);
+    const timer = setTimeout(() => {
+      localStorage.setItem(DRAFT_KEY, form.title);
+      localStorage.setItem(DRAFT_TAGS_KEY, JSON.stringify(tags));
+      setDraftSaved(true);
+      setHasUnsavedChanges(false);
+      setTimeout(() => setDraftSaved(false), 2000);
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [form.title, form.body, tags]);
 
   const findSimilar = useCallback(async (title, currentTags) => {
@@ -273,6 +275,7 @@ export default function AskQuestionPage() {
 
         <div className="flex items-center gap-3">
           {draftSaved && <span className="text-xs text-green-600">Draft saved</span>}
+          {hasUnsavedChanges && !draftSaved && <span className="text-xs text-gray-400">Saving...</span>}
           <button type="submit" disabled={loading} className="btn-primary px-6 py-2.5">
             {loading ? 'Posting...' : 'Post Your Question'}
           </button>
