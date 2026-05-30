@@ -40,7 +40,7 @@ export default function HomePage() {
         {/* FAQ Section */}
         <section className="mb-12">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">VINS FAQ Categories</h2>
+            <h2 className="text-2xl font-bold text-[var(--color-text)]">VINS FAQ Categories</h2>
             <Link href="/faqs" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
               View all &rarr;
             </Link>
@@ -67,8 +67,8 @@ export default function HomePage() {
                       <span className="badge-gray text-xs">{faq.category}</span>
                     )}
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{faq.title}</h3>
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{faq.description}</p>
+                  <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">{faq.title}</h3>
+                  <p className="text-sm text-[var(--color-text-secondary)] mb-3 line-clamp-2">{faq.description}</p>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     <span>{faq.itemCount || 0} items</span>
                     <span>{faq.viewCount || 0} views</span>

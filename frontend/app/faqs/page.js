@@ -89,12 +89,12 @@ function FAQsPageContent() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">FAQs</h1>
-        <p className="text-sm text-gray-500 mt-1">Curated answers to commonly asked questions</p>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">FAQs</h1>
+        <p className="text-sm text-[var(--color-text-secondary)] mt-1">Curated answers to commonly asked questions</p>
       </div>
 
       {/* Sort tabs */}
-      <div className="flex gap-1 mb-4 border-b border-gray-200">
+      <div className="flex gap-1 mb-4 border-b border-[var(--color-border)]">
         {[
           { value: 'newest', label: 'Newest' },
           { value: 'views', label: 'Most Viewed' },
@@ -107,7 +107,7 @@ function FAQsPageContent() {
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               sort === s.value
                 ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-border)]'
             }`}
           >
             {s.label}
@@ -120,7 +120,7 @@ function FAQsPageContent() {
         <Link
           href="/faqs"
           className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-            !category ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            !category ? 'bg-primary-600 text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
           }`}
         >
           All
@@ -130,7 +130,7 @@ function FAQsPageContent() {
             key={cat}
             href={`/faqs?category=${cat}`}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium capitalize transition-colors ${
-              category === cat ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              category === cat ? 'bg-primary-600 text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
             }`}
           >
             {cat}
@@ -142,16 +142,16 @@ function FAQsPageContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1,2,3,4,5,6].map(i => (
             <div key={i} className="card p-6 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
-              <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-3/4" />
+              <div className="h-5 bg-[var(--color-border)] rounded w-1/2 mb-3" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-full mb-2" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-3/4" />
             </div>
           ))}
         </div>
       ) : faqs.length === 0 ? (
         <div className="card p-12 text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No FAQs found</h3>
-          <p className="text-gray-500">No FAQs available for this category yet.</p>
+          <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">No FAQs found</h3>
+          <p className="text-[var(--color-text-secondary)]">No FAQs available for this category yet.</p>
         </div>
       ) : (
         <>

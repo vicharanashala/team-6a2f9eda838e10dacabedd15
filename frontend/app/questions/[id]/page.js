@@ -473,7 +473,7 @@ export default function QuestionDetailPage() {
                             </svg>
                             Solved My Doubt {solvedDoubtAnswers[answer._id]?.count > 0 && `(${solvedDoubtAnswers[answer._id].count})`}
                           </button>
-                          {question.author?._id === user?._id && !answer.isAccepted && (
+                          {(user?.role === 'admin' || user?.role === 'moderator') && !answer.isAccepted && (
                             <button onClick={() => handleAcceptAnswer(answer._id)} className="btn-secondary btn-sm">
                               Accept
                             </button>
