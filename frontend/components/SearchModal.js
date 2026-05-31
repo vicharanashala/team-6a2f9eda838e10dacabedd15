@@ -5,6 +5,20 @@ import Link from 'next/link';
 import { formatDate, truncate } from '@/lib/utils';
 import api from '@/lib/api';
 
+const PLACEHOLDER_QUESTIONS = [
+  'Ask a question you have doubts about...',
+  'Search existing questions and answers...',
+  'Find answers in the FAQs section...',
+  'Look up topics by tags...',
+  'Check if your question was already answered...',
+  'Browse questions by category...',
+  'Find an expert answer to your problem...',
+];
+
+let placeholderInterval = null;
+let placeholderIndex = 0;
+let placeholderFading = false;
+
 export default function SearchModal({ isOpen, onClose }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -21,8 +35,48 @@ export default function SearchModal({ isOpen, onClose }) {
       setQuery('');
       setResults([]);
       setSelectedIndex(-1);
+      startPlaceholderRotation();
+    } else {
+      stopPlaceholderRotation();
     }
   }, [isOpen]);
+
+  const startPlaceholderRotation = useCallback(() => {
+    const overlay = document.getElementById('searchPlaceholder');
+    const textEl = document.getElementById('searchPlaceholderText');
+    if (!overlay || !textEl) return;
+
+    const showNext = () => {
+      if (placeholderFading) return;
+      placeholderFading = true;
+      overlay.classList.remove('visible');
+      setTimeout(() => {
+        placeholderIndex = (placeholderIndex + 1) % PLACEHOLDER_QUESTIONS.length;
+        textEl.textContent = PLACEHOLDER_QUESTIONS[placeholderIndex];
+        overlay.classList.add('visible');
+        placeholderFading = false;
+      }, 500);
+    };
+
+    textEl.textContent = PLACEHOLDER_QUESTIONS[0];
+    overlay.classList.add('visible');
+    placeholderInterval = setInterval(showNext, 3000);
+  }, []);
+
+  const stopPlaceholderRotation = useCallback(() => {
+    if (placeholderInterval) {
+      clearInterval(placeholderInterval);
+      placeholderInterval = null;
+    }
+    const overlay = document.getElementById('searchPlaceholder');
+    if (overlay) overlay.classList.remove('visible');
+  }, []);
+
+  const resetPlaceholderRotation = useCallback(() => {
+    stopPlaceholderRotation();
+    placeholderIndex = 0;
+    startPlaceholderRotation();
+  }, [stopPlaceholderRotation, startPlaceholderRotation]);
 
   useEffect(() => {
     const search = async () => {
@@ -45,6 +99,14 @@ export default function SearchModal({ isOpen, onClose }) {
     const debounce = setTimeout(search, 200);
     return () => clearTimeout(debounce);
   }, [query, type]);
+
+  useEffect(() => {
+    if (query.trim()) {
+      stopPlaceholderRotation();
+    } else if (isOpen) {
+      resetPlaceholderRotation();
+    }
+  }, [query, isOpen]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'ArrowDown') {
@@ -110,9 +172,11 @@ export default function SearchModal({ isOpen, onClose }) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search questions, FAQs, users..."
-                className="flex-1 text-lg outline-none bg-transparent text-[var(--color-text)] placeholder-[var(--color-text-secondary)]"
+                className="flex-1 text-lg outline-none bg-transparent text-[var(--color-text)] relative z-10"
               />
+              <div className="search-placeholder-overlay" id="searchPlaceholder">
+                <span className="search-placeholder-text" id="searchPlaceholderText"></span>
+              </div>
               {loading && (
                 <svg className="animate-spin w-5 h-5 text-[var(--color-text-secondary)]" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
