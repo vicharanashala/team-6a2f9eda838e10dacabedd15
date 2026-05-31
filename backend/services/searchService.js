@@ -331,13 +331,19 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
       [INDEX_USERS]: 'user',
     };
 
-    return {
-      results: result.hits.hits.map(h => ({
+    let results = result.hits.hits.map(h => ({
         id: h._id,
         ...h._source,
         _type: indexToType[h._index] || 'unknown',
         score: h._score,
-      })),
+      }));
+
+    if (type === 'users') {
+      results.sort((a, b) => (a.displayName || a.username || '').localeCompare(b.displayName || b.username || ''));
+    }
+
+    return {
+      results,
       total: result.hits.total.value,
       page,
       limit,
@@ -411,7 +417,7 @@ const syncToElasticsearch = async () => {
       console.log(`Synced ${faqs.length} FAQs with items`);
     }
 
-    if (uCount === 0 && mongoUsers > 0) {
+    if (uCount !== mongoUsers) {
       console.log(`Syncing ${mongoUsers} users to Elasticsearch...`);
       const users = await User.find();
       for (const u of users) {

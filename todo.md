@@ -242,10 +242,11 @@
 - Moderators can mark users as "verified instructor"
 - Special badge displayed next to name on answers
 - Helps students trust the answer source
-6. Downvote Feedback (required)
-- When a question/answer gets a downvote, prompt the downvoter to optionally leave a one-line reason
-- Reason shown anonymously to author
-- Helps students improve rather than just getting rejected
+- [x] 6. Downvote Feedback (required)
+  - When a question/answer gets a downvote, prompt the downvoter to optionally leave a reason
+  - 6 predefined reasons (incorrect, incomplete, unclear, harmful, spam, other)
+  - Free-text field for elaboration
+  - Reason shown anonymously to the post author to help them improve
 7. Quick Reaction Emojis on Answers
 - Beyond upvote/downvote: 😂 funny, 🙏 helpful, ❓ unclear
 - Aggregated as small icon counts below the answer
