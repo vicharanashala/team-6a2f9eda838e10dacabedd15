@@ -142,7 +142,7 @@ function QuestionsPageContent() {
 
 export default function QuestionsPage() {
   return (
-    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-8 animate-pulse"><div className="h-8 w-48 bg-gray-200 rounded mb-6" /></div>}>
+    <Suspense fallback={<div className="max-w-7xl mx-auto px-4 py-8 animate-pulse"><div className="h-8 w-48 bg-[var(--color-border)] rounded mb-6" /></div>}>
       <QuestionsPageContent />
     </Suspense>
   );

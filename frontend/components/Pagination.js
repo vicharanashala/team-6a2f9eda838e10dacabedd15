@@ -35,7 +35,7 @@ export default function Pagination({ pagination, basePath, queryParams = {} }) {
             className={`px-3 py-1.5 text-sm rounded-lg ${
               p === page
                 ? 'bg-primary-600 text-white'
-                : 'text-gray-600 hover:bg-gray-100'
+                : 'text-[var(--color-text-secondary)] hover:bg-gray-100 dark:hover:bg-gray-700'
             }`}
           >
             {p}

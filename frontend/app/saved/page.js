@@ -187,21 +187,21 @@ export default function SavedPage() {
                     <span className="badge-gray text-xs">{typeLabel}</span>
                     {isFAQ && target?.isOfficial && <span className="badge-green text-xs">Official</span>}
                   </div>
-                  <h3 className="text-base font-semibold text-gray-900 hover:text-primary-600 mb-1">
+                  <h3 className="text-base font-semibold text-[var(--color-text)] hover:text-primary-600 mb-1">
                     {target?.title || target?.question || 'Untitled'}
                   </h3>
-                  {!isFAQ && target?.body && (
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                   {!isFAQ && target?.body && (
+                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2 mb-2">
                       {target.body.slice(0, 200)}
                     </p>
                   )}
                   {isFAQ && target?.description && (
-                    <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2 mb-2">
                       {target.description}
                     </p>
                   )}
                   {item.notes && (
-                    <p className="text-sm italic text-gray-500 mb-2">Note: {item.notes}</p>
+                    <p className="text-sm italic text-[var(--color-text-secondary)] mb-2">Note: {item.notes}</p>
                   )}
                   {item.tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
@@ -210,7 +210,7 @@ export default function SavedPage() {
                       ))}
                     </div>
                   )}
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
                     {!isFAQ && <span>{target?.answerCount || 0} answers</span>}
                     {!isFAQ && <span>{target?.upvotes || 0} votes</span>}
                     {isFAQ && <span>{target?.viewCount || 0} views</span>}
@@ -221,7 +221,7 @@ export default function SavedPage() {
               <div className="flex flex-col gap-1">
                 <button
                   onClick={(e) => startEdit(item, e)}
-                  className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
+                  className="p-1.5 text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                   title="Edit"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -230,7 +230,7 @@ export default function SavedPage() {
                 </button>
                 <button
                   onClick={(e) => isFAQ ? handleUnsaveFAQ(target?._id, e) : handleUnsaveQuestion(target?._id, e)}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+                  className="p-1.5 text-[var(--color-text-secondary)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                   title="Remove"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -250,16 +250,16 @@ export default function SavedPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Saved</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">Saved</h1>
         <Link href="/questions" className="btn-secondary btn-sm">Browse Questions</Link>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4 border-b border-gray-200">
+      <div className="flex gap-1 mb-4 border-b border-[var(--color-border)]">
         <button
           onClick={() => { setTab('questions'); setSelectedTag(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'questions' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            tab === 'questions' ? 'border-primary-600 text-primary-600' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
           }`}
         >
           Questions
@@ -267,7 +267,7 @@ export default function SavedPage() {
         <button
           onClick={() => { setTab('faqs'); setSelectedTag(''); }}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-            tab === 'faqs' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            tab === 'faqs' ? 'border-primary-600 text-primary-600' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
           }`}
         >
           FAQs
@@ -279,7 +279,7 @@ export default function SavedPage() {
           <button
             onClick={() => setSelectedTag('')}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-              !selectedTag ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              !selectedTag ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
             All
@@ -289,7 +289,7 @@ export default function SavedPage() {
               key={tag}
               onClick={() => setSelectedTag(tag)}
               className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors capitalize ${
-                selectedTag === tag ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                selectedTag === tag ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               {tag}
@@ -302,16 +302,16 @@ export default function SavedPage() {
         <div className="space-y-4">
           {[1,2,3].map(i => (
             <div key={i} className="card p-6 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-3" />
-              <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-1/2" />
+              <div className="h-5 bg-[var(--color-border)] rounded w-3/4 mb-3" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-full mb-2" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-1/2" />
             </div>
           ))}
         </div>
       ) : currentSaved.length === 0 ? (
         <div className="card p-12 text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No saved {tab}</h3>
-          <p className="text-gray-500">Save {tab} to reference them later</p>
+          <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">No saved {tab}</h3>
+          <p className="text-[var(--color-text-secondary)]">Save {tab} to reference them later</p>
           <Link href={tab === 'questions' ? '/questions' : '/faqs'} className="btn-primary mt-4">Browse {tab}</Link>
         </div>
       ) : (
@@ -327,7 +327,7 @@ export default function SavedPage() {
               key={i + 1}
               onClick={() => tab === 'questions' ? fetchSavedQuestions(selectedTag, i + 1) : fetchSavedFaqs(selectedTag, i + 1)}
               className={`px-3 py-1 text-sm rounded ${
-                currentPagination.page === i + 1 ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                currentPagination.page === i + 1 ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
               {i + 1}

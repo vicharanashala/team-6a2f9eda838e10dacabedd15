@@ -158,7 +158,7 @@ export default function QuestionCard({ question }) {
                 {question.author?.avatar ? (
                   <img src={question.author?.avatar} alt="" className="w-4 h-4 rounded-full" />
                 ) : (
-                  <span className="w-4 h-4 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-[10px] font-medium">
+                  <span className="w-4 h-4 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-300 flex items-center justify-center text-[10px] font-medium">
                     {(question.author?.displayName || question.author?.username || '?')[0]}
                   </span>
                 )}

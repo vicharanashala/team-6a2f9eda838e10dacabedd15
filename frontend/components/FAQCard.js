@@ -52,7 +52,7 @@ export default function FAQCard({ faq, isSelected, onSelect }) {
           className={`p-1.5 rounded shrink-0 transition-colors ${
             isSaved
               ? 'text-primary-600 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30'
-              : 'text-gray-400 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+              : 'text-gray-400 dark:text-gray-500 hover:text-primary-600 hover:bg-gray-100 dark:hover:bg-gray-700'
           }`}
           title={isSaved ? 'Unsave' : 'Save'}
         >

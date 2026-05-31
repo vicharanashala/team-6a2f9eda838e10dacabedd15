@@ -74,7 +74,7 @@ export default function HomePage() {
                   </div>
                   <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">{faq.title}</h3>
                   <p className="text-sm text-[var(--color-text-secondary)] mb-3 line-clamp-2">{faq.description}</p>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <div className="flex items-center gap-3 text-xs text-[var(--color-text-secondary)]">
                     <span>{faq.itemCount || 0} items</span>
                     <span>{faq.viewCount || 0} views</span>
                   </div>
@@ -114,6 +114,7 @@ View all &rarr;
         )}
 
         
+      </div>
     </div>
   );
 }

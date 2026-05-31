@@ -78,7 +78,7 @@ export default function FAQDetailPage() {
 
   if (!faq) return (
     <div className="max-w-3xl mx-auto px-4 py-8 text-center">
-      <h2 className="text-xl font-semibold text-gray-900 mb-2">FAQ not found</h2>
+      <h2 className="text-xl font-semibold text-[var(--color-text)] mb-2">FAQ not found</h2>
       <Link href="/faqs" className="text-primary-600 hover:text-primary-700">Browse all FAQs</Link>
     </div>
   );
@@ -88,13 +88,13 @@ export default function FAQDetailPage() {
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <Link href="/faqs" className="text-sm text-gray-500 hover:text-gray-700">&larr; Back to FAQs</Link>
+            <Link href="/faqs" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">&larr; Back to FAQs</Link>
             <div className="flex items-center gap-2 mt-2 mb-2">
               {faq.isOfficial && <span className="badge-green">Official</span>}
               {faq.category && <span className="badge-gray capitalize">{faq.category}</span>}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{faq.title}</h1>
-            {faq.description && <p className="text-gray-600 mt-2">{faq.description}</p>}
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text)]">{faq.title}</h1>
+            {faq.description && <p className="text-[var(--color-text-secondary)] mt-2">{faq.description}</p>}
           </div>
           <button onClick={handleSave} className="btn-secondary btn-sm shrink-0">
             {isSaved ? 'Saved' : 'Save'}
@@ -105,7 +105,7 @@ export default function FAQDetailPage() {
       {/* Sidebar navigation */}
       {faq.items?.length > 1 && (
         <div className="card p-4 mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">On this page</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2">On this page</h3>
           <nav className="space-y-1">
             {faq.items.filter(i => i.isPublished).map((item, index) => (
               <button
@@ -115,7 +115,7 @@ export default function FAQDetailPage() {
                   document.getElementById(`item-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
                 className={`block w-full text-left px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  activeItem === index ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-50'
+                  activeItem === index ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium' : 'text-[var(--color-text-secondary)] hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
               >
                 {item.question}
@@ -133,7 +133,7 @@ export default function FAQDetailPage() {
             id={`item-${index}`}
             className={`card p-6 transition-all ${activeItem === index ? 'ring-2 ring-primary-200' : ''}`}
           >
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">{item.question}</h2>
+            <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">{item.question}</h2>
             <MarkdownRenderer content={item.answer} />
             {item.tags?.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-3">
@@ -142,7 +142,7 @@ export default function FAQDetailPage() {
                 ))}
               </div>
             )}
-            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100 text-xs text-gray-500">
+            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--color-border)] text-xs text-[var(--color-text-secondary)]">
               <span>Was this helpful?</span>
               <button onClick={() => handleFeedback(item._id, true)} className="flex items-center gap-1 hover:text-green-600">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" /></svg>
@@ -165,7 +165,7 @@ export default function FAQDetailPage() {
         </div>
       )}
 
-      <div className="mt-6 text-xs text-gray-400">
+      <div className="mt-6 text-xs text-[var(--color-text-secondary)]">
         {faq.viewCount} views &middot; Last updated {formatDate(faq.updatedAt)}
       </div>
     </div>

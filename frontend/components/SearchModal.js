@@ -101,7 +101,7 @@ export default function SearchModal({ isOpen, onClose }) {
         <div className="relative bg-[var(--color-bg-secondary)] rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
           <div className="p-4 border-b border-[var(--color-border)]">
             <div className="flex items-center gap-3">
-              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -111,15 +111,15 @@ export default function SearchModal({ isOpen, onClose }) {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search questions, FAQs, users..."
-                className="flex-1 text-lg outline-none placeholder-gray-400"
+                className="flex-1 text-lg outline-none bg-transparent text-[var(--color-text)] placeholder-[var(--color-text-secondary)]"
               />
               {loading && (
-                <svg className="animate-spin w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin w-5 h-5 text-[var(--color-text-secondary)]" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
               )}
-              <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded">ESC</kbd>
+              <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] bg-gray-100 dark:bg-gray-700 rounded">ESC</kbd>
             </div>
             <div className="flex gap-2 mt-3">
               {['', 'questions', 'faqs', 'users'].map(t => (
@@ -156,7 +156,7 @@ export default function SearchModal({ isOpen, onClose }) {
                         <span className="badge-gray text-xs capitalize mt-1 shrink-0">{typeLabel}</span>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-semibold text-[var(--color-text)] truncate">{title}</h4>
-                          {desc && <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{truncate(desc, 100)}</p>}
+                          {desc && <p className="text-xs text-[var(--color-text-secondary)] line-clamp-1 mt-0.5">{truncate(desc, 100)}</p>}
                           {result.tags?.length > 0 && (
                             <div className="flex gap-1 mt-1">
                               {result.tags.slice(0, 3).map(tag => (
@@ -166,7 +166,7 @@ export default function SearchModal({ isOpen, onClose }) {
                           )}
                         </div>
                         {selectedIndex === index && (
-                          <span className="text-xs text-gray-400 shrink-0">Enter to select</span>
+                          <span className="text-xs text-[var(--color-text-secondary)] shrink-0">Enter to select</span>
                         )}
                       </button>
                     </li>
@@ -175,16 +175,16 @@ export default function SearchModal({ isOpen, onClose }) {
               </ul>
             ) : query.trim() && !loading ? (
               <div className="py-12 text-center">
-                <p className="text-gray-500 text-sm">No results found for "{query}"</p>
-                <p className="text-gray-400 text-xs mt-1">Press Enter to search all pages</p>
+                <p className="text-[var(--color-text-secondary)] text-sm">No results found for "{query}"</p>
+                <p className="text-[var(--color-text-secondary)] text-xs mt-1 opacity-60">Press Enter to search all pages</p>
               </div>
             ) : !query.trim() ? (
               <div className="py-8 text-center">
-                <p className="text-gray-500 text-sm">Type to search...</p>
-                <div className="flex items-center justify-center gap-4 mt-3 text-xs text-gray-400">
-                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 rounded">↑</kbd><kbd className="px-1.5 py-0.5 bg-gray-100 rounded ml-1">↓</kbd> navigate</span>
-                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 rounded">Enter</kbd> select</span>
-                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 rounded">Esc</kbd> close</span>
+                <p className="text-[var(--color-text-secondary)] text-sm">Type to search...</p>
+                <div className="flex items-center justify-center gap-4 mt-3 text-xs text-[var(--color-text-secondary)]">
+                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">↑</kbd><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded ml-1">↓</kbd> navigate</span>
+                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Enter</kbd> select</span>
+                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Esc</kbd> close</span>
                 </div>
               </div>
             ) : null}

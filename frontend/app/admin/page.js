@@ -88,20 +88,20 @@ export default function AdminPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+        <h1 className="text-2xl font-bold text-[var(--color-text)]">Admin Panel</h1>
         {user?.role === 'admin' && (
           <button onClick={clearCache} className="btn-secondary btn-sm">Clear Cache</button>
         )}
       </div>
 
       {/* Tab navigation */}
-      <div className="flex gap-1 mb-6 border-b border-gray-200">
+      <div className="flex gap-1 mb-6 border-b border-[var(--color-border)]">
         {tabs.map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-              tab === t ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+              tab === t ? 'border-primary-600 text-primary-600' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
             }`}
           >
             {t}
@@ -111,8 +111,8 @@ export default function AdminPage() {
 
       {loading ? (
         <div className="card p-8 animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4" />
-          <div className="h-4 bg-gray-200 rounded w-1/2" />
+          <div className="h-8 bg-[var(--color-border)] rounded w-1/4" />
+          <div className="h-4 bg-[var(--color-border)] rounded w-1/2" />
         </div>
       ) : tab === 'dashboard' && stats ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -128,7 +128,7 @@ export default function AdminPage() {
           ].map(item => (
             <div key={item.label} className="card p-4 text-center">
               <p className="text-2xl font-bold text-primary-600">{item.value}</p>
-              <p className="text-xs text-gray-500 mt-1">{item.label}</p>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-1">{item.label}</p>
             </div>
           ))}
         </div>
@@ -137,30 +137,30 @@ export default function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">User</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Email</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Role</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Status</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Joined</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-700">Actions</th>
+                <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">User</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Email</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Role</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Status</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Joined</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-[var(--color-border)]">
                 {users.map(u => (
-                  <tr key={u._id} className="hover:bg-gray-50">
+                  <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium text-gray-900">{u.displayName || u.username}</p>
-                        <p className="text-xs text-gray-500">@{u.username}</p>
+                        <p className="font-medium text-[var(--color-text)]">{u.displayName || u.username}</p>
+                        <p className="text-xs text-[var(--color-text-secondary)]">@{u.username}</p>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)]">{u.email}</td>
                     <td className="px-4 py-3">
                       <select
                         value={u.role}
                         onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                        className="text-xs border border-gray-300 rounded px-2 py-1"
+                        className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-[var(--color-bg)] text-[var(--color-text)]"
                       >
                         <option value="user">User</option>
                         <option value="moderator">Moderator</option>
@@ -174,7 +174,7 @@ export default function AdminPage() {
                         <span className="badge-green">Active</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(u.createdAt)}</td>
+                    <td className="px-4 py-3 text-[var(--color-text-secondary)] text-xs">{formatDate(u.createdAt)}</td>
                     <td className="px-4 py-3">
                       {u.isBanned ? (
                         <button onClick={() => handleUnban(u._id)} className="btn-secondary btn-sm">Unban</button>
@@ -191,32 +191,32 @@ export default function AdminPage() {
       ) : tab === 'flagged' ? (
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Flagged Questions ({flaggedQs.length})</h3>
+            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">Flagged Questions ({flaggedQs.length})</h3>
             {flaggedQs.length === 0 ? (
-              <div className="card p-4 text-sm text-gray-500">No flagged questions</div>
+              <div className="card p-4 text-sm text-[var(--color-text-secondary)]">No flagged questions</div>
             ) : (
               <div className="space-y-2">
                 {flaggedQs.map(q => (
                   <div key={q._id} className="card p-4">
-                    <p className="font-medium text-gray-900">{q.title}</p>
-                    <p className="text-xs text-red-600 mt-1">Reason: {q.flagReason}</p>
-                    <p className="text-xs text-gray-500 mt-1">Flagged by: {q.flaggedBy?.username}</p>
+                    <p className="font-medium text-[var(--color-text)]">{q.title}</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">Reason: {q.flagReason}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-1">Flagged by: {q.flaggedBy?.username}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Flagged Answers ({flaggedAs.length})</h3>
+            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">Flagged Answers ({flaggedAs.length})</h3>
             {flaggedAs.length === 0 ? (
-              <div className="card p-4 text-sm text-gray-500">No flagged answers</div>
+              <div className="card p-4 text-sm text-[var(--color-text-secondary)]">No flagged answers</div>
             ) : (
               <div className="space-y-2">
                 {flaggedAs.map(a => (
                   <div key={a._id} className="card p-4">
-                    <p className="text-sm text-gray-700 line-clamp-2">{a.body}</p>
-                    <p className="text-xs text-red-600 mt-1">Reason: {a.flagReason}</p>
-                    <p className="text-xs text-gray-500 mt-1">Flagged by: {a.flaggedBy?.username}</p>
+                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2">{a.body}</p>
+                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">Reason: {a.flagReason}</p>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-1">Flagged by: {a.flaggedBy?.username}</p>
                   </div>
                 ))}
               </div>

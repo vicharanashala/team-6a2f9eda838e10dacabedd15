@@ -43,16 +43,16 @@ function AuthPageContent() {
       <div className="w-full max-w-md">
         <div className="card p-8">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-2xl font-bold text-[var(--color-text)]">
               {mode === 'login' ? 'Welcome back' : 'Create account'}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
               {mode === 'login' ? 'Sign in to your account' : 'Join the community'}
             </p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
               {error}
             </div>
           )}
@@ -100,7 +100,7 @@ function AuthPageContent() {
             </button>
           </form>
 
-          <div className="mt-4 text-center text-sm text-gray-500">
+          <div className="mt-4 text-center text-sm text-[var(--color-text-secondary)]">
             {mode === 'login' ? (
               <>
                 Don&apos;t have an account?{' '}
@@ -125,7 +125,7 @@ function AuthPageContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={<div className="min-h-[80vh] flex items-center justify-center animate-pulse"><div className="h-8 w-48 bg-gray-200 rounded" /></div>}>
+    <Suspense fallback={<div className="min-h-[80vh] flex items-center justify-center animate-pulse"><div className="h-8 w-48 bg-[var(--color-border)] rounded" /></div>}>
       <AuthPageContent />
     </Suspense>
   );

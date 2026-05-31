@@ -49,7 +49,7 @@ function SearchPageContent() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Search</h1>
+      <h1 className="text-2xl font-bold text-[var(--color-text)] mb-6">Search</h1>
 
       <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
         <input
@@ -70,7 +70,7 @@ function SearchPageContent() {
             key={t}
             onClick={() => { setType(t); if (query) router.push(`/search?q=${encodeURIComponent(query)}&type=${t}`); }}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium capitalize transition-colors ${
-              type === t ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              type === t ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
           >
             {t || 'All'}
@@ -81,13 +81,13 @@ function SearchPageContent() {
       {/* Suggestions */}
       {!searchParams.get('q') && suggestions.length > 0 && (
         <div className="card p-4 mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Trending searches</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2">Trending searches</h3>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((s, i) => (
               <Link
                 key={i}
                 href={`/search?q=${encodeURIComponent(s.query)}`}
-                className="badge-gray hover:bg-gray-200 cursor-pointer"
+                className="badge-gray hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer"
               >
                 {s.query}
               </Link>
@@ -100,20 +100,20 @@ function SearchPageContent() {
         <div className="space-y-4">
           {[1,2,3].map(i => (
             <div key={i} className="card p-6 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-3" />
-              <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-1/2" />
+              <div className="h-5 bg-[var(--color-border)] rounded w-3/4 mb-3" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-full mb-2" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-1/2" />
             </div>
           ))}
         </div>
       ) : results.length === 0 && searchParams.get('q') ? (
         <div className="card p-12 text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No results found</h3>
-          <p className="text-gray-500">Try different keywords or browse categories</p>
+          <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">No results found</h3>
+          <p className="text-[var(--color-text-secondary)]">Try different keywords or browse categories</p>
         </div>
       ) : (
         <>
-          {total > 0 && <p className="text-sm text-gray-500 mb-4">{total} results found</p>}
+          {total > 0 && <p className="text-sm text-[var(--color-text-secondary)] mb-4">{total} results found</p>}
           <div className="space-y-4">
             {results.map((result) => {
               const typeLabel = result.body !== undefined ? 'question' : result.description !== undefined ? 'faq' : 'user';
@@ -125,10 +125,10 @@ function SearchPageContent() {
                 <Link key={result.id} href={link} className="card-hover p-4 block">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="badge-gray text-xs capitalize">{typeLabel}</span>
-                    {result.score && <span className="text-xs text-gray-400">Relevance: {Math.round(result.score * 100)}%</span>}
+                    {result.score && <span className="text-xs text-[var(--color-text-secondary)]">Relevance: {Math.round(result.score * 100)}%</span>}
                   </div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-1">{title}</h3>
-                  {desc && <p className="text-sm text-gray-600 line-clamp-2">{truncate(desc, 200)}</p>}
+                  <h3 className="text-base font-semibold text-[var(--color-text)] mb-1">{title}</h3>
+                  {desc && <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2">{truncate(desc, 200)}</p>}
                   {result.tags?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {result.tags.slice(0, 3).map(tag => (
@@ -148,7 +148,7 @@ function SearchPageContent() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="max-w-4xl mx-auto px-4 py-8 animate-pulse"><div className="h-8 w-48 bg-gray-200 rounded mb-6" /></div>}>
+    <Suspense fallback={<div className="max-w-4xl mx-auto px-4 py-8 animate-pulse"><div className="h-8 w-48 bg-[var(--color-border)] rounded mb-6" /></div>}>
       <SearchPageContent />
     </Suspense>
   );

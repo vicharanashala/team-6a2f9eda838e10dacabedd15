@@ -17,8 +17,8 @@ export default function TagsPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Tags</h1>
-      <p className="text-sm text-gray-500 mb-6">Browse questions by topic or category</p>
+      <h1 className="text-2xl font-bold text-[var(--color-text)] mb-2">Tags</h1>
+      <p className="text-sm text-[var(--color-text-secondary)] mb-6">Browse questions by topic or category</p>
 
       <input
         type="text"
@@ -32,14 +32,14 @@ export default function TagsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {[1,2,3,4,5,6].map(i => (
             <div key={i} className="card p-6 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-1/3 mb-3" />
-              <div className="h-4 bg-gray-200 rounded w-full" />
+              <div className="h-5 bg-[var(--color-border)] rounded w-1/3 mb-3" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-full" />
             </div>
           ))}
         </div>
       ) : tags.length === 0 ? (
         <div className="card p-12 text-center">
-          <p className="text-gray-500">No tags found</p>
+          <p className="text-[var(--color-text-secondary)]">No tags found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -50,9 +50,9 @@ export default function TagsPage() {
                 {tag.isOfficial && <span className="badge-green text-xs">Official</span>}
               </div>
               {tag.description && (
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{tag.description}</p>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-3 line-clamp-2">{tag.description}</p>
               )}
-              <div className="flex items-center justify-between text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
                 <span>{tag.questionCount || 0} questions</span>
                 {tag.category && <span className="capitalize">{tag.category}</span>}
               </div>

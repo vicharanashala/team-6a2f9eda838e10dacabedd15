@@ -63,7 +63,7 @@ export default function NotificationsPage() {
 
   if (!user) return (
     <div className="max-w-3xl mx-auto px-4 py-8 text-center">
-      <p className="text-gray-500">Please login to view notifications</p>
+      <p className="text-[var(--color-text-secondary)]">Please login to view notifications</p>
       <Link href="/auth?mode=login" className="btn-primary mt-4 inline-block">Login</Link>
     </div>
   );
@@ -72,8 +72,8 @@ export default function NotificationsPage() {
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
-          {unreadCount > 0 && <p className="text-sm text-gray-500">{unreadCount} unread</p>}
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">Notifications</h1>
+          {unreadCount > 0 && <p className="text-sm text-[var(--color-text-secondary)]">{unreadCount} unread</p>}
         </div>
         {unreadCount > 0 && (
           <button onClick={markAllRead} className="btn-secondary btn-sm">Mark all as read</button>
@@ -84,15 +84,15 @@ export default function NotificationsPage() {
         <div className="space-y-3">
           {[1,2,3,4].map(i => (
             <div key={i} className="card p-4 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-3/4" />
             </div>
           ))}
         </div>
       ) : notifications.length === 0 ? (
         <div className="card p-12 text-center">
           <p className="text-4xl mb-3">🔔</p>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-          <p className="text-gray-500">You&apos;re all caught up!</p>
+          <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">No notifications</h3>
+          <p className="text-[var(--color-text-secondary)]">You&apos;re all caught up!</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -100,7 +100,7 @@ export default function NotificationsPage() {
             <div
               key={notification._id}
               className={`card p-4 flex items-start gap-3 transition-colors ${
-                !notification.isRead ? 'bg-primary-50 border-primary-200' : ''
+                !notification.isRead ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800' : ''
               }`}
             >
               <span className="text-xl shrink-0">{notificationIcons[notification.type] || '🔔'}</span>
@@ -116,12 +116,12 @@ export default function NotificationsPage() {
                 ) : (
                   <p className={`text-sm ${!notification.isRead ? 'font-medium' : ''}`}>{notification.title}</p>
                 )}
-                {notification.message && <p className="text-xs text-gray-500 mt-0.5">{notification.message}</p>}
-                <p className="text-xs text-gray-400 mt-1">{formatDate(notification.createdAt)}</p>
+                {notification.message && <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">{notification.message}</p>}
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1 opacity-60">{formatDate(notification.createdAt)}</p>
               </div>
               <button
                 onClick={() => archiveNotification(notification._id)}
-                className="text-gray-400 hover:text-gray-600 text-sm shrink-0"
+                className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm shrink-0"
                 title="Archive"
               >
                 &times;
