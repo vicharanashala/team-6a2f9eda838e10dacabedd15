@@ -13,6 +13,7 @@ router.patch('/me/saved/:questionId', auth, ctrl.updateSavedQuestion);
 router.delete('/me/saved/:questionId', auth, ctrl.unsaveQuestion);
 
 router.get('/me/me-too', auth, ctrl.getMeTooQuestions);
+router.patch('/me/onboarding', auth, ctrl.completeOnboarding);
 
 router.get('/me/saved/faqs', auth, ctrl.getSavedFAQs);
 router.get('/me/saved/faqs/tags', auth, ctrl.getSavedFAQTags);

@@ -52,6 +52,9 @@ const userSchema = new mongoose.Schema({
   banReason: { type: String },
   flags: { type: Number, default: 0 },
   lastActive: { type: Date },
+
+  // Onboarding
+  hasCompletedOnboarding: { type: Boolean, default: false },
 }, { timestamps: true });
 
 userSchema.index({ username: 'text', displayName: 'text', bio: 'text' });
@@ -81,6 +84,7 @@ userSchema.methods.toPublicJSON = function () {
     badges: this.badges,
     questionCount: this.questionCount,
     answerCount: this.answerCount,
+    hasCompletedOnboarding: this.hasCompletedOnboarding,
     createdAt: this.createdAt,
   };
 };

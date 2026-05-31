@@ -87,6 +87,15 @@ exports.getMeTooQuestions = async (req, res, next) => {
   }
 };
 
+exports.completeOnboarding = async (req, res, next) => {
+  try {
+    await User.findByIdAndUpdate(req.user._id, { hasCompletedOnboarding: true });
+    res.json({ message: 'Onboarding completed' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 exports.saveQuestion = async (req, res, next) => {
   try {
     const { questionId } = req.body;

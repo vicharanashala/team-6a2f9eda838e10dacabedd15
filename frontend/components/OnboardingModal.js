@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import api from '@/lib/api';
 
 const STEPS = [
   {
@@ -38,13 +39,15 @@ export default function OnboardingModal() {
 
 useEffect(() => {
     if (!user || loading) return;
-    if (localStorage.getItem('onboarding_completed')) return;
+    if (user.hasCompletedOnboarding) return;
     if (user.role === 'admin' || user.role === 'moderator') return;
     setIsOpen(true);
   }, [user, loading]);
 
-  const handleDismiss = () => {
-    localStorage.setItem('onboarding_completed', '1');
+  const handleDismiss = async () => {
+    try {
+      await api.patch('/users/me/onboarding');
+    } catch (_) {}
     setDismissed(true);
     setIsOpen(false);
   };
