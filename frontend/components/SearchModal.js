@@ -110,14 +110,14 @@ export default function SearchModal({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="min-h-screen px-4 pt-20 pb-8 flex items-start justify-center">
-        <div className="fixed inset-0 bg-black/50 transition-opacity" onClick={onClose} />
-        <div className="relative bg-[var(--color-bg-secondary)] rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-          <div className="p-4 border-b border-[var(--color-border)]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+        <div className="relative bg-[var(--color-bg-secondary)] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-[var(--color-border)] animate-scale-in">
+          <div className="p-5 border-b border-[var(--color-border)]">
             <div className="flex items-center gap-3 relative">
-              <svg className="w-5 h-5 text-[var(--color-text-secondary)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-[var(--color-text-muted)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <div className="flex-1 relative" style={{ height: '40px' }}>
+              <div className="flex-1 relative" style={{ height: '44px' }}>
                 <input
                   ref={inputRef}
                   type="text"
@@ -125,28 +125,32 @@ export default function SearchModal({ isOpen, onClose }) {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="w-full h-full text-lg outline-none bg-transparent text-[var(--color-text)] relative z-10"
+                  placeholder=""
                 />
                 {!query && (
-                  <span className="absolute inset-0 flex items-center text-lg text-[var(--color-text-secondary)] pointer-events-none overflow-hidden whitespace-nowrap">
+                  <span className="absolute inset-0 flex items-center text-lg text-[var(--color-text-muted)] pointer-events-none overflow-hidden whitespace-nowrap">
                     {placeholderText}
                   </span>
                 )}
               </div>
-              {loading && (
-                <svg className="animate-spin w-5 h-5 text-[var(--color-text-secondary)]" fill="none" viewBox="0 0 24 24">
+              {loading ? (
+                <svg className="animate-spin w-5 h-5 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
+              ) : (
+                <kbd className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)] rounded-md border border-[var(--color-border)]">ESC</kbd>
               )}
-              <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] bg-gray-100 dark:bg-gray-700 rounded">ESC</kbd>
             </div>
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-4">
               {['', 'questions', 'faqs', 'users'].map(t => (
                 <button
                   key={t}
                   onClick={() => setType(t)}
-                  className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
-                    type === t ? 'bg-primary-600 text-white' : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)]'
+                  className={`px-4 py-1.5 text-sm rounded-lg font-medium transition-all ${
+                    type === t 
+                      ? 'bg-[var(--color-primary)] text-white shadow-sm' 
+                      : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-border)] hover:text-[var(--color-text)]'
                   }`}
                 >
                   {t || 'All'}
@@ -168,16 +172,18 @@ export default function SearchModal({ isOpen, onClose }) {
                     <li key={result.id}>
                       <button
                         onClick={() => handleResultClick(result)}
-                        className={`w-full text-left px-4 py-3 flex items-start gap-3 transition-colors ${
-                          selectedIndex === index ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-[var(--color-bg)]'
+                        className={`w-full text-left px-5 py-4 flex items-start gap-3 transition-colors ${
+                          selectedIndex === index 
+                            ? 'bg-[var(--color-primary-subtle)]' 
+                            : 'hover:bg-[var(--color-bg-tertiary)]'
                         }`}
                       >
-                        <span className="badge-gray text-xs capitalize mt-1 shrink-0">{typeLabel}</span>
+                        <span className="badge-gray text-xs capitalize mt-0.5 shrink-0">{typeLabel}</span>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-semibold text-[var(--color-text)] truncate">{title}</h4>
-                          {desc && <p className="text-xs text-[var(--color-text-secondary)] line-clamp-1 mt-0.5">{truncate(desc, 100)}</p>}
+                          {desc && <p className="text-xs text-[var(--color-text-muted)] line-clamp-1 mt-0.5">{truncate(desc, 100)}</p>}
                           {result.tags?.length > 0 && (
-                            <div className="flex gap-1 mt-1">
+                            <div className="flex gap-1.5 mt-2">
                               {result.tags.slice(0, 3).map(tag => (
                                 <span key={tag} className="badge-primary text-xs">{tag}</span>
                               ))}
@@ -185,7 +191,7 @@ export default function SearchModal({ isOpen, onClose }) {
                           )}
                         </div>
                         {selectedIndex === index && (
-                          <span className="text-xs text-[var(--color-text-secondary)] shrink-0">Enter to select</span>
+                          <span className="text-xs text-[var(--color-primary)] shrink-0 font-medium">Enter to select</span>
                         )}
                       </button>
                     </li>
@@ -193,17 +199,32 @@ export default function SearchModal({ isOpen, onClose }) {
                 })}
               </ul>
             ) : query.trim() && !loading ? (
-              <div className="py-12 text-center">
-                <p className="text-[var(--color-text-secondary)] text-sm">No results found for "{query}"</p>
-                <p className="text-[var(--color-text-secondary)] text-xs mt-1 opacity-60">Press Enter to search all pages</p>
+              <div className="py-16 text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center">
+                  <svg className="w-8 h-8 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-[var(--color-text-secondary)] text-sm font-medium">No results found for "{query}"</p>
+                <p className="text-[var(--color-text-muted)] text-xs mt-1">Press Enter to search all pages</p>
               </div>
             ) : !query.trim() ? (
-              <div className="py-8 text-center">
-                <p className="text-[var(--color-text-secondary)] text-sm">Type to search...</p>
-                <div className="flex items-center justify-center gap-4 mt-3 text-xs text-[var(--color-text-secondary)]">
-                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">↑</kbd><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded ml-1">↓</kbd> navigate</span>
-                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Enter</kbd> select</span>
-                  <span><kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">Esc</kbd> close</span>
+              <div className="py-12 text-center">
+                <p className="text-[var(--color-text-muted)] text-sm">Start typing to search...</p>
+                <div className="flex items-center justify-center gap-6 mt-5 text-xs text-[var(--color-text-muted)]">
+                  <span className="flex items-center gap-1.5">
+                    <kbd className="px-2 py-1 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)]">↑</kbd>
+                    <kbd className="px-2 py-1 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)]">↓</kbd> 
+                    navigate
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <kbd className="px-2 py-1 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)]">Enter</kbd> 
+                    select
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <kbd className="px-2 py-1 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)]">Esc</kbd> 
+                    close
+                  </span>
                 </div>
               </div>
             ) : null}
