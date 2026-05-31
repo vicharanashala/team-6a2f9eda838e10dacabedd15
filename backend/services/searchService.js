@@ -434,6 +434,108 @@ const syncToElasticsearch = async () => {
   }
 };
 
+const seedDatabase = async () => {
+  try {
+    const User = require('../models/User');
+    const FAQ = require('../models/FAQ');
+    const Question = require('../models/Question');
+    const path = require('path');
+    const fs = require('fs');
+    const crypto = require('crypto');
+
+    const metadataPath = path.join(__dirname, '..', '..', 'metadata.json');
+    const faqsPath = path.join(__dirname, '..', '..', 'faqs-complete.json');
+    const integrityPath = [path.join(__dirname, '..', '..', '.integrity'), path.join(__dirname, '..', '..', '..', '.integrity')].find(p => fs.existsSync(p));
+
+    if (fs.existsSync(integrityPath)) {
+      const integrityData = fs.readFileSync(integrityPath, 'utf-8');
+      const seedFiles = [
+        { path: metadataPath, name: 'metadata.json' },
+        { path: faqsPath, name: 'faqs-complete.json' },
+      ];
+      for (const file of seedFiles) {
+        const content = fs.readFileSync(file.path);
+        const hash = crypto.createHash('sha256').update(content).digest('hex');
+        const expectedLine = integrityData.split('\n').find(l => l.includes(file.name));
+        if (expectedLine) {
+          const expectedHash = expectedLine.split(' ')[0];
+          if (hash !== expectedHash) {
+            console.error(`Integrity check FAILED for ${file.name}`);
+          }
+        }
+      }
+    }
+
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
+    const faqItems = JSON.parse(fs.readFileSync(faqsPath, 'utf-8'));
+
+    const existingFaqs = await FAQ.countDocuments();
+    if (existingFaqs === 0) {
+      console.log('Seeding database...');
+      await Promise.all([User.deleteMany({}), FAQ.deleteMany({})]);
+
+      await User.create({
+        username: 'admin',
+        email: 'admin@quorafaq.com',
+        password: 'admin123',
+        displayName: 'Admin',
+        role: 'admin',
+      });
+
+      const slugify = (text) => text.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').trim();
+      const grouped = {};
+      for (const item of faqItems) {
+        const catId = item.categoryId;
+        if (!grouped[catId]) grouped[catId] = { items: [] };
+        grouped[catId].items.push({ question: item.question, answer: item.answer, order: grouped[catId].items.length, isPublished: true });
+      }
+
+      const faqPages = [];
+      for (const [catId, catName] of Object.entries(metadata.categories)) {
+        const group = grouped[catId];
+        if (!group) continue;
+        faqPages.push({
+          title: catName,
+          slug: slugify(catName),
+          description: `Frequently asked questions about ${catName.toLowerCase()}`,
+          category: catName,
+          icon: 'help-circle',
+          tags: catName.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean),
+          isOfficial: true,
+          items: group.items,
+        });
+      }
+      await FAQ.insertMany(faqPages);
+      console.log('Database seeded successfully');
+    }
+
+    console.log('Seeding additional users...');
+    const seedUsers = [
+      { username: 'admin', email: 'admin@quorafaq.com', password: 'admin123', displayName: 'Administrator', bio: 'Site administrator with full access', role: 'admin', reputation: 10000, badges: ['Founder', 'Administrator'], isBanned: false },
+      { username: 'moderator', email: 'moderator@quorafaq.com', password: 'mod12345', displayName: 'Senior Moderator', bio: 'Community moderator', role: 'moderator', reputation: 5000, badges: ['Moderator', 'Helper'], isBanned: false },
+      { username: 'student', email: 'student@quorafaq.com', password: 'student123', displayName: 'Regular Member', bio: 'Active community member', role: 'user', reputation: 250, badges: ['Contributor'], isBanned: false },
+      { username: 'alice', email: 'alice@quorafaq.com', password: 'alice123', displayName: 'Alice Johnson', bio: 'Computer Science student', role: 'user', reputation: 100, badges: ['Newcomer'], isBanned: false },
+      { username: 'bob', email: 'bob@quorafaq.com', password: 'bob123', displayName: 'Bob Smith', bio: 'Engineering student', role: 'user', reputation: 150, badges: ['Curious Learner'], isBanned: false },
+    ];
+
+    for (const u of seedUsers) {
+      const existingByEmail = await User.findOne({ email: u.email });
+      const existingByUsername = await User.findOne({ username: u.username });
+      if (existingByEmail || existingByUsername) {
+        const existing = existingByEmail || existingByUsername;
+        if (existingByUsername && existingByUsername._id.toString() !== existing._id.toString()) {
+          await Question.updateMany({ author: existingByUsername._id }, { $set: { author: existing._id } });
+        }
+      } else {
+        await User.create(u);
+      }
+    }
+    console.log('Users seeded successfully');
+  } catch (err) {
+    console.error('Seed error:', err.message);
+  }
+};
+
 module.exports = {
   initIndices,
   indexQuestion,
@@ -447,4 +549,5 @@ module.exports = {
   deleteFAQItemsByFAQId,
   reindexAllFAQs,
   syncToElasticsearch,
+  seedDatabase,
 };

@@ -11,7 +11,7 @@ const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorHandler');
 const { apiLimiter } = require('./middleware/rateLimiter');
 const { setupSocket } = require('./socket');
-const { initIndices, syncToElasticsearch } = require('./services/searchService');
+const { initIndices, syncToElasticsearch, seedDatabase } = require('./services/searchService');
 
 // Ensure uploads directory
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -75,12 +75,12 @@ app.use(errorHandler);
 const startServer = async () => {
   await connectDB();
 
-  // Initialize search indices and sync data (non-blocking)
   try {
+    await seedDatabase();
     await initIndices();
     await syncToElasticsearch();
   } catch (err) {
-    console.log('Search index init skipped:', err.message);
+    console.log('Startup init skipped:', err.message);
   }
 
   server.listen(config.port, () => {

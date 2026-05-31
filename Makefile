@@ -44,7 +44,7 @@ seed-es: ## Force re-sync MongoDB data into Elasticsearch
 		}).catch(e => { console.error(e); process.exit(1); }); \
 	"
 
-up: _check-ports _clean-stale ## Build and start all services with $(ENGINE)
+up: ## Build and start all services with $(ENGINE)
 	$(COMPOSE) up -d --build
 
 down: ## Stop all services
@@ -83,7 +83,7 @@ verify: check-integ ## Verify reproducibility — checks node version, lockfiles
 	@grep -rn 'npm ci\|npm install' backend/Dockerfile backend/Dockerfile.dev frontend/Dockerfile frontend/Dockerfile.dev 2>/dev/null
 	@echo "=== Check complete ==="
 
-prod-up: _check-ports _clean-stale ## Build and start production services with $(ENGINE) (from podman/)
+prod-up: ## Build and start production services with $(ENGINE) (from podman/)
 	$(COMPOSE) -f podman/docker-compose.yml up -d --build
 
 prod-down: ## Stop production services
@@ -92,30 +92,4 @@ prod-down: ## Stop production services
 prod-logs: ## View production logs
 	$(COMPOSE) -f podman/docker-compose.yml logs -f
 
-# ── Internal targets ──────────────────────────────────────────────────
 
-# Remove any stale project containers and orphaned pods before starting
-_clean-stale:
-	@echo "Cleaning stale containers..."
-	@$(COMPOSE) down 2>/dev/null || true
-	@for c in $(CONTAINERS); do $(ENGINE) rm -f $$c 2>/dev/null || true; done
-	@$(ENGINE) pod rm -af 2>/dev/null || true
-
-# Warn (and attempt to free) if required ports are already occupied
-_check-ports:
-	@BLOCKED=""; \
-	for port in $(PORTS); do \
-		pid=$$(ss -tlnp 2>/dev/null | grep ":$$port " | grep -oP 'pid=\K[0-9]+' | head -1); \
-		if [ -n "$$pid" ]; then \
-			name=$$(ps -p $$pid -o comm= 2>/dev/null || echo "unknown"); \
-			echo "⚠  Port $$port is in use by $$name (pid $$pid) — attempting to free..."; \
-			kill $$pid 2>/dev/null && sleep 1 && echo "   ✓ Freed port $$port" \
-				|| { echo "   ✗ Could not kill pid $$pid — try: sudo kill $$pid"; BLOCKED="$$BLOCKED $$port"; }; \
-		fi; \
-	done; \
-	if [ -n "$$BLOCKED" ]; then \
-		echo ""; \
-		echo "ERROR: Could not free port(s):$$BLOCKED"; \
-		echo "Stop the conflicting services manually and retry."; \
-		exit 1; \
-	fi
