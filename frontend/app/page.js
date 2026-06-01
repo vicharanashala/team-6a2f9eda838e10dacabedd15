@@ -4,6 +4,7 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext';
+import MarkdownRenderer from '@/components/MarkdownRenderer';
 
 const CATEGORY_ICONS = {
   'About the internship': '💼',
@@ -52,12 +53,13 @@ export default function HomePage() {
         if (!categoryMap[cat]) {
           categoryMap[cat] = { name: cat, count: 0, items: [] };
         }
-        categoryMap[cat].count += faq.itemCount || 0;
+        const itemCount = faq.items ? faq.items.filter(i => i.isPublished).length : 0;
+        categoryMap[cat].count += itemCount;
         categoryMap[cat].items.push(faq);
       });
 
       const sortedCategories = Object.values(categoryMap).sort((a, b) => b.count - a.count);
-      setCategories([{ name: 'All Categories', count: faqList.reduce((acc, f) => acc + (f.itemCount || 0), 0) }, ...sortedCategories]);
+      setCategories([{ name: 'All Categories', count: faqList.reduce((acc, f) => acc + (f.items ? f.items.filter(i => i.isPublished).length : 0), 0) }, ...sortedCategories]);
       setFaqs(faqList);
     } catch (err) {
       console.error('Failed to load FAQs:', err);
@@ -122,6 +124,12 @@ export default function HomePage() {
 
   const getIcon = (category) => {
     return CATEGORY_ICONS[category] || '📌';
+  };
+
+  const isFaqFresh = (faq) => {
+    if (!faq.items || faq.items.length === 0) return false;
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return faq.items.some(item => item.lastReviewed && new Date(item.lastReviewed).getTime() > sevenDaysAgo);
   };
 
   return (
@@ -216,7 +224,9 @@ export default function HomePage() {
                         {faq.isOfficial && (
                           <span className="badge-green text-xs">✓ Official</span>
                         )}
-                        <span className="text-xs text-[var(--color-text-muted)]">✓ Fresh</span>
+                        {isFaqFresh(faq) && (
+                          <span className="text-xs text-[var(--color-text-muted)]">✓ Fresh</span>
+                        )}
                       </div>
                       <h3 className="text-base font-medium text-[var(--color-text)]">
                         {faq.title}
@@ -244,11 +254,8 @@ export default function HomePage() {
                             <div className="text-sm font-medium text-[var(--color-text)] mb-2">
                               {item.question}
                             </div>
-                            <div
-                              className="text-sm text-[var(--color-text-secondary)] mb-4"
-                              style={{ whiteSpace: 'pre-wrap' }}
-                            >
-                              {item.answer}
+                            <div className="text-sm text-[var(--color-text-secondary)] mb-4">
+                              <MarkdownRenderer content={item.answer} />
                             </div>
                             <div className="flex items-center gap-4 text-xs text-[var(--color-text-secondary)]">
                               <span>Was this helpful?</span>

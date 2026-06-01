@@ -58,7 +58,7 @@ exports.getFAQs = async (req, res, next) => {
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .select('title slug description category icon tags viewCount saveCount isOfficial createdAt items.isPublished items.question')
+        .select('title slug description category icon tags viewCount saveCount isOfficial createdAt items')
         .populate('author', 'username displayName'),
       FAQ.countDocuments(filter),
     ]);
