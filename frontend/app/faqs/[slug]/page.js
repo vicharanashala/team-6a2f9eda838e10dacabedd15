@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
+import SimpleEditor from '@/components/SimpleEditor';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -16,6 +17,10 @@ export default function FAQDetailPage() {
   const [activeItem, setActiveItem] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const [localVotes, setLocalVotes] = useState({});
+  const [showAddQuestion, setShowAddQuestion] = useState(false);
+  const [newQuestion, setNewQuestion] = useState('');
+  const [newAnswer, setNewAnswer] = useState('');
+  const [addingQuestion, setAddingQuestion] = useState(false);
 
   useEffect(() => {
     api.get(`/faqs/${slug}`)
@@ -43,6 +48,29 @@ export default function FAQDetailPage() {
   useEffect(() => {
     checkIfSaved();
   }, [user, faq]);
+
+  const isAdminOrMod = user && (user.role === 'admin' || user.role === 'moderator');
+
+  const handleAddQuestion = async (e) => {
+    e.preventDefault();
+    if (!newQuestion.trim() || !newAnswer.trim()) return;
+    setAddingQuestion(true);
+    try {
+      const data = await api.post(`/faqs/${faq._id}/items`, {
+        question: newQuestion.trim(),
+        answer: newAnswer,
+      });
+      setFaq(data.faq);
+      setShowAddQuestion(false);
+      setNewQuestion('');
+      setNewAnswer('');
+      toast.success('Question added successfully');
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setAddingQuestion(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!user) { toast.error('Please login to save'); return; }
@@ -119,9 +147,16 @@ export default function FAQDetailPage() {
             <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text)]">{faq.title}</h1>
             {faq.description && <p className="text-[var(--color-text-secondary)] mt-2">{faq.description}</p>}
           </div>
-          <button onClick={handleSave} className="btn-secondary btn-sm shrink-0">
-            {isSaved ? 'Saved' : 'Save'}
-          </button>
+          <div className="flex gap-2">
+            {isAdminOrMod && (
+              <button onClick={() => setShowAddQuestion(true)} className="btn-secondary btn-sm shrink-0">
+                + Add Question
+              </button>
+            )}
+            <button onClick={handleSave} className="btn-secondary btn-sm shrink-0">
+              {isSaved ? 'Saved' : 'Save'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -197,6 +232,53 @@ export default function FAQDetailPage() {
       <div className="mt-6 text-xs text-[var(--color-text-secondary)]">
         {faq.viewCount} views &middot; Last updated {formatDate(faq.updatedAt)}
       </div>
+
+      {showAddQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAddQuestion(false)} />
+          <div className="relative bg-[var(--color-bg-secondary)] rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-4">Add Question to {faq.title}</h3>
+            <form onSubmit={handleAddQuestion}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Question</label>
+                <input
+                  type="text"
+                  value={newQuestion}
+                  onChange={(e) => setNewQuestion(e.target.value)}
+                  placeholder="Enter the question"
+                  className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Answer</label>
+                <SimpleEditor
+                  content={newAnswer}
+                  onChange={setNewAnswer}
+                  placeholder="Write the answer (Markdown supported)..."
+                  minHeight="200px"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddQuestion(false)}
+                  className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingQuestion || !newQuestion.trim() || !newAnswer.trim()}
+                  className="px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+                >
+                  {addingQuestion ? 'Adding...' : 'Add Question'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

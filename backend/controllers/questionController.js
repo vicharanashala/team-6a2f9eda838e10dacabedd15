@@ -9,6 +9,7 @@ const { emitToQuestion, emitToUser } = require('../socket');
 const { canDeleteQuestion, hasPermission, PERMISSIONS } = require('../utils/permissions');
 const Notification = require('../models/Notification');
 const { flagContent, clearFlag } = require('../services/moderationService');
+const FAQ = require('../models/FAQ');
 
 exports.createQuestion = async (req, res, next) => {
   try {
@@ -749,6 +750,89 @@ exports.promoteToMasterFAQ = async (req, res, next) => {
     await question.save();
 
     res.json({ message: 'Promoted to master FAQ', question });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.addToFAQ = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+      throw new AppError('Only moderators can add questions to FAQs', 403);
+    }
+
+    const { faqId, answerId } = req.body;
+    if (!faqId) throw new AppError('FAQ ID is required', 400);
+
+    const question = await Question.findById(req.params.id);
+    if (!question) throw new AppError('Question not found', 404);
+
+    let answerBody = question.body;
+    if (answerId) {
+      const Answer = require('../models/Answer');
+      const answer = await Answer.findById(answerId);
+      if (!answer) throw new AppError('Answer not found', 404);
+      if (answer.question.toString() !== question._id.toString()) {
+        throw new AppError('Answer does not belong to this question', 400);
+      }
+      answerBody = answer.body;
+    }
+
+    const faq = await FAQ.findById(faqId);
+    if (!faq) throw new AppError('FAQ not found', 404);
+
+    faq.items.push({
+      question: question.title,
+      answer: answerBody,
+      tags: question.tagNames || [],
+      order: faq.items.length,
+    });
+    await faq.save();
+
+    res.json({ message: 'Added to FAQ', faq });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.removeFromFAQ = async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
+      throw new AppError('Only moderators can remove questions from FAQs', 403);
+    }
+
+    const { answerId } = req.body;
+
+    const question = await Question.findById(req.params.id);
+    if (!question) throw new AppError('Question not found', 404);
+
+    let removeContent = question.title;
+
+    if (answerId) {
+      const Answer = require('../models/Answer');
+      const answer = await Answer.findById(answerId);
+      if (answer && answer.question.toString() === question._id.toString()) {
+        removeContent = answer.body;
+      }
+    }
+
+    const faqs = await FAQ.find({ 'items.question': question.title });
+    for (const faq of faqs) {
+      faq.items = faq.items.filter(item => {
+        if (item.question !== question.title) return true;
+        if (answerId) {
+          return item.answer !== removeContent;
+        }
+        return item.answer !== removeContent && item.answer !== question.body;
+      });
+      if (faq.items.length === 0) {
+        await FAQ.findByIdAndDelete(faq._id);
+      } else {
+        await faq.save();
+      }
+    }
+
+    res.json({ message: 'Removed from FAQs' });
   } catch (err) {
     next(err);
   }

@@ -25,6 +25,8 @@ router.patch('/:id/flag', moderatorOrAdmin, ctrl.flagQuestion);
 router.patch('/:id/flag/clear', moderatorOrAdmin, ctrl.clearFlagQuestion);
 router.patch('/:id/merge', auth, ctrl.mergeIntoMasterFAQ);
 router.patch('/:id/promote-master', auth, ctrl.promoteToMasterFAQ);
+router.patch('/:id/add-to-faq', auth, ctrl.addToFAQ);
+router.patch('/:id/remove-from-faq', auth, ctrl.removeFromFAQ);
 router.get('/:id/merged-questions', ctrl.getMergedQuestions);
 router.get('/master-faqs', ctrl.getMasterFAQs);
 router.delete('/:id', auth, ctrl.deleteQuestion);

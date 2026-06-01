@@ -30,6 +30,10 @@ export default function QuestionDetailPage() {
   const [confidenceLevel, setConfidenceLevel] = useState(null);
   const [showDownvoteModal, setShowDownvoteModal] = useState({ open: false, targetType: null, targetId: null });
   const [downvoteFeedback, setDownvoteFeedback] = useState({ question: [], answers: {} });
+  const [showAddToFAQModal, setShowAddToFAQModal] = useState({ open: false, answerId: null });
+  const [faqs, setFaqs] = useState([]);
+  const [selectedFAQ, setSelectedFAQ] = useState('');
+  const [addingToFAQ, setAddingToFAQ] = useState(false);
 
   const fetchQuestion = useCallback(async () => {
     try {
@@ -201,6 +205,7 @@ export default function QuestionDetailPage() {
   const handleUnacceptAnswer = async (answerId) => {
     try {
       await api.post(`/answers/${answerId}/unaccept`);
+      await handleRemoveFromFAQ(answerId);
       fetchQuestion();
       fetchAnswers();
       toast.success('Answer unaccepted');
@@ -226,7 +231,10 @@ export default function QuestionDetailPage() {
     const isModOrAdmin = user.role === 'admin' || user.role === 'moderator';
     if (question.isEscalated || question.resolutionStatus === 'escalated') return false;
     if (isModOrAdmin) return true;
-    if (question.isOwner) return true;
+    if (question.isOwner) {
+      const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+      return new Date(question.createdAt).getTime() < twentyFourHoursAgo;
+    }
     return false;
   };
 
@@ -254,6 +262,7 @@ export default function QuestionDetailPage() {
   const handleClearVerify = async () => {
     try {
       await api.patch(`/questions/${id}/verify/clear`);
+      await handleRemoveFromFAQ();
       toast.success('FAQ verification cleared');
       fetchQuestion();
     } catch (err) {
@@ -266,8 +275,43 @@ export default function QuestionDetailPage() {
     if (reason === null) return;
     try {
       await api.patch(`/questions/${id}/outdated`, { reason });
+      await handleRemoveFromFAQ();
       toast.success('Marked as outdated');
       fetchQuestion();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const openAddToFAQModal = (answerId = null) => {
+    setShowAddToFAQModal({ open: true, answerId });
+    setSelectedFAQ('');
+    api.get('/faqs', { limit: 100 }).then(data => {
+      setFaqs(data.faqs || []);
+    }).catch(() => {});
+  };
+
+  const handleAddToFAQ = async () => {
+    if (!selectedFAQ) { toast.error('Please select an FAQ'); return; }
+    setAddingToFAQ(true);
+    try {
+      await api.patch(`/questions/${id}/add-to-faq`, {
+        faqId: selectedFAQ,
+        answerId: showAddToFAQModal.answerId,
+      });
+      toast.success('Added to FAQ');
+      setShowAddToFAQModal({ open: false, answerId: null });
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setAddingToFAQ(false);
+    }
+  };
+
+  const handleRemoveFromFAQ = async (answerId = null) => {
+    try {
+      await api.patch(`/questions/${id}/remove-from-faq`, { answerId });
+      toast.success('Removed from FAQ');
     } catch (err) {
       toast.error(err.message);
     }
@@ -395,6 +439,9 @@ export default function QuestionDetailPage() {
             )}
             {question.isFAQ && (user?.role === 'admin' || user?.role === 'moderator') && (
               <button onClick={() => handleMarkOutdated()} className="btn-secondary btn-sm">Mark Outdated</button>
+            )}
+            {user?.role === 'admin' || user?.role === 'moderator' && (
+              <button onClick={() => openAddToFAQModal(null)} className="btn-secondary btn-sm">Add to FAQ</button>
             )}
           </div>
         </div>
@@ -559,6 +606,11 @@ export default function QuestionDetailPage() {
                               Unaccept
                             </button>
                           )}
+                          {(user?.role === 'admin' || user?.role === 'moderator') && (
+                            <button onClick={() => openAddToFAQModal(answer._id)} className="btn-secondary btn-sm">
+                              Add to FAQ
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -682,6 +734,38 @@ export default function QuestionDetailPage() {
         onSubmit={submitDownvoteWithReason}
         targetType={showDownvoteModal.targetType}
       />
+
+      {showAddToFAQModal.open && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[var(--color-bg-secondary)] rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-4">Add to FAQ</h3>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+              Select an FAQ to add this question{showAddToFAQModal.answerId ? ' and answer' : ''} as a verified item.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Select FAQ</label>
+              <select
+                value={selectedFAQ}
+                onChange={(e) => setSelectedFAQ(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+              >
+                <option value="">Choose an FAQ...</option>
+                {faqs.map(faq => (
+                  <option key={faq._id} value={faq._id}>{faq.title}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setShowAddToFAQModal({ open: false, answerId: null })} className="btn-secondary">
+                Cancel
+              </button>
+              <button onClick={handleAddToFAQ} disabled={addingToFAQ || !selectedFAQ} className="btn-primary">
+                {addingToFAQ ? 'Adding...' : 'Add to FAQ'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );

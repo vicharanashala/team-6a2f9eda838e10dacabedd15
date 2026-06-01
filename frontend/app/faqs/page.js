@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Pagination from '@/components/Pagination';
 import FAQCard from '@/components/FAQCard';
+import SimpleEditor from '@/components/SimpleEditor';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -30,6 +31,12 @@ function FAQsPageContent() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📌');
   const [addingCategory, setAddingCategory] = useState(false);
+  const [showAddFAQModal, setShowAddFAQModal] = useState(false);
+  const [newFAQTitle, setNewFAQTitle] = useState('');
+  const [newFAQQuestion, setNewFAQQuestion] = useState('');
+  const [newFAQAnswer, setNewFAQAnswer] = useState('');
+  const [newFAQCategory, setNewFAQCategory] = useState('');
+  const [addingFAQ, setAddingFAQ] = useState(false);
 
   const fetchSavedFaqs = useCallback(async () => {
     if (!user) return;
@@ -113,11 +120,54 @@ function FAQsPageContent() {
     }
   };
 
+  const handleAddFAQ = async (e) => {
+    e.preventDefault();
+    if (!newFAQTitle.trim() || !newFAQQuestion.trim() || !newFAQAnswer.trim()) return;
+    setAddingFAQ(true);
+    try {
+      const data = await api.post('/faqs', {
+        title: newFAQTitle.trim(),
+        category: newFAQCategory.trim() || undefined,
+        items: [{
+          question: newFAQQuestion.trim(),
+          answer: newFAQAnswer,
+        }],
+      });
+      toast.success('FAQ added successfully');
+      setShowAddFAQModal(false);
+      setNewFAQTitle('');
+      setNewFAQQuestion('');
+      setNewFAQAnswer('');
+      setNewFAQCategory('');
+      const all = await api.get('/faqs', { limit: 100, sort: 'newest' });
+      setFaqs(all.faqs || []);
+      const cats = [...new Set((all.faqs || []).map(f => f.category).filter(Boolean))];
+      setCategories(cats);
+      if (data.faq?.slug) {
+        router.push(`/faqs/${data.faq.slug}`);
+      }
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setAddingFAQ(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">FAQs</h1>
-        <p className="text-sm text-[var(--color-text-secondary)] mt-1">Curated answers to commonly asked questions</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">FAQs</h1>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">Curated answers to commonly asked questions</p>
+        </div>
+        {isAdminOrMod && (
+          <button
+            onClick={() => setShowAddFAQModal(true)}
+            className="px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition-colors"
+          >
+            + Add FAQ
+          </button>
+        )}
       </div>
 
       {/* Sort tabs */}
@@ -246,6 +296,81 @@ function FAQsPageContent() {
                   className="px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50"
                 >
                   {addingCategory ? 'Adding...' : 'Add Category'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add FAQ Modal */}
+      {showAddFAQModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowAddFAQModal(false)} />
+          <div className="relative bg-[var(--color-bg-secondary)] rounded-xl shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-4">Add New FAQ</h3>
+            <form onSubmit={handleAddFAQ}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">FAQ Title</label>
+                <input
+                  type="text"
+                  value={newFAQTitle}
+                  onChange={(e) => setNewFAQTitle(e.target.value)}
+                  placeholder="e.g., Getting Started Guide"
+                  className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Category</label>
+                <input
+                  type="text"
+                  value={newFAQCategory}
+                  onChange={(e) => setNewFAQCategory(e.target.value)}
+                  placeholder="e.g., General, Getting Started (optional)"
+                  list="category-options"
+                  className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
+                />
+                <datalist id="category-options">
+                  {categories.map(cat => (
+                    <option key={cat} value={cat} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Question</label>
+                <input
+                  type="text"
+                  value={newFAQQuestion}
+                  onChange={(e) => setNewFAQQuestion(e.target.value)}
+                  placeholder="Enter the question"
+                  className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Answer</label>
+                <SimpleEditor
+                  content={newFAQAnswer}
+                  onChange={setNewFAQAnswer}
+                  placeholder="Write the answer (Markdown supported)..."
+                  minHeight="200px"
+                />
+              </div>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddFAQModal(false)}
+                  className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingFAQ || !newFAQTitle.trim() || !newFAQQuestion.trim() || !newFAQAnswer.trim()}
+                  className="px-4 py-2 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+                >
+                  {addingFAQ ? 'Adding...' : 'Add FAQ'}
                 </button>
               </div>
             </form>
