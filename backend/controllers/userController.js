@@ -10,15 +10,47 @@ const { getLeaderboardData } = require('../services/leaderboardService');
 
 exports.getUserProfile = async (req, res, next) => {
   try {
-    const user = await User.findOne({ username: req.params.username });
+    const safeUsername = req.params.username.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const user = await User.findOne({ username: { $regex: new RegExp(`^${safeUsername}$`, 'i') } });
     if (!user) throw new AppError('User not found', 404);
 
-    const [questions, answers] = await Promise.all([
+    const [questions, answers, questionLikes, answerLikes, questionVotes, answerVotes, savedQuestionsCount, savedFaqsCount] = await Promise.all([
       Question.countDocuments({ author: user._id, isDeleted: false }),
       Answer.countDocuments({ author: user._id, isDeleted: false }),
+      Question.aggregate([
+        { $match: { author: user._id, isDeleted: false } },
+        { $group: { _id: null, total: { $sum: '$upvotes' } } }
+      ]),
+      Answer.aggregate([
+        { $match: { author: user._id, isDeleted: false } },
+        { $group: { _id: null, total: { $sum: '$upvotes' } } }
+      ]),
+      Question.aggregate([
+        { $match: { author: user._id, isDeleted: false } },
+        { $group: { _id: null, up: { $sum: '$upvotes' }, down: { $sum: '$downvotes' } } }
+      ]),
+      Answer.aggregate([
+        { $match: { author: user._id, isDeleted: false } },
+        { $group: { _id: null, up: { $sum: '$upvotes' }, down: { $sum: '$downvotes' } } }
+      ]),
+      SavedQuestion.countDocuments({ user: user._id }),
+      SavedFAQ.countDocuments({ user: user._id })
     ]);
 
-    res.json({ user: { ...user.toPublicJSON(), questionCount: questions, answerCount: answers } });
+    const totalLikes = (questionLikes[0]?.total || 0) + (answerLikes[0]?.total || 0);
+    const totalVotes = (questionVotes[0]?.up || 0) + (questionVotes[0]?.down || 0) + (answerVotes[0]?.up || 0) + (answerVotes[0]?.down || 0);
+    const totalBookmarks = savedQuestionsCount + savedFaqsCount;
+
+    res.json({
+      user: {
+        ...user.toPublicJSON(),
+        questionCount: questions,
+        answerCount: answers,
+        totalLikes,
+        totalVotes,
+        totalBookmarks
+      }
+    });
   } catch (err) {
     next(err);
   }
@@ -26,7 +58,8 @@ exports.getUserProfile = async (req, res, next) => {
 
 exports.getUserQuestions = async (req, res, next) => {
   try {
-    const user = await User.findOne({ username: req.params.username });
+    const safeUsername = req.params.username.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const user = await User.findOne({ username: { $regex: new RegExp(`^${safeUsername}$`, 'i') } });
     if (!user) throw new AppError('User not found', 404);
 
     const { page, limit, skip } = paginate(req.query.page, req.query.limit);
@@ -48,7 +81,8 @@ exports.getUserQuestions = async (req, res, next) => {
 
 exports.getUserAnswers = async (req, res, next) => {
   try {
-    const user = await User.findOne({ username: req.params.username });
+    const safeUsername = req.params.username.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const user = await User.findOne({ username: { $regex: new RegExp(`^${safeUsername}$`, 'i') } });
     if (!user) throw new AppError('User not found', 404);
 
     const { page, limit, skip } = paginate(req.query.page, req.query.limit);

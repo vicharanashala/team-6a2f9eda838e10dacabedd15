@@ -160,7 +160,7 @@ async function findExistingQuestion(title, tagNames) {
 exports.getQuestions = async (req, res, next) => {
   try {
     const { page, limit, skip } = paginate(req.query.page, req.query.limit);
-    const filter = { status: 'open', isDeleted: false };
+    const filter = { isDeleted: false, status: { $ne: 'deleted' } };
 
     if (req.query.tag) filter.tagNames = req.query.tag.toLowerCase();
     if (req.query.author) filter.author = req.query.author;

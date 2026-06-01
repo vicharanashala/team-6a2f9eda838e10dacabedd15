@@ -98,6 +98,11 @@ const questionSchema = new mongoose.Schema({
   },
 
   // Moderation
+  status: {
+    type: String,
+    enum: ['open', 'closed', 'deleted'],
+    default: 'open',
+  },
   isLocked: { type: Boolean, default: false },
   isDeleted: { type: Boolean, default: false },
   isFlagged: { type: Boolean, default: false },

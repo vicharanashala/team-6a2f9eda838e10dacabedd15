@@ -140,7 +140,7 @@ export default function UserProfilePage() {
                 <span>📅 Joined {formatDate(user.createdAt)}</span>
               </div>
 
-              <div className="flex items-center gap-6 mt-4 pt-3 border-t border-[var(--color-border)]/40">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-4 mt-4 pt-3 border-t border-[var(--color-border)]/40">
                 <div className="text-center">
                   <p className="text-lg font-extrabold text-[var(--color-text)]">{user.questionCount || 0}</p>
                   <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-text-muted)]">Questions</p>
@@ -148,6 +148,18 @@ export default function UserProfilePage() {
                 <div className="text-center">
                   <p className="text-lg font-extrabold text-[var(--color-text)]">{user.answerCount || 0}</p>
                   <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-text-muted)]">Answers</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-extrabold text-[var(--color-text)]">{user.totalLikes || 0}</p>
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-text-muted)]">Likes Received</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-extrabold text-[var(--color-text)]">{user.totalVotes || 0}</p>
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-text-muted)]">Votes Received</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-extrabold text-[var(--color-text)]">{user.totalBookmarks || 0}</p>
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-text-muted)]">Bookmarks</p>
                 </div>
               </div>
             </div>

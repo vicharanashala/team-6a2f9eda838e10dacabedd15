@@ -7,14 +7,14 @@ exports.getTags = async (req, res, next) => {
     const filter = {};
     if (req.query.search) {
       filter.name = { $regex: req.query.search, $options: 'i' };
+    } else {
+      // Ensure we only retrieve official tags or tags associated with at least one question when not filtering
+      filter.$or = [
+        { isOfficial: true },
+        { questionCount: { $gt: 0 } }
+      ];
     }
     if (req.query.category) filter.category = req.query.category;
-
-    // Ensure we only retrieve official tags or tags associated with at least one question
-    filter.$or = [
-      { isOfficial: true },
-      { questionCount: { $gt: 0 } }
-    ];
 
     const tags = await Tag.find(filter)
       .sort({ questionCount: -1 })
