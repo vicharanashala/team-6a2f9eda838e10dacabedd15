@@ -45,6 +45,7 @@ const faqPageSchema = new mongoose.Schema({
   isOfficial: { type: Boolean, default: false },
   isPublished: { type: Boolean, default: true },
   viewCount: { type: Number, default: 0 },
+  saveCount: { type: Number, default: 0 },
 
   // Tags for discoverability
   tags: [{ type: String }],

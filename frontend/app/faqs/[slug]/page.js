@@ -3,15 +3,18 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
+import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function FAQDetailPage() {
   const { slug } = useParams();
+  const { user } = useAuth();
   const [faq, setFaq] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeItem, setActiveItem] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     api.get(`/faqs/${slug}`)
@@ -19,6 +22,36 @@ export default function FAQDetailPage() {
       .catch(() => toast.error('FAQ not found'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const checkIfSaved = async () => {
+    if (!user || !faq) return;
+    try {
+      const data = await api.get('/users/me/saved/faqs');
+      const saved = data.saved?.some(s => s.faq?._id === faq._id);
+      setIsSaved(saved);
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    checkIfSaved();
+  }, [user, faq]);
+
+  const handleSave = async () => {
+    if (!user) { toast.error('Please login to save'); return; }
+    try {
+      if (isSaved) {
+        await api.delete(`/users/me/saved/faqs/${faq._id}`);
+        setIsSaved(false);
+        toast.success('FAQ unsaved');
+      } else {
+        await api.post('/users/me/saved/faqs', { faqId: faq._id });
+        setIsSaved(true);
+        toast.success('FAQ saved');
+      }
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
 
   const handleFeedback = async (itemId, helpful) => {
     try {
@@ -53,13 +86,20 @@ export default function FAQDetailPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
-        <Link href="/faqs" className="text-sm text-gray-500 hover:text-gray-700">&larr; Back to FAQs</Link>
-        <div className="flex items-center gap-2 mt-2 mb-2">
-          {faq.isOfficial && <span className="badge-green">Official</span>}
-          {faq.category && <span className="badge-gray capitalize">{faq.category}</span>}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <Link href="/faqs" className="text-sm text-gray-500 hover:text-gray-700">&larr; Back to FAQs</Link>
+            <div className="flex items-center gap-2 mt-2 mb-2">
+              {faq.isOfficial && <span className="badge-green">Official</span>}
+              {faq.category && <span className="badge-gray capitalize">{faq.category}</span>}
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{faq.title}</h1>
+            {faq.description && <p className="text-gray-600 mt-2">{faq.description}</p>}
+          </div>
+          <button onClick={handleSave} className="btn-secondary btn-sm shrink-0">
+            {isSaved ? 'Saved' : 'Save'}
+          </button>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{faq.title}</h1>
-        {faq.description && <p className="text-gray-600 mt-2">{faq.description}</p>}
       </div>
 
       {/* Sidebar navigation */}

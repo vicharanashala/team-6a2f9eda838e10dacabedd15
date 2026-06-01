@@ -3,8 +3,26 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-bg: #f9fafb;
+    --color-bg-secondary: #ffffff;
+    --color-text: #111827;
+    --color-text-secondary: #374151;
+    --color-border: #e5e7eb;
+  }
+  .dark {
+    --color-bg: #111827;
+    --color-bg-secondary: #1f2937;
+    --color-text: #f9fafb;
+    --color-text-secondary: #d1d5db;
+    --color-border: #374151;
+  }
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-[var(--color-bg)] text-[var(--color-text)] antialiased;
+    font-family: 'JetBrains Mono', Fira Code, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  }
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', Fira Code, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   }
 }
 
@@ -16,7 +34,7 @@
     @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500;
   }
   .btn-secondary {
-    @apply btn bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500 border border-gray-300;
+    @apply btn bg-[var(--color-bg-secondary)] text-[var(--color-text)] hover:bg-[var(--color-border)] focus:ring-gray-500 border border-[var(--color-border)];
   }
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
@@ -29,7 +47,7 @@
   }
 
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors;
+    @apply w-full px-3 py-2 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors bg-[var(--color-bg-secondary)] text-[var(--color-text)];
   }
   .input-error {
     @apply border-red-300 focus:ring-red-500;
@@ -39,10 +57,10 @@
   }
 
   .card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+    @apply bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)] shadow-sm;
   }
   .card-hover {
-    @apply card hover:shadow-md hover:border-gray-300 transition-shadow;
+    @apply card hover:shadow-md hover:border-[var(--color-border)] transition-shadow;
   }
 
   .badge {
@@ -63,6 +81,28 @@
   .badge-yellow {
     @apply badge bg-yellow-100 text-yellow-800;
   }
+  .badge-blue {
+    @apply badge bg-blue-100 text-blue-800;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.confetti-piece {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  top: -10px;
+  animation: confetti-fall 3s ease-in-out forwards;
 }
 
 @layer utilities {

@@ -2,17 +2,25 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 import QuestionCard from '@/components/QuestionCard';
+import FAQCard from '@/components/FAQCard';
 import { formatDate, getInitials } from '@/lib/utils';
 import api from '@/lib/api';
 
 export default function UserProfilePage() {
   const { username } = useParams();
+  const { user: currentUser } = useAuth();
   const [user, setUser] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState([]);
+  const [savedQuestions, setSavedQuestions] = useState([]);
+  const [savedFaqs, setSavedFaqs] = useState([]);
   const [tab, setTab] = useState('questions');
+  const [savedSubTab, setSavedSubTab] = useState('questions');
   const [loading, setLoading] = useState(true);
+
+  const isOwnProfile = currentUser?.username === username;
 
   useEffect(() => {
     api.get(`/users/${username}`)
@@ -24,10 +32,13 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (tab === 'questions') {
       api.get(`/users/${username}/questions`).then(d => setQuestions(d.questions || [])).catch(() => {});
-    } else {
+    } else if (tab === 'answers') {
       api.get(`/users/${username}/answers`).then(d => setAnswers(d.answers || [])).catch(() => {});
+    } else if (tab === 'saved' && isOwnProfile) {
+      api.get('/users/me/saved').then(d => setSavedQuestions(d.saved || [])).catch(() => {});
+      api.get('/users/me/saved/faqs').then(d => setSavedFaqs(d.saved || [])).catch(() => {});
     }
-  }, [username, tab]);
+  }, [username, tab, isOwnProfile]);
 
   if (loading) {
     return (
@@ -118,6 +129,16 @@ export default function UserProfilePage() {
         >
           Answers ({user.answerCount || 0})
         </button>
+        {isOwnProfile && (
+          <button
+            onClick={() => setTab('saved')}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              tab === 'saved' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Saved
+          </button>
+        )}
       </div>
 
       {tab === 'questions' ? (
@@ -128,7 +149,7 @@ export default function UserProfilePage() {
             {questions.map(q => <QuestionCard key={q._id} question={q} />)}
           </div>
         )
-      ) : (
+      ) : tab === 'answers' ? (
         answers.length === 0 ? (
           <div className="card p-8 text-center text-gray-500">No answers yet</div>
         ) : (
@@ -145,6 +166,50 @@ export default function UserProfilePage() {
             ))}
           </div>
         )
+      ) : (
+        <div>
+          {isOwnProfile && (
+            <div className="flex gap-1 mb-4 border-b border-gray-200">
+              <button
+                onClick={() => setSavedSubTab('questions')}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  savedSubTab === 'questions' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Questions
+              </button>
+              <button
+                onClick={() => setSavedSubTab('faqs')}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  savedSubTab === 'faqs' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                FAQs
+              </button>
+            </div>
+          )}
+          {savedSubTab === 'questions' ? (
+            savedQuestions.length === 0 ? (
+              <div className="card p-8 text-center text-gray-500">No saved questions yet</div>
+            ) : (
+              <div className="space-y-4">
+                {savedQuestions.map(item => (
+                  <QuestionCard key={item._id} question={item.question} />
+                ))}
+              </div>
+            )
+          ) : (
+            savedFaqs.length === 0 ? (
+              <div className="card p-8 text-center text-gray-500">No saved FAQs yet</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {savedFaqs.map(item => (
+                  <FAQCard key={item._id} faq={item.faq} />
+                ))}
+              </div>
+            )
+          )}
+        </div>
       )}
     </div>
   );

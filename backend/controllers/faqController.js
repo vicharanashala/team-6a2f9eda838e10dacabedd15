@@ -44,12 +44,21 @@ exports.getFAQs = async (req, res, next) => {
       filter.$text = { $search: req.query.search };
     }
 
+    const sort = {};
+    switch (req.query.sort) {
+      case 'newest': sort.createdAt = -1; break;
+      case 'views': sort.viewCount = -1; break;
+      case 'saved': sort.saveCount = -1; break;
+      case 'title': sort.title = 1; break;
+      default: sort.createdAt = -1;
+    }
+
     const [faqs, total] = await Promise.all([
       FAQ.find(filter)
-        .sort({ createdAt: -1 })
+        .sort(sort)
         .skip(skip)
         .limit(limit)
-        .select('title slug description category icon tags viewCount isOfficial createdAt items.isPublished items.question')
+        .select('title slug description category icon tags viewCount saveCount isOfficial createdAt items.isPublished items.question')
         .populate('author', 'username displayName'),
       FAQ.countDocuments(filter),
     ]);

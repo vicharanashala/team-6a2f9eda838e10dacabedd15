@@ -65,9 +65,9 @@ function QuestionsPageContent() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Questions</h1>
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">Questions</h1>
           {tag && (
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
               Tagged with <span className="badge-primary">{tag}</span>
               <button onClick={() => { setTag(''); router.push('/questions'); }} className="ml-2 text-red-500 hover:text-red-700">&times; clear</button>
             </p>
@@ -77,11 +77,12 @@ function QuestionsPageContent() {
       </div>
 
       {/* Sort tabs */}
-      <div className="flex gap-1 mb-6 border-b border-gray-200">
+      <div className="flex gap-1 mb-6 border-b border-[var(--color-border)]">
         {[
           { value: 'newest', label: 'Newest' },
           { value: 'active', label: 'Active' },
           { value: 'votes', label: 'Most Voted' },
+          { value: 'liked', label: 'Most Liked' },
           { value: 'views', label: 'Most Viewed' },
         ].map(s => (
           <button
@@ -90,7 +91,7 @@ function QuestionsPageContent() {
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               sort === s.value
                 ? 'border-primary-600 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:border-[var(--color-border)]'
             }`}
           >
             {s.label}
@@ -102,16 +103,16 @@ function QuestionsPageContent() {
         <div className="space-y-4">
           {[1,2,3,4,5].map(i => (
             <div key={i} className="card p-6 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-3/4 mb-3" />
-              <div className="h-4 bg-gray-200 rounded w-full mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-1/3" />
+              <div className="h-5 bg-[var(--color-border)] rounded w-3/4 mb-3" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-full mb-2" />
+              <div className="h-4 bg-[var(--color-border)] rounded w-1/3" />
             </div>
           ))}
         </div>
       ) : questions.length === 0 ? (
         <div className="card p-12 text-center">
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No questions found</h3>
-          <p className="text-gray-500 mb-4">Be the first to ask a question!</p>
+          <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">No questions found</h3>
+          <p className="text-[var(--color-text-secondary)] mb-4">Be the first to ask a question!</p>
           <Link href="/questions/ask" className="btn-primary">Ask a Question</Link>
         </div>
       ) : (

@@ -28,6 +28,8 @@ const initIndices = async () => {
         viewCount: { type: 'integer' },
         createdAt: { type: 'date' },
         status: { type: 'keyword' },
+        isFAQ: { type: 'boolean' },
+        resolvedAt: { type: 'date' },
       },
     },
   });
@@ -78,6 +80,8 @@ const indexQuestion = async (question) => {
         viewCount: question.viewCount,
         createdAt: question.createdAt,
         status: question.status,
+        isFAQ: question.isFAQ || false,
+        resolvedAt: question.resolvedAt || null,
       },
     });
   } catch (err) {
@@ -106,35 +110,91 @@ const indexFAQ = async (faq) => {
   }
 };
 
+const indexUser = async (user) => {
+  try {
+    const es = getES();
+    await es.index({
+      index: INDEX_USERS,
+      id: user._id.toString(),
+      body: {
+        id: user._id,
+        username: user.username,
+        displayName: user.displayName || user.username,
+        bio: user.bio || '',
+        reputation: user.reputation || 0,
+        role: user.role || 'user',
+      },
+    });
+  } catch (err) {
+    console.error('Index user error:', err.message);
+  }
+};
+
 const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
   try {
     const es = getES();
     const must = [];
     const filter = [];
 
+    const indices = type === 'faqs' ? INDEX_FAQS
+      : type === 'users' ? INDEX_USERS
+      : [INDEX_QUESTIONS, INDEX_FAQS, INDEX_USERS];
+
     if (query) {
-      must.push({
-        multi_match: {
-          query,
-          fields: ['title^3', 'body^2', 'description', 'tags'],
-          type: 'best_fields',
-          fuzziness: 'AUTO',
-        },
-      });
+      if (type === 'users') {
+        must.push({
+          multi_match: {
+            query,
+            fields: ['username^3', 'displayName^2', 'bio'],
+            type: 'best_fields',
+            fuzziness: 'AUTO',
+          },
+        });
+      } else if (type === 'faqs') {
+        must.push({
+          multi_match: {
+            query,
+            fields: ['title^3', 'description^2', 'tags'],
+            type: 'best_fields',
+            fuzziness: 'AUTO',
+          },
+        });
+      } else {
+        must.push({
+          multi_match: {
+            query,
+            fields: ['title^3', 'body^2', 'description', 'tags', 'username^2', 'displayName', 'bio'],
+            type: 'best_fields',
+            fuzziness: 'AUTO',
+          },
+        });
+      }
     }
 
     if (tags && tags.length > 0) {
       filter.push({ terms: { tags } });
     }
 
-    const indices = type === 'faqs' ? INDEX_FAQS
-      : type === 'users' ? INDEX_USERS
-      : INDEX_QUESTIONS;
+    // Only show resolved FAQs when searching questions (not faqs or users type)
+    // For "all" search, only apply isFAQ filter to the questions index
+    if (!type || (type !== 'faqs' && type !== 'users')) {
+      must.push({
+        bool: {
+          should: [
+            { bool: { must: [{ term: { isFAQ: true } }, { term: { _index: INDEX_QUESTIONS } }] } },
+            { terms: { _index: [INDEX_FAQS, INDEX_USERS] } },
+          ],
+          minimum_should_match: 1,
+        },
+      });
+    }
 
     const body = {
       from: (page - 1) * limit,
       size: limit,
-      sort: [{ _score: 'desc' }, { createdAt: { order: 'desc' } }],
+      sort: type === 'users'
+        ? [{ _score: 'desc' }]
+        : [{ _score: 'desc' }, { createdAt: { order: 'desc' } }],
     };
 
     if (must.length > 0 || filter.length > 0) {
@@ -176,6 +236,7 @@ module.exports = {
   initIndices,
   indexQuestion,
   indexFAQ,
+  indexUser,
   searchAll,
   deleteQuestionIndex,
   deleteFAQIndex,

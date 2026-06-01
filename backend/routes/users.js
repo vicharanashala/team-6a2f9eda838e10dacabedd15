@@ -7,7 +7,15 @@ router.get('/:username/questions', ctrl.getUserQuestions);
 router.get('/:username/answers', ctrl.getUserAnswers);
 
 router.get('/me/saved', auth, ctrl.getSavedQuestions);
+router.get('/me/saved/tags', auth, ctrl.getSavedTags);
 router.post('/me/saved', auth, ctrl.saveQuestion);
+router.patch('/me/saved/:questionId', auth, ctrl.updateSavedQuestion);
 router.delete('/me/saved/:questionId', auth, ctrl.unsaveQuestion);
+
+router.get('/me/saved/faqs', auth, ctrl.getSavedFAQs);
+router.get('/me/saved/faqs/tags', auth, ctrl.getSavedFAQTags);
+router.post('/me/saved/faqs', auth, ctrl.saveFAQ);
+router.patch('/me/saved/faqs/:faqId', auth, ctrl.updateSavedFAQ);
+router.delete('/me/saved/faqs/:faqId', auth, ctrl.unsaveFAQ);
 
 module.exports = router;
