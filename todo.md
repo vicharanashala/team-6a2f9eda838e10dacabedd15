@@ -296,3 +296,11 @@ Medium-Impact Quality of Life
 - Questions with no answers for 48h get a gentle prompt to the author
 - "Still looking for an answer? Consider adding more details or simplifying your question"
 - Optional re-tag or bounty suggestion
+
+---
+
+## Completed Search & Scoring Enhancements
+- [x] **Strict 100% Relevance Scoring**: Relevance score is exactly `100%` only when the user's query matches the exact text of a question or post title. All non-exact matches are dynamically scaled relative to the highest Elasticsearch hit score and capped at a maximum of `95%` (`0.95`).
+- [x] **Automatic Clean Elasticsearch Synchronization**: Full indexes are wiped, rebuilt, and populated cleanly from MongoDB data on backend server startup to prevent stale database ID links and "FAQ not found" errors.
+- [x] **Search De-duplication and Multi-Match Fix**: Resolved composite ID collision bugs so search results are cleanly merged and de-duplicated.
+
