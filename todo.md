@@ -38,6 +38,7 @@
 - [x] Registration / Login / Logout
 - [x] JWT-based authentication
 - [x] User profiles (avatar, bio, reputation, badges)
+- [x] User profile editing (modify display name, bio, and upload custom avatars with FormData support)
 - [x] Saved questions with notes and custom tags
 - [x] Saved FAQs with notes and custom tags
 - [x] Notification system (new answer, answer accepted, upvotes, etc.)
@@ -65,6 +66,7 @@
 
 ### Infrastructure
 - [x] Docker/Podman deployment
+  - **Note:** Run `docker-compose up --build -d` to build and start services without local version conflicts.
 - [x] Nginx reverse proxy
 - [x] Elasticsearch full-text search
 - [x] Redis caching (search results, trending)
@@ -129,11 +131,11 @@
 
 ## Phase 3: Engagement & Motivation
 
-- [ ] ### 7. Top Contributor / Subject Expert Badges
-  - Auto-awarded per tag: "Top Answerer in React", "Helper in Python", etc.
-  - Criteria: most accepted/solved answers in that tag in the last 30 days
-  - Badge shown next to the username on answers
-  - *Why:* Recognizes peer-to-peer help and builds trust in answers
+- [x] ### 7. Live Community Leaderboard — **IMPLEMENTED**
+  - Live ranking of top contributors based on their resolved query counts (accepted answers and doubt solved signals).
+  - Dynamically broadcasts ranking updates to all connected clients using Socket.IO events.
+  - Interactive podium for the top 3 spots and tabular stats for remaining users.
+  - *Why:* Motivates community participation, peer-to-peer assistance, and rewards contributors.
 
 - [x] ### 8. Doubt Resolved Celebration — **IMPLEMENTED**
   - When a student marks an answer as "Solved My Doubt" or accepts an answer:
@@ -209,7 +211,7 @@
 | | 4 | Doubt Resolution Dashboard | 2 | 3 days | Very High |
 | DONE | 5 | Answer Confidence Badge | 2 | done | Medium |
 | | 6 | Similar Solved Doubts Sidebar | 2 | 1 day | Medium |
-| | 7 | Top Contributor Badges | 3 | 2 days | Medium |
+| DONE | 7 | Community Leaderboard | 3 | done | High |
 | DONE | 8 | Doubt Resolved Celebration | 3 | done | High |
 | | 9 | "This Helped Me" Button | 3 | 1 day | Medium |
 | DONE | 10 | Onboarding Walkthrough | 4 | done | High |
@@ -220,7 +222,7 @@
 | | 15 | Request Answer from Contributor | 5 | 3-5 days | Medium |
 | | 16 | PWA / Install Prompt | 5 | 3-5 days | Medium |
 
-**Completed: 8/16 features**
+**Completed: 9/16 features**
 
 1. Question Draft Auto-Save
 - Auto-save draft as student types (every 30s to localStorage)

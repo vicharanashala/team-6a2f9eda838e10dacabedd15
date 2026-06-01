@@ -62,11 +62,13 @@ cd frontend && npm run dev
 
 ### Running with Docker Compose
 
+To run this site on other systems without local database/Node.js version conflicts or setup errors, you should build and start all containers using:
+
 ```bash
-bash podman/deploy.sh
+docker-compose up --build -d
 ```
 
-This starts all services (MongoDB, Redis, Elasticsearch, backend, frontend, Nginx). Access the app at http://localhost:8080.
+This spins up the complete development environment (MongoDB, Redis, Elasticsearch, Backend, Frontend). Access the application directly at http://localhost:3000.
 
 ## Project Structure
 
