@@ -1,0 +1,18 @@
+.git/
+.history/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+.env
+.env.*
+*.md
+CLAUDE.md
+*.key
+*.pem
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+ nginx/
+ kafka/
+ podman/
