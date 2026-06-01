@@ -57,4 +57,3 @@ Thumbs.db
 *.tgz
 .yarn/
 .eslintcache
-.integrity
