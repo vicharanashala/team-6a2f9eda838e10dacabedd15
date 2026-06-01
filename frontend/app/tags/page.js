@@ -36,7 +36,7 @@ export default function TagsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter tags..."
-            className="w-full px-4 py-3 pl-11 border border-[var(--color-border)]/60 rounded-xl text-sm bg-[var(--color-bg-secondary)]/80 backdrop-blur-md text-[var(--color-text)] dark:text-white placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all"
+            className="w-full px-4 py-3 pl-11 border border-[var(--color-border)]/60 rounded-xl text-sm bg-[var(--color-bg-secondary)] text-[var(--color-text)] dark:text-white placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] transition-all"
           />
           <svg 
             className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" 

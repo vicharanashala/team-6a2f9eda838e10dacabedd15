@@ -238,6 +238,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
             fields: ['username^3', 'displayName^2', 'bio'],
             type: 'best_fields',
             fuzziness: 'AUTO',
+            minimum_should_match: '2<70%',
           },
         });
       } else if (type === 'questions') {
@@ -247,6 +248,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
             fields: ['title^3', 'body^2', 'tags', 'authorName'],
             type: 'best_fields',
             fuzziness: 'AUTO',
+            minimum_should_match: '2<70%',
           },
         });
       } else if (type === 'faqs') {
@@ -256,6 +258,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
             fields: ['title^3', 'description^2', 'question^4', 'answer', 'tags'],
             type: 'best_fields',
             fuzziness: 'AUTO',
+            minimum_should_match: '2<70%',
           },
         });
       } else {
@@ -266,6 +269,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
             fields: ['title^3', 'body^2', 'question^4', 'answer', 'description', 'tags', 'username^2', 'displayName', 'bio', 'authorName'],
             type: 'best_fields',
             fuzziness: 'AUTO',
+            minimum_should_match: '2<70%',
           },
         });
       }
