@@ -9,12 +9,22 @@ const createTransporter = () => {
   const pass = process.env.SMTP_PASS;
 
   if (user && pass) {
-    return nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass }
-    });
+    const isGmail = host.includes('gmail.com') || host.includes('googlemail.com');
+    const transportOptions = isGmail 
+      ? {
+          service: 'gmail',
+          auth: { user, pass }
+        }
+      : {
+          host,
+          port,
+          secure: port === 465,
+          auth: { user, pass },
+          tls: {
+            rejectUnauthorized: false
+          }
+        };
+    return nodemailer.createTransport(transportOptions);
   }
 
   // Fallback: Console Logging / Mock Transporter to prevent crashes
