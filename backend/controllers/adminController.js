@@ -36,6 +36,13 @@ exports.getGlobalFAQAnalytics = async (req, res, next) => {
 
 exports.getUsers = async (req, res, next) => {
   try {
+    try {
+      const { syncGoogleUsers } = require('../services/syncService');
+      await syncGoogleUsers();
+    } catch (syncErr) {
+      console.error('Failed to sync Google users on admin query:', syncErr.message);
+    }
+
     const { page, limit, skip } = paginate(req.query.page, req.query.limit);
     const filter = {};
     if (req.query.role) filter.role = req.query.role;

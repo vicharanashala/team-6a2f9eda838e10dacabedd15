@@ -13,7 +13,10 @@ const createTransporter = () => {
     const transportOptions = isGmail 
       ? {
           service: 'gmail',
-          auth: { user, pass }
+          auth: { user, pass },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 15000
         }
       : {
           host,
@@ -22,7 +25,10 @@ const createTransporter = () => {
           auth: { user, pass },
           tls: {
             rejectUnauthorized: false
-          }
+          },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 15000
         };
     return nodemailer.createTransport(transportOptions);
   }
@@ -170,9 +176,12 @@ exports.sendNewQuestionNotification = async (question, authorName) => {
             <div style="color: #475569; font-size: 14px; margin-bottom: 15px;">
               ${question.body.replace(/<[^>]*>/g, '').substring(0, 180)}...
             </div>
-            ${question.tagNames && question.tagNames.length > 0 ? `
+            ${question.tags && question.tags.length > 0 ? `
               <div style="margin-top: 10px;">
-                ${question.tagNames.map(t => `<span style="background-color: #e2e8f0; color: #475569; font-size: 12px; padding: 4px 8px; border-radius: 6px; margin-right: 6px; display: inline-block;">#${t}</span>`).join('')}
+                ${question.tags.map(t => {
+                  const name = typeof t === 'string' ? t : (t.name || '');
+                  return `<span style="background-color: #e2e8f0; color: #475569; font-size: 12px; padding: 4px 8px; border-radius: 6px; margin-right: 6px; display: inline-block;">#${name}</span>`;
+                }).join('')}
               </div>
             ` : ''}
           </div>
