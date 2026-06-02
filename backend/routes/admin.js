@@ -15,4 +15,10 @@ router.post('/cache/clear', auth, adminOnly, ctrl.clearCache);
 router.get('/anomalies', auth, moderatorOrAdmin, ctrl.getAnomalies);
 router.post('/anomalies/:id/resolve', auth, moderatorOrAdmin, ctrl.resolveAnomaly);
 
+router.post('/reports', auth, ctrl.createSiteReport);
+router.get('/reports', auth, adminOnly, ctrl.getSiteReports);
+router.post('/reports/:id/resolve', auth, adminOnly, ctrl.resolveSiteReport);
+
+router.post('/questions/:id/convert-to-faq', auth, moderatorOrAdmin, ctrl.convertQuestionToFAQItem);
+
 module.exports = router;

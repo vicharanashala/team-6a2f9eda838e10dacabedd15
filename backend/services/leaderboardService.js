@@ -5,7 +5,7 @@ const { getIO } = require('../socket');
 const getLeaderboardData = async () => {
   // Primary: users who resolved doubts (accepted answers or solved-my-doubt votes)
   let leaderboard = await Answer.aggregate([
-    { $match: { isDeleted: false, $or: [{ isAccepted: true }, { solvedMyDoubtCount: { $gt: 0 } }] } },
+    { $match: { isDeleted: { $ne: true }, status: { $ne: 'deleted' }, $or: [{ isAccepted: true }, { solvedMyDoubtCount: { $gt: 0 } }] } },
     { $group: { 
         _id: '$author', 
         resolvedCount: { $sum: 1 }, 
@@ -27,14 +27,23 @@ const getLeaderboardData = async () => {
     }}
   ]);
 
-  // Fallback: if no resolved answers yet, show top users by reputation
-  if (leaderboard.length === 0) {
-    const topUsers = await User.find({ isBanned: { $ne: true } })
+  // If we have fewer than 20 users with resolved counts, fill up the remaining spots with top reputation users
+  if (leaderboard.length < 20) {
+    const remainingCount = 20 - leaderboard.length;
+    const excludedUsernames = leaderboard
+      .filter(row => row.user && row.user.username)
+      .map(row => row.user.username);
+
+    const topUsers = await User.find({ 
+      isBanned: { $ne: true },
+      username: { $nin: excludedUsernames }
+    })
       .sort({ reputation: -1 })
-      .limit(20)
+      .limit(remainingCount)
       .select('username displayName avatar reputation')
       .lean();
-    leaderboard = topUsers.map(u => ({
+
+    const fallbackRows = topUsers.map(u => ({
       resolvedCount: 0,
       totalSolvedVotes: 0,
       user: {
@@ -44,6 +53,8 @@ const getLeaderboardData = async () => {
         reputation: u.reputation || 0,
       }
     }));
+
+    leaderboard = [...leaderboard, ...fallbackRows];
   }
 
   return leaderboard;
@@ -54,6 +65,22 @@ const broadcastLeaderboard = async () => {
     const data = await getLeaderboardData();
     const io = getIO();
     io.emit('leaderboard:update', { leaderboard: data });
+
+    // Handle Top 10 leaderboard email notifications
+    try {
+      const top10 = data.slice(0, 10);
+      const { sendLeaderboardTop10Email } = require('./emailService');
+      for (const row of top10) {
+        if (row.user && row.user.username) {
+          const userObj = await User.findOne({ username: row.user.username });
+          if (userObj && !userObj.receivedTop10Email) {
+            await sendLeaderboardTop10Email(userObj);
+          }
+        }
+      }
+    } catch (top10Err) {
+      console.error('Error handling Top 10 email triggers:', top10Err.message);
+    }
   } catch (err) {
     // Socket might not be initialized yet during startup/seeding, ignore
     console.log('Socket not ready to broadcast leaderboard update.');

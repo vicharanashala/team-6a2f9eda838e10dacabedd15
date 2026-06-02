@@ -164,11 +164,26 @@ exports.googleLogin = async (req, res, next) => {
         throw new AppError(`Account banned: ${user.banReason}`, 403);
       }
       user.lastActive = new Date();
+      let needsReindex = false;
+
+      if (email && user.email !== email) {
+        user.email = email;
+        needsReindex = true;
+      }
+      if (name && user.displayName !== name) {
+        user.displayName = name;
+        needsReindex = true;
+      }
       if (picture && user.avatarUrl !== picture) {
         user.avatarUrl = picture;
         user.avatar = picture;
+        needsReindex = true;
       }
+
       await user.save();
+      if (needsReindex) {
+        await indexUser(user);
+      }
       const jwtToken = generateToken(user);
       return res.json({ token: jwtToken, user: user.toPublicJSON() });
     }
@@ -181,6 +196,9 @@ exports.googleLogin = async (req, res, next) => {
       }
       user.googleId = sub;
       user.authProvider = 'both';
+      if (name && !user.displayName) {
+        user.displayName = name;
+      }
       if (picture && !user.avatarUrl) {
         user.avatarUrl = picture;
         user.avatar = picture;

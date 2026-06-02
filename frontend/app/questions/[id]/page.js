@@ -527,7 +527,7 @@ export default function QuestionDetailPage() {
             {question.isFAQ && (user?.role === 'admin' || user?.role === 'moderator') && (
               <button onClick={() => handleMarkOutdated()} className="btn-secondary btn-sm">Mark Outdated</button>
             )}
-            {user?.role === 'admin' || user?.role === 'moderator' && (
+            {(user?.role === 'admin' || user?.role === 'moderator') && (
               <button onClick={() => openAddToFAQModal(null)} className="btn-secondary btn-sm">Add to FAQ</button>
             )}
           </div>

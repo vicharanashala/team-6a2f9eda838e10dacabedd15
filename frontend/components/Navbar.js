@@ -55,6 +55,11 @@ export default function Navbar({ onSearch }) {
               <Link href="/users" className="px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-tertiary)] rounded-md transition-colors">
                 Community
               </Link>
+              {user && (user.role === 'admin' || user.role === 'moderator') && (
+                <Link href="/admin" className="px-3 py-2 text-sm font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 rounded-md transition-colors">
+                  Admin Panel
+                </Link>
+              )}
             </div>
           </div>
 

@@ -61,6 +61,10 @@ exports.vote = async (req, res, next) => {
         await User.findByIdAndUpdate(target.author, { $inc: { reputation: voteType === 'upvote' ? -10 : 10 } });
       }
       releaseVoteLock(req.user._id, targetId);
+      try {
+        const { broadcastLeaderboard } = require('../services/leaderboardService');
+        broadcastLeaderboard();
+      } catch (lErr) {}
       return res.json({ message: 'Vote removed', vote: null });
     }
 
@@ -75,6 +79,10 @@ exports.vote = async (req, res, next) => {
         await User.findByIdAndUpdate(target.author, { $inc: { reputation: voteType === 'upvote' ? 10 : -10 } });
       }
       releaseVoteLock(req.user._id, targetId);
+      try {
+        const { broadcastLeaderboard } = require('../services/leaderboardService');
+        broadcastLeaderboard();
+      } catch (lErr) {}
       return res.json({ message: 'Vote updated', vote: existingVote });
     }
 
@@ -94,9 +102,12 @@ exports.vote = async (req, res, next) => {
     }
 
     if (voteType === 'upvote' && target.author.toString() !== req.user._id.toString()) {
+      const questionId = targetType === 'Question'
+        ? targetId
+        : (target.question && target.question._id ? target.question._id.toString() : target.question.toString());
       const linkUrl = targetType === 'Question'
         ? `/questions/${targetId}`
-        : `/questions/${target.question.toString()}#answer-${target._id.toString()}`;
+        : `/questions/${questionId}#answer-${target._id.toString()}`;
 
       await Notification.create({
         recipient: target.author,
@@ -120,9 +131,12 @@ exports.vote = async (req, res, next) => {
         other: 'See feedback below',
       };
 
+      const questionId = targetType === 'Question'
+        ? targetId
+        : (target.question && target.question._id ? target.question._id.toString() : target.question.toString());
       const linkUrl = targetType === 'Question'
         ? `/questions/${targetId}`
-        : `/questions/${target.question.toString()}#answer-${target._id.toString()}`;
+        : `/questions/${questionId}#answer-${target._id.toString()}`;
 
       await Notification.create({
         recipient: target.author,
@@ -139,6 +153,10 @@ exports.vote = async (req, res, next) => {
     }
 
     releaseVoteLock(req.user._id, targetId);
+    try {
+      const { broadcastLeaderboard } = require('../services/leaderboardService');
+      broadcastLeaderboard();
+    } catch (lErr) {}
     res.status(201).json({ message: 'Voted', vote });
   } catch (err) {
     releaseVoteLock(req.user._id, targetId);

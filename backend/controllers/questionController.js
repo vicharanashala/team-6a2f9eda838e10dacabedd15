@@ -75,6 +75,15 @@ exports.createQuestion = async (req, res, next) => {
 
     await indexQuestion(populated);
 
+    // Send new question notification email broadcast
+    try {
+      const { sendNewQuestionNotification } = require('../services/emailService');
+      const authorName = populated.author ? (populated.author.displayName || populated.author.username) : 'Anonymous';
+      sendNewQuestionNotification(populated, authorName);
+    } catch (emailErr) {
+      console.error('Email notification error:', emailErr.message);
+    }
+
     res.status(201).json({ question: populated, alreadyAsked: existingQuestion ? {
       isAlreadyAsked: true,
       scopeMatch: existingQuestion.scopeMatch,

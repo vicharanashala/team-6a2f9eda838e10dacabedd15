@@ -16,6 +16,7 @@ export default function AdminPage() {
   const [flaggedAs, setFlaggedAs] = useState([]);
   const [anomalies, setAnomalies] = useState([]);
   const [anomalyStats, setAnomalyStats] = useState(null);
+  const [siteReports, setSiteReports] = useState([]);
   const [anomalySeverityFilter, setAnomalySeverityFilter] = useState('all');
   const [anomalyStatusFilter, setAnomalyStatusFilter] = useState('unresolved');
   const [anomalySortBy, setAnomalySortBy] = useState('time');
@@ -32,6 +33,9 @@ export default function AdminPage() {
     fetchFlagged();
     fetchDeepData();
     fetchAnomalies();
+    if (user.role === 'admin') {
+      fetchSiteReports();
+    }
   }, [user]);
   useEffect(() => {
     if (user && (user.role === 'admin' || user.role === 'moderator')) {
@@ -97,6 +101,21 @@ export default function AdminPage() {
       toast.error(err.message || 'Failed to resolve anomaly');
     }
   };
+  const fetchSiteReports = async () => {
+    try {
+      const data = await api.get('/admin/reports');
+      setSiteReports(data.reports || []);
+    } catch (_) {}
+  };
+  const handleResolveSiteReport = async (reportId) => {
+    try {
+      await api.post(`/admin/reports/${reportId}/resolve`);
+      toast.success('Site issue marked as resolved');
+      fetchSiteReports();
+    } catch (err) {
+      toast.error(err.message || 'Failed to resolve site report');
+    }
+  };
   const handleBan = async (userId) => {
     const reason = prompt('Ban reason:');
     if (!reason) return;
@@ -127,7 +146,11 @@ export default function AdminPage() {
     } catch (err) { toast.error(err.message); }
   };
   const tabs = ['dashboard', 'users', 'flagged', 'anomalies'];
-  if (user?.role !== 'admin') tabs.splice(tabs.indexOf('users'), 1);
+  if (user?.role === 'admin') tabs.push('siteReports');
+  if (user?.role !== 'admin') {
+    const uIdx = tabs.indexOf('users');
+    if (uIdx > -1) tabs.splice(uIdx, 1);
+  }
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -514,6 +537,94 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      ) : tab === 'siteReports' ? (
+        <div className="card overflow-hidden">
+          <div className="p-5 border-b border-[var(--color-border)] bg-gradient-to-r from-red-500/5 to-amber-500/5">
+            <h3 className="font-bold text-lg text-[var(--color-text)] flex items-center gap-2">
+              <span>🚨</span>
+              <span>Site Issue Reports / Flags ({siteReports.length})</span>
+            </h3>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+              User-submitted reports regarding technical issues or bugs on the platform.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Status</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Subject</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Description</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Page URL</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Submitted By</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Date</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {siteReports.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="text-center p-8 text-[var(--color-text-secondary)]">
+                      No site reports submitted yet.
+                    </td>
+                  </tr>
+                ) : (
+                  siteReports.map(report => (
+                    <tr key={report._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                      <td className="px-4 py-3">
+                        {report.status === 'resolved' ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            Resolved
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 animate-pulse">
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-[var(--color-text)]">{report.subject}</td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)] max-w-xs truncate" title={report.description}>
+                        {report.description}
+                      </td>
+                      <td className="px-4 py-3 text-xs font-mono max-w-xs truncate" title={report.pageUrl}>
+                        {report.pageUrl ? (
+                          <a href={report.pageUrl} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline">
+                            {report.pageUrl}
+                          </a>
+                        ) : (
+                          'N/A'
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {report.user ? (
+                          <div>
+                            <p className="font-medium text-[var(--color-text)]">{report.user.displayName || report.user.username}</p>
+                            <p className="text-xs text-[var(--color-text-secondary)]">@{report.user.username}</p>
+                          </div>
+                        ) : (
+                          <span className="text-[var(--color-text-muted)]">Unknown</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">
+                        {formatDate(report.createdAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {report.status === 'pending' && (
+                          <button
+                            onClick={() => handleResolveSiteReport(report._id)}
+                            className="btn-primary btn-sm px-3 py-1.5 rounded-lg text-xs"
+                          >
+                            Resolve
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : null}

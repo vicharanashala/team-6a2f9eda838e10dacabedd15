@@ -188,6 +188,8 @@ exports.acceptAnswer = async (req, res, next) => {
     // Reward answer author
     await User.findByIdAndUpdate(answer.author, { $inc: { reputation: 15 } });
 
+    broadcastLeaderboard();
+
     await Notification.create({
       recipient: answer.author,
       type: 'answer_accepted',
@@ -213,6 +215,16 @@ exports.acceptAnswer = async (req, res, next) => {
       question.meTooUsers.forEach(userId => {
         emitToUser(userId.toString(), 'notification:new', { questionAnswered: true });
       });
+
+      // Send email notifications to "Me Too" users via Nodemailer
+      try {
+        const { sendDoubtSolvedNotification } = require('../services/emailService');
+        const solver = await User.findById(answer.author);
+        const solverName = solver ? (solver.displayName || solver.username) : 'A community peer';
+        sendDoubtSolvedNotification(question, answer.body, solverName);
+      } catch (emailErr) {
+        console.error('Email notification error:', emailErr.message);
+      }
     }
 
     broadcastLeaderboard();

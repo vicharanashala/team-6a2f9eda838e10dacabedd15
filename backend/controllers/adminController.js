@@ -246,3 +246,109 @@ exports.clearCache = async (req, res) => {
     res.json({ message: 'Cache not available' });
   }
 };
+
+exports.createSiteReport = async (req, res, next) => {
+  try {
+    const SiteReport = require('../models/SiteReport');
+    const { subject, description, pageUrl } = req.body;
+    if (!subject || !description) {
+      throw new AppError('Subject and description are required', 400);
+    }
+    const report = await SiteReport.create({
+      user: req.user._id,
+      subject,
+      description,
+      pageUrl
+    });
+    res.status(201).json({ message: 'Site report submitted successfully', report });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getSiteReports = async (req, res, next) => {
+  try {
+    const SiteReport = require('../models/SiteReport');
+    const reports = await SiteReport.find()
+      .populate('user', 'username displayName email')
+      .sort({ createdAt: -1 });
+    res.json({ reports });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.resolveSiteReport = async (req, res, next) => {
+  try {
+    const SiteReport = require('../models/SiteReport');
+    const report = await SiteReport.findByIdAndUpdate(
+      req.params.id,
+      { status: 'resolved' },
+      { new: true }
+    );
+    if (!report) throw new AppError('Report not found', 404);
+    res.json({ message: 'Site report marked as resolved', report });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.convertQuestionToFAQItem = async (req, res, next) => {
+  try {
+    const Question = require('../models/Question');
+    const Answer = require('../models/Answer');
+    const FAQ = require('../models/FAQ');
+    
+    const { categoryId } = req.body;
+    if (!categoryId) {
+      throw new AppError('FAQ Category ID is required', 400);
+    }
+
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      throw new AppError('Student question not found', 404);
+    }
+
+    let answerText = '';
+    if (question.acceptedAnswer) {
+      const ans = await Answer.findById(question.acceptedAnswer);
+      if (ans) answerText = ans.body;
+    } else {
+      const topAns = await Answer.findOne({ question: question._id, isDeleted: false }).sort({ upvotes: -1 });
+      if (topAns) answerText = topAns.body;
+    }
+
+    if (!answerText) {
+      throw new AppError('The student question must have at least one answer to be converted to an FAQ', 400);
+    }
+
+    const faqPage = await FAQ.findById(categoryId);
+    if (!faqPage) {
+      throw new AppError('FAQ category not found', 404);
+    }
+
+    faqPage.items.push({
+      question: question.title,
+      answer: answerText,
+      tags: question.tagNames || [],
+      order: faqPage.items.length,
+      reviewedBy: req.user._id,
+      lastReviewed: new Date()
+    });
+
+    await faqPage.save();
+
+    const { indexFAQItem } = require('../services/searchService');
+    const newItem = faqPage.items[faqPage.items.length - 1];
+    await indexFAQItem(faqPage, newItem);
+
+    question.isFAQ = true;
+    await question.save();
+
+    res.json({ message: 'Question successfully converted and added to FAQ list!', faq: faqPage });
+  } catch (err) {
+    next(err);
+  }
+};
+
+

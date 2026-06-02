@@ -71,8 +71,8 @@ export default function OnboardingModal() {
     }
     if (user.role === 'admin' || user.role === 'moderator') return;
 
-    // Prevent repeated popups if user dismissed the prompt in current session
-    if (typeof window !== 'undefined' && sessionStorage.getItem(`phase_prompt_dismissed_${user.id}`)) {
+    // Prevent repeated popups if user dismissed the prompt
+    if (typeof window !== 'undefined' && localStorage.getItem(`phase_prompt_dismissed_${user.id}`)) {
       return;
     }
 
@@ -98,7 +98,7 @@ export default function OnboardingModal() {
       await completeOnboarding(phaseValue);
     } catch (_) {}
     if (typeof window !== 'undefined' && user) {
-      sessionStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
+      localStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
     }
     setDismissed(true);
     setIsOpen(false);
@@ -120,7 +120,7 @@ export default function OnboardingModal() {
 
   const handleSkip = () => {
     if (typeof window !== 'undefined' && user) {
-      sessionStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
+      localStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
     }
     handleDismiss(null);
   };

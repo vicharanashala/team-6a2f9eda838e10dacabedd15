@@ -19,7 +19,9 @@ export function AuthProvider({ children }) {
       const data = await api.get('/auth/me');
       setUser(data.user);
     } catch (err) {
-      localStorage.removeItem('token');
+      if (err.status === 401 || err.status === 403) {
+        localStorage.removeItem('token');
+      }
     } finally {
       setLoading(false);
     }

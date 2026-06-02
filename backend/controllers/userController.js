@@ -131,6 +131,14 @@ exports.completeOnboarding = async (req, res, next) => {
     }
     const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true });
 
+    // Trigger Onboarding welcome email via Nodemailer
+    try {
+      const { sendOnboardingEmail } = require('../services/emailService');
+      sendOnboardingEmail(user);
+    } catch (emailErr) {
+      console.error('Email notification error:', emailErr.message);
+    }
+
     // Invalidate recommendation cache
     try {
       const { getRedis } = require('../config/redis');

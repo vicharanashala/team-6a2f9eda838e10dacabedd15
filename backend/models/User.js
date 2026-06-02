@@ -72,6 +72,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['pre', 'phase1_coursework', 'phase1_completed', 'phase2_project', 'completed']
   },
+  receivedTop10Email: { type: Boolean, default: false },
   tagAffinity: [{
     tag: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
