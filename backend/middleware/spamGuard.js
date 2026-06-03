@@ -200,6 +200,30 @@ const spamGuard = async (req, res, next) => {
       return res.status(400).json({ blocked: false, reason: "Message contains repeated character patterns" });
     }
 
+    // Gibberish / randomstring detection
+    const isGibberish = (text) => {
+      if (!text || text.length < 5) return false;
+      const lower = text.toLowerCase();
+      const letters = lower.replace(/[^a-z]/g, '');
+      if (letters.length < 5) return false;
+      // Check vowel ratio — real words need at least 15% vowels
+      const vowels = (letters.match(/[aeiou]/g) || []).length;
+      const vowelRatio = vowels / letters.length;
+      if (vowelRatio < 0.10) return true; // nearly no vowels = gibberish
+      // Check consecutive consonant clusters (5+ in a row)
+      if (/[bcdfghjklmnpqrstvwxyz]{6,}/.test(lower)) return true;
+      // Check unique char ratio — real sentences have repetition
+      const uniqueChars = new Set(letters).size;
+      const uniqueRatio = uniqueChars / letters.length;
+      if (letters.length > 12 && uniqueRatio > 0.85) return true;
+      return false;
+    };
+
+    if (isQuestion && (isGibberish(title) || isGibberish(body))) {
+      await handleViolation(user);
+      return res.status(400).json({ blocked: false, reason: "Your question appears to be gibberish or random characters. Please write a clear, meaningful question." });
+    }
+
     const externalLinkRegex = /https?:\/\//g;
     const linkMatches = (body.match(externalLinkRegex) || []).length + (title.match(externalLinkRegex) || []).length;
     if (user.trustLevel === 'new' && linkMatches > 0) {

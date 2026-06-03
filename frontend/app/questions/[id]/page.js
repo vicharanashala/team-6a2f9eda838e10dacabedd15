@@ -509,9 +509,8 @@ export default function QuestionDetailPage() {
           <span>Verified on {formatDate(question.lastVerifiedAt)}</span>
         </div>
       )}
-
-      {/* Anomaly Detection Banners */}
-      {question.anomalySeverity === 'high' && (
+      {/* Anomaly Detection Banners — hide when resolved or already answered */}
+      {question.anomalySeverity === 'high' && !question.anomalyResolvedAt && question.answerCount === 0 && (
         <div className="mb-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg shadow-sm animate-pulse">
           <div className="flex items-center gap-2 text-red-800 dark:text-red-400">
             <svg className="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -522,16 +521,28 @@ export default function QuestionDetailPage() {
         </div>
       )}
 
-      {question.anomalySeverity === 'medium' && (
+      {question.anomalySeverity === 'high' && question.anomalyResolvedAt && (
+        <div className="mb-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900/50 rounded-lg">
+          <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium">This query has been reviewed and resolved by our team.</span>
+          </div>
+        </div>
+      )}
+
+      {question.anomalySeverity === 'medium' && !question.anomalyResolvedAt && question.answerCount === 0 && (
         <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-lg shadow-sm">
           <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span className="font-semibold text-sm">Your query is in our review queue. You'll hear back soon.</span>
+            <span className="font-semibold text-sm">Your query is in our review queue. You\'ll hear back soon.</span>
           </div>
         </div>
       )}
+
 
       {user && (question.author?._id === user._id || question.author === user._id) && 
         (question.anomalySeverity === 'low' || question.anomalySeverity === 'none' || !question.anomalySeverity) && (

@@ -1,6 +1,7 @@
 const { validationResult } = require('express-validator');
 const Question = require('../models/Question');
 const Tag = require('../models/Tag');
+const User = require('../models/User');
 const QuestionView = require('../models/QuestionView');
 const { AppError } = require('../middleware/errorHandler');
 const { paginate, buildPaginationMeta } = require('../utils/helpers');
@@ -83,8 +84,11 @@ exports.createQuestion = async (req, res, next) => {
       console.error('[AI Validate] FastAPI validation call failed or timed out:', err.message);
     }
 
+    // If AI flags gibberish/noise — reject immediately with a clear message
     if (isAiFlaggedNoise) {
-      visibility = 'pending';
+      return res.status(400).json({
+        error: `Your question appears to be spam or gibberish and was not allowed. Reason: ${aiFlagReason} Please write a clear, meaningful question.`
+      });
     }
 
     const questionData = {
