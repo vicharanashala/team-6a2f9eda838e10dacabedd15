@@ -1,10 +1,10 @@
 const router = require('express').Router();
-const { auth, moderatorOrAdmin } = require('../middleware/auth');
+const { auth, optionalAuth, moderatorOrAdmin } = require('../middleware/auth');
 const { answerValidation } = require('../utils/validators');
 const { spamGuard } = require('../middleware/spamGuard');
 const ctrl = require('../controllers/answerController');
 
-router.get('/question/:questionId', ctrl.getAnswers);
+router.get('/question/:questionId', optionalAuth, ctrl.getAnswers);
 router.post('/question/:questionId', auth, spamGuard, answerValidation, ctrl.createAnswer);
 router.put('/:id', auth, ctrl.updateAnswer);
 router.delete('/:id', auth, ctrl.deleteAnswer);

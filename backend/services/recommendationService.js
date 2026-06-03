@@ -103,23 +103,54 @@ const getRecommendedFAQs = async (userId) => {
   const phase = user.currentPhase;
   const affinityTags = (user.tagAffinity || []).map(item => item.tag.toLowerCase());
 
+  const phaseQueries = {
+    pre: 'pre internship selection process NOC certificate getting started onboarding',
+    phase1_coursework: 'phase 1 coursework live sessions modules lectures test assignment LMS Vibe',
+    phase1_completed: 'phase 1 completed team formation yaksha chat project group',
+    phase2_project: 'phase 2 project code reviews github checkin final evaluation placement interview',
+    completed: 'internship completed certificate alumni job placement resume referral graduation',
+  };
+
+  const query = phaseQueries[phase] || phase;
+  let aiRecommendedTitles = [];
+  try {
+    const axios = require('axios');
+    const config = require('../config');
+    console.log(`[AI Recommend] Querying FastAPI search for phase "${phase}" with query: "${query}"`);
+    const response = await axios.post(`${config.fastApiUrl}/api/v1/search`, {
+      query,
+      documents: allFAQs.map(faq => faq.title)
+    }, { timeout: 3000 });
+
+    if (response.data && response.data.recommendations) {
+      aiRecommendedTitles = response.data.recommendations;
+      console.log(`[AI Recommend] FastAPI returned recommendations:`, aiRecommendedTitles);
+    }
+  } catch (err) {
+    console.error('[AI Recommend] FastAPI search call failed or timed out:', err.message);
+  }
+
   const scoredFAQs = allFAQs.map(faq => {
     // 1. Phase Match: keyword-based, broad matching
     const phaseMatch = isFaqMatchingPhase(faq, phase);
 
-    // 2. Tag affinity overlap
+    // 2. AI Semantic Match from FastAPI
+    const aiMatch = aiRecommendedTitles.includes(faq.title);
+
+    // 3. Tag affinity overlap
     const faqTagsClean = (faq.tags || []).map(t => t.toLowerCase().trim());
     const matchingTagsCount = faqTagsClean.filter(t => affinityTags.includes(t)).length;
 
-    // 3. View count (log scale)
+    // 4. View count (log scale)
     const viewFactor = Math.log((faq.viewCount || 0) + 1) * 2;
 
-    // 4. Official bonus
+    // 5. Official bonus
     const officialFactor = faq.isOfficial ? 10 : 0;
 
-    const score = (phaseMatch ? 100 : 0) + (matchingTagsCount * 10) + viewFactor + officialFactor;
+    // Phase Match adds 50, AI Semantic Match adds 100
+    const score = (phaseMatch ? 50 : 0) + (aiMatch ? 100 : 0) + (matchingTagsCount * 10) + viewFactor + officialFactor;
 
-    return { ...faq, score, phaseMatch, matchingTagsCount };
+    return { ...faq, score, phaseMatch: phaseMatch || aiMatch, matchingTagsCount };
   });
 
   scoredFAQs.sort((a, b) => b.score - a.score);

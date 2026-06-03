@@ -74,10 +74,25 @@ services:
       # Override localhost URLs from secrets.env with Docker service names
       - REDIS_URL=redis://redis:6379
       - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - FASTAPI_URL=http://fastapi:8000
       - JWT_EXPIRES_IN=7d
       - CLIENT_URL=http://localhost:3000
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  fastapi:
+    build:
+      context: ./FastAPI_python_model
+      dockerfile: Dockerfile
+    container_name: quorafaq-fastapi
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./FastAPI_python_model:/app
+      - fastapi_cache:/root/.cache
+    environment:
+      - PORT=8000
 
   frontend:
     build:
@@ -96,6 +111,7 @@ services:
       - /app/node_modules
       - next_cache:/app/.next
     environment:
+      - PORT=3000
       - NEXT_PUBLIC_API_URL=http://localhost:5000/api
       - NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
       # Internal proxy uses Docker service name, not localhost
@@ -112,3 +128,4 @@ volumes:
   elasticsearch_data:
   next_cache:
   uploads:
+  fastapi_cache:

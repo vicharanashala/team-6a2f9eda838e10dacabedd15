@@ -87,6 +87,7 @@ exports.updateProfile = async (req, res, next) => {
     if (req.file) {
       const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       updates.avatar = base64Image;
+      updates.avatarUrl = base64Image;
     }
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true });

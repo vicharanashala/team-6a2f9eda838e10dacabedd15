@@ -63,6 +63,30 @@ exports.createQuestion = async (req, res, next) => {
       }
     }
 
+    // Call FastAPI AI microservice for zero-shot validation and noise classification
+    let isAiFlaggedNoise = false;
+    let aiFlagReason = '';
+    try {
+      const axios = require('axios');
+      const config = require('../config');
+      console.log(`[AI Validate] Calling FastAPI validate at: ${config.fastApiUrl}/api/v1/validate`);
+      const response = await axios.post(`${config.fastApiUrl}/api/v1/validate`, {
+        text: title
+      }, { timeout: 3000 });
+
+      if (response.data && response.data.valid === false) {
+        isAiFlaggedNoise = true;
+        aiFlagReason = response.data.reason || 'AI flagged this as unreadable noise.';
+        console.log(`[AI Validate] Question flagged as noise. Reason: ${aiFlagReason}`);
+      }
+    } catch (err) {
+      console.error('[AI Validate] FastAPI validation call failed or timed out:', err.message);
+    }
+
+    if (isAiFlaggedNoise) {
+      visibility = 'pending';
+    }
+
     const questionData = {
       title,
       body,
@@ -72,8 +96,10 @@ exports.createQuestion = async (req, res, next) => {
       lastActivity: new Date(),
       isAnonymous: !!anonymous,
       visibility,
-      triggeredRule: req.body.triggeredRule || undefined,
-      phase: phase || mapUserPhase(req.user.currentPhase) || 'onboarding'
+      triggeredRule: isAiFlaggedNoise ? 'AI Noise Filter' : (req.body.triggeredRule || undefined),
+      phase: phase || mapUserPhase(req.user.currentPhase) || 'onboarding',
+      anomalySeverity: isAiFlaggedNoise ? 'high' : 'none',
+      anomalyScore: isAiFlaggedNoise ? 0.95 : 0
     };
 
     if (existingQuestion) {

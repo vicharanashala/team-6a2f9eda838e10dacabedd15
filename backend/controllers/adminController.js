@@ -38,9 +38,12 @@ exports.getUsers = async (req, res, next) => {
   try {
     try {
       const { syncGoogleUsers } = require('../services/syncService');
-      await syncGoogleUsers();
+      // Execute syncGoogleUsers in the background to avoid blocking the request
+      syncGoogleUsers().catch(syncErr => {
+        console.error('Failed to sync Google users in background:', syncErr.message);
+      });
     } catch (syncErr) {
-      console.error('Failed to sync Google users on admin query:', syncErr.message);
+      console.error('Failed to require/invoke syncGoogleUsers:', syncErr.message);
     }
 
     const { page, limit, skip } = paginate(req.query.page, req.query.limit);
@@ -58,7 +61,8 @@ exports.getUsers = async (req, res, next) => {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('-password'),
+        .select('-password')
+        .lean(),
       User.countDocuments(filter),
     ]);
 
@@ -184,14 +188,28 @@ exports.deleteUser = async (req, res, next) => {
 exports.getFlaggedContent = async (req, res, next) => {
   try {
     const [flaggedQuestions, flaggedAnswers] = await Promise.all([
-      Question.find({ isFlagged: true, isDeleted: false })
+      Question.find({
+        $or: [
+          { isFlagged: true },
+          { visibility: 'pending' }
+        ],
+        isDeleted: false
+      })
         .populate('author', 'username displayName')
         .populate('flaggedBy', 'username')
-        .select('title flagReason createdAt'),
-      Answer.find({ isFlagged: true, isDeleted: false })
+        .select('title body visibility isFlagged flagReason createdAt')
+        .lean(),
+      Answer.find({
+        $or: [
+          { isFlagged: true },
+          { visibility: 'pending' }
+        ],
+        isDeleted: false
+      })
         .populate('author', 'username displayName')
         .populate('flaggedBy', 'username')
-        .select('body flagReason createdAt'),
+        .select('body visibility isFlagged flagReason createdAt')
+        .lean(),
     ]);
 
     res.json({ flaggedQuestions, flaggedAnswers });
@@ -230,7 +248,8 @@ exports.getAnomalies = async (req, res, next) => {
         .skip(skip)
         .limit(parseInt(limit))
         .populate('author', 'username displayName email')
-        .populate('anomalyResolvedBy', 'username displayName'),
+        .populate('anomalyResolvedBy', 'username displayName')
+        .lean(),
       Question.countDocuments(filter)
     ]);
 
@@ -457,10 +476,12 @@ exports.convertQuestionToFAQItem = async (req, res, next) => {
 exports.getModerationQueue = async (req, res, next) => {
   try {
     const questions = await Question.find({ visibility: 'pending', isDeleted: { $ne: true } })
-      .populate('author', 'username displayName trustLevel trustScore');
+      .populate('author', 'username displayName trustLevel trustScore')
+      .lean();
     const answers = await Answer.find({ visibility: 'pending', isDeleted: { $ne: true } })
       .populate('author', 'username displayName trustLevel trustScore')
-      .populate({ path: 'question', select: 'title' });
+      .populate({ path: 'question', select: 'title' })
+      .lean();
     res.json({ questions, answers });
   } catch (err) {
     next(err);

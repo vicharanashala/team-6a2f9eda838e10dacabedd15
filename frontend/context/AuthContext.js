@@ -6,8 +6,16 @@ import toast from 'react-hot-toast';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const setUser = (u) => {
+    if (u) {
+      u._id = u.id || u._id;
+      u.id = u._id || u.id;
+    }
+    setUserState(u);
+  };
 
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('token');

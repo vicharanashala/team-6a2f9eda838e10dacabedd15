@@ -7,6 +7,7 @@ const config = {
   mongodb: {
     uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/quorafaq',
   },
+  fastApiUrl: process.env.FASTAPI_URL || 'http://localhost:8000',
   redis: {
     url: process.env.REDIS_URL || 'redis://localhost:6379',
   },

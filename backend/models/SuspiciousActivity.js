@@ -18,4 +18,6 @@ const suspiciousActivitySchema = new mongoose.Schema({
   }]
 }, { timestamps: { createdAt: 'flagDate', updatedAt: false } });
 
+suspiciousActivitySchema.index({ flagDate: -1 });
+
 module.exports = mongoose.model('SuspiciousActivity', suspiciousActivitySchema);

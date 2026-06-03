@@ -91,6 +91,8 @@ const startServer = async () => {
 
   try {
     await seedDatabase();
+    const { cleanupOrphanedData } = require('./utils/cleanup');
+    await cleanupOrphanedData();
     await initIndices();
     await syncToElasticsearch();
   } catch (err) {

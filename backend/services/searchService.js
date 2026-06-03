@@ -691,7 +691,7 @@ const seedDatabase = async () => {
 
     const metadataPath = path.join(__dirname, '..', '..', 'metadata.json');
     const faqsPath = path.join(__dirname, '..', '..', 'faqs-complete.json');
-    const integrityPath = [path.join(__dirname, '..', '..', '.integrity'), path.join(__dirname, '..', '..', '..', '.integrity')].find(p => fs.existsSync(p));
+    const integrityPath = [path.join(__dirname, '..', '..', '.integrity'), path.join(__dirname, '..', '..', '..', '.integrity')].find(p => fs.existsSync(p) && fs.statSync(p).isFile());
 
     if (fs.existsSync(integrityPath)) {
       const integrityData = fs.readFileSync(integrityPath, 'utf-8');

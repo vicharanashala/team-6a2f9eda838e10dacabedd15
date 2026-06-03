@@ -36,33 +36,52 @@ export default function AdminPage() {
       router.push('/');
       return;
     }
-    fetchDashboard();
-    fetchUsers();
-    fetchFlagged();
-    fetchDeepData();
-    fetchAnomalies();
-    fetchModerationQueue();
-    fetchReportedPosts();
-    fetchSuspiciousActivities();
-    fetchAuditLogs();
-    if (user.role === 'admin') {
+    
+    // Lazy-load data based on active tab
+    if (tab === 'dashboard') {
+      fetchDashboard();
+      fetchDeepData();
+    } else if (tab === 'users') {
+      fetchUsers();
+    } else if (tab === 'flagged') {
+      fetchFlagged();
+    } else if (tab === 'anomalies') {
+      fetchAnomalies();
+    } else if (tab === 'moderationQueue') {
+      fetchModerationQueue();
+    } else if (tab === 'reportedPosts') {
+      fetchReportedPosts();
+    } else if (tab === 'suspiciousActivities') {
+      fetchSuspiciousActivities();
+    } else if (tab === 'auditLogs') {
+      fetchAuditLogs();
+    } else if (tab === 'siteReports' && user.role === 'admin') {
       fetchSiteReports();
     }
-  }, [user]);
+  }, [user, tab]);
 
   useEffect(() => {
     if (!socket) return;
     const handleModerationUpdate = () => {
-      fetchDashboard();
-      fetchUsers();
-      fetchFlagged();
-      fetchDeepData();
-      fetchAnomalies();
-      fetchModerationQueue();
-      fetchReportedPosts();
-      fetchSuspiciousActivities();
-      fetchAuditLogs();
-      if (user?.role === 'admin') {
+      // Re-fetch only the active tab's data
+      if (tab === 'dashboard') {
+        fetchDashboard();
+        fetchDeepData();
+      } else if (tab === 'users') {
+        fetchUsers();
+      } else if (tab === 'flagged') {
+        fetchFlagged();
+      } else if (tab === 'anomalies') {
+        fetchAnomalies();
+      } else if (tab === 'moderationQueue') {
+        fetchModerationQueue();
+      } else if (tab === 'reportedPosts') {
+        fetchReportedPosts();
+      } else if (tab === 'suspiciousActivities') {
+        fetchSuspiciousActivities();
+      } else if (tab === 'auditLogs') {
+        fetchAuditLogs();
+      } else if (tab === 'siteReports' && user?.role === 'admin') {
         fetchSiteReports();
       }
     };
@@ -70,7 +89,7 @@ export default function AdminPage() {
     return () => {
       socket.off('moderation:updated', handleModerationUpdate);
     };
-  }, [socket, user]);
+  }, [socket, user, tab]);
 
   useEffect(() => {
     if (user && (user.role === 'admin' || user.role === 'moderator')) {
@@ -741,7 +760,7 @@ export default function AdminPage() {
                         {formatDate(report.createdAt)}
                       </td>
                       <td className="px-4 py-3">
-                        {report.status === 'pending' && (
+                        {report.status !== 'resolved' && (
                           <button
                             onClick={() => handleResolveSiteReport(report._id)}
                             className="btn-primary btn-sm px-3 py-1.5 rounded-lg text-xs"

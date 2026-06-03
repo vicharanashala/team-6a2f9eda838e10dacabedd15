@@ -320,7 +320,19 @@ Medium-Impact Quality of Life
 
 #### Latest Fixes (June 3, 2026)
 
-1. **Role Promotion Email Notifications**
+1. **Admin Panel Lazy-Loading Optimization**
+   * *Resolution*: Refactored the Admin Panel (`frontend/app/admin/page.js`) to lazy-load tab data only when the tab becomes active. Socket.IO `moderation:updated` events now only trigger a re-fetch of the currently active tab, dramatically improving page responsiveness and reducing network traffic.
+
+2. **Resolved Missing Site Reports Resolution Handler**
+   * *Resolution*: Added the missing `handleResolveSiteReport` function in the frontend admin view to interact with the backend `/admin/reports/:id/resolve` endpoint. Admins can now successfully click the "Resolve" button for site reports to update their status.
+
+3. **Fixed Missing Answers Display Bug**
+   * *Resolution*: Applied the `optionalAuth` middleware to the `getAnswers` route in `backend/routes/answers.js` to correctly populate `req.user`. This allows authenticated admins/moderators to view pending/flagged answers directly on the question page instead of showing an empty list when the answers count is positive.
+
+4. **Fixed EISDIR Database Seeding Crash**
+   * *Resolution*: Corrected the path checks during the integrity checks of the seed script to explicitly verify if the matched path is a file (`fs.statSync(p).isFile()`) before reading, resolving the EISDIR crash when encountering the `.integrity` directory.
+
+5. **Role Promotion Email Notifications**
    * *Resolution*: Implemented `sendRolePromotionEmail` in `emailService.js` and hooked it into `updateUserRole` in `adminController.js` to automatically notify users when promoted to moderator or admin.
 
 2. **Moderators Directory Tab**

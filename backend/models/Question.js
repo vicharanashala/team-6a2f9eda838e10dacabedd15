@@ -149,6 +149,7 @@ const questionSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 questionSchema.index({ title: 'text', body: 'text' });
+questionSchema.index({ visibility: 1, isDeleted: 1 });
 questionSchema.index({ author: 1 });
 questionSchema.index({ tags: 1 });
 questionSchema.index({ status: 1 });
