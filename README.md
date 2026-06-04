@@ -12,77 +12,103 @@ A community-driven Q&A and FAQ platform designed to help students ask doubts wit
 | Events    | Kafka (optional)                                |
 | Infra     | Podman / Docker, Nginx                          |
 
-## Quick Start (local development)
+## Running on Other Systems
 
-### Prerequisites
+To set up and run this project on a new developer environment or a separate host system, follow these steps:
 
-- Node.js 20 (use [nvm](https://github.com/nvm-sh/nvm): `nvm use`)
-- MongoDB running on `localhost:27017`
-- Redis running on `localhost:6379`
+### 1. Prerequisites
+Ensure you have the following installed on the target system:
+* **Docker / Podman & Docker Desktop** (with WSL2 enabled if on Windows)
+* **Node.js 20.x** (for local host development without containers)
 
-### 1. Install dependencies
+---
 
-```bash
-cd backend && npm install
-cd ../frontend && npm install
-```
+### 2. Environment Configuration (Crucial Step)
+Since the `secrets.env` file containing sensitive private keys and credentials is ignored by version control, **you must create it manually** on the target system:
 
-### 2. Configure environment
+1. Copy `.env.example` to `secrets.env` in the root directory:
+   ```bash
+   cp .env.example secrets.env
+   ```
+2. Open `secrets.env` and populate the following values:
+   * **Gmail SMTP Credentials**:
+     ```env
+     GMAIL_USER=your-email@gmail.com
+     GMAIL_APP_PASSWORD=sixteencharacterpassword
+     ```
+     *(Note: The Gmail App Password must be 16 characters with no spaces. Requires 2FA enabled on your Google account).*
+   * **Firebase Admin Credentials**:
+     Provide the JSON string of your Firebase service account in `FIREBASE_SERVICE_ACCOUNT` on a single line.
 
-```bash
-# Backend env is pre-configured for local dev — review and adjust as needed
-cat backend/.env
+---
 
-# Frontend uses NEXT_PUBLIC_* env vars (defaults work for local dev)
-```
+### 3. Option A: Run via Docker Compose (Recommended)
+This starts all required auxiliary services (MongoDB, Redis, Elasticsearch, FastAPI Spam Service, Node Backend, Next.js Frontend) in unified containers:
 
-### 3. Seed the database
+1. Run the cross-platform setup script or docker-compose command directly:
+   ```bash
+   # Option 1: Cross-platform script
+   ./setup-docker.sh
+   
+   # Option 2: Direct docker-compose
+   docker-compose up --build -d
+   ```
+2. Access the site at: http://localhost:3000
 
-```bash
-cd backend && npm run seed
-```
+---
 
-This reads `faqs-complete.json` and `metadata.json` to populate MongoDB with 13 FAQ categories and 126 FAQ items, plus test users:
-- **Admin:** `aduorafamin@qq.com` / `admin123`
-- **Moderator:** `mod@quorafaq.com` / `mod123`
-- **Students:** `alice@test.com`, `bob@test.com`, `charlie@test.com` (password: `test123`)
+### 4. Option B: Running via Docker Directly (Without Compose)
+If you want to run the application using standalone Docker commands without orchestrating through docker-compose:
 
-### 4. Start the dev servers
+1. **Start required database & cache containers**:
+   ```bash
+   # Start MongoDB
+   docker run -d --name mongodb -p 27017:27017 mongo:6.0
+   
+   # Start Redis
+   docker run -d --name redis -p 6379:6379 redis:7.0-alpine
+   
+   # Start Elasticsearch
+   docker run -d --name elasticsearch -p 9200:9200 -e "discovery.type=single-node" -e "xpack.security.enabled=false" elasticsearch:8.11.1
+   ```
 
-```bash
-# Terminal 1 — backend
-cd backend && npm run dev
+2. **Build and run the Backend**:
+   ```bash
+   # Build the backend image
+   docker build -t prashnasarathi-backend ./backend
+   
+   # Run the backend container using your secrets.env file
+   docker run -d --name backend -p 5000:5000 --env-file secrets.env prashnasarathi-backend
+   ```
 
-# Terminal 2 — frontend
-cd frontend && npm run dev
-```
+3. **Build and run the Frontend**:
+   ```bash
+   # Build the frontend image
+   docker build -t prashnasarathi-frontend ./frontend
+   
+   # Run the frontend container
+   docker run -d --name frontend -p 3000:3000 prashnasarathi-frontend
+   ```
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000/api
+---
 
-### Running with Docker Compose (Recommended for Windows/Mac)
+### 5. Option C: Local Host Setup (No Containers)
+If you prefer running services directly on the host machine:
 
-This is the easiest way to run the platform on any OS without installing Node.js, MongoDB, Redis, or Elasticsearch locally.
+1. Start local instances of **MongoDB** (`port 27017`), **Redis** (`port 6379`), and **Elasticsearch** (`port 9200`).
+2. Install packages:
+   ```bash
+   cd backend && npm install
+   cd ../frontend && npm install
+   ```
+3. Seed the FAQ Database:
+   ```bash
+   cd backend && npm run seed
+   ```
+4. Start development servers:
+   * **Backend**: `cd backend && npm run dev` (starts on port 5000)
+   * **Frontend**: `cd frontend && npm run dev` (starts on port 3000)
 
-```bash
-# Option 1: Use the setup script (recommended for Windows/Mac)
-./setup-docker.sh
-
-# Option 2: Direct docker-compose
-docker-compose up --build -d
-```
-
-This spins up the complete development environment (MongoDB, Redis, Elasticsearch, Backend, Frontend). Access the application directly at http://localhost:3000.
-
-**For Windows (Docker Desktop WSL2):**
-- Ensure WSL2 is installed and Docker Desktop is configured to use it
-- Allocate at least 4GB RAM in Docker Desktop settings
-- Run from WSL2 terminal or Git Bash
-
-**For macOS (Docker Desktop):**
-- Allocate at least 4GB RAM in Docker Desktop settings
-- Apple Silicon (M1/M2/M3): Docker Desktop handles ARM64 natively
-- Intel: Standard amd64 builds work automatically
 
 ## Project Structure
 
