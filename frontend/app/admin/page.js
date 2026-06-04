@@ -242,6 +242,15 @@ export default function AdminPage() {
       toast.error(err.message || 'Failed to resolve anomaly');
     }
   };
+  const handleResolveSuspicious = async (id) => {
+    try {
+      await api.post(`/admin/moderation/suspicious/${id}/resolve`);
+      toast.success('Suspicious activity marked as resolved');
+      fetchSuspiciousActivities();
+    } catch (err) {
+      toast.error(err.message || 'Failed to resolve suspicious activity');
+    }
+  };
   const fetchSiteReports = async () => {
     try {
       const data = await api.get('/admin/reports');
@@ -1122,12 +1131,13 @@ export default function AdminPage() {
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Confidence</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Status</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Date</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {suspiciousActivities.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center p-8 text-[var(--color-text-secondary)]">
+                    <td colSpan="7" className="text-center p-8 text-[var(--color-text-secondary)]">
                       No suspicious activity flags detected.
                     </td>
                   </tr>
@@ -1152,12 +1162,27 @@ export default function AdminPage() {
                       <td className="px-4 py-3 font-medium text-[var(--color-text)]">{act.confidenceScore}%</td>
                       <td className="px-4 py-3">
                         {act.isResolved ? (
-                          <span className="badge-green">Resolved</span>
+                          <div className="text-xs">
+                            <span className="badge-green">Resolved</span>
+                            {act.resolvedBy && (
+                              <p className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">by @{act.resolvedBy.username}</p>
+                            )}
+                          </div>
                         ) : (
                           <span className="badge-red">Unresolved</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">{formatDate(act.flagDate)}</td>
+                      <td className="px-4 py-3">
+                        {!act.isResolved && (
+                          <button
+                            onClick={() => handleResolveSuspicious(act._id)}
+                            className="btn-primary btn-sm px-3 py-1 text-xs"
+                          >
+                            Mark Resolved
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1177,7 +1202,7 @@ export default function AdminPage() {
             <table className="w-full text-sm text-left">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Moderator</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">User/Admin</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Action</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Target Type</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Reason / Note</th>
@@ -1195,7 +1220,7 @@ export default function AdminPage() {
                   auditLogs.map(log => (
                     <tr key={log._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                       <td className="px-4 py-3 font-medium text-[var(--color-text)]">
-                        {log.adminId ? `@${log.adminId.username}` : 'System'}
+                        {log.adminId ? `@${log.adminId.username}` : (log.userId ? `@${log.userId.username}` : 'System')}
                       </td>
                       <td className="px-4 py-3 font-semibold text-xs capitalize text-[var(--color-text-secondary)]">{log.action.replace('_', ' ')}</td>
                       <td className="px-4 py-3 font-mono text-xs">{log.targetType}</td>

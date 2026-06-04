@@ -15,8 +15,19 @@ const suspiciousActivitySchema = new mongoose.Schema({
   affectedUsers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }]
-}, { timestamps: { createdAt: 'flagDate', updatedAt: false } });
+  }],
+  isResolved: {
+    type: Boolean,
+    default: false
+  },
+  resolvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  resolvedAt: {
+    type: Date
+  }
+}, { timestamps: { createdAt: 'flagDate', updatedAt: 'resolvedAt' } });
 
 suspiciousActivitySchema.index({ flagDate: -1 });
 

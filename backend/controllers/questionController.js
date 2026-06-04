@@ -111,6 +111,15 @@ exports.createQuestion = async (req, res, next) => {
 
     const question = await Question.create(questionData);
 
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'create_question',
+      targetId: question._id,
+      targetType: 'Question',
+      reason: `Created question: "${title}"`
+    });
+
     const { processAnomalyClassification } = require('../services/anomalyService');
     await processAnomalyClassification(question._id);
 
@@ -384,6 +393,9 @@ exports.updateQuestion = async (req, res, next) => {
       throw new AppError('Not authorized', 403);
     }
 
+    const oldTitle = question.title;
+    const oldBody = question.body;
+
     const { title, body, tags } = req.body;
     if (title) question.title = title;
     if (body) question.body = body;
@@ -403,6 +415,21 @@ exports.updateQuestion = async (req, res, next) => {
     }
 
     await question.save();
+
+    const AuditLog = require('../models/AuditLog');
+    let changes = [];
+    if (title && title !== oldTitle) changes.push(`title: "${oldTitle}" -> "${title}"`);
+    if (body && body !== oldBody) changes.push(`body: "${oldBody}" -> "${body}"`);
+    const changeReason = changes.length > 0 ? `Updated question: ${changes.join(', ')}` : 'Updated question tags';
+
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'update_question',
+      targetId: question._id,
+      targetType: 'Question',
+      reason: changeReason
+    });
+
     const updated = await Question.findById(question._id)
       .populate('author', 'username displayName avatar reputation')
       .populate('tags', 'name color');
@@ -424,6 +451,16 @@ exports.deleteQuestion = async (req, res, next) => {
     question.status = 'deleted';
     question.isDeleted = true;
     await question.save();
+
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'delete_question',
+      targetId: question._id,
+      targetType: 'Question',
+      reason: `Deleted question: "${question.title}"`
+    });
+
     await deleteQuestionIndex(question._id);
     res.json({ message: 'Question deleted' });
   } catch (err) {

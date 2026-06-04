@@ -215,7 +215,7 @@ exports.getAnomalies = async (req, res, next) => {
     const { severity, status, sortBy = 'time', page = 1, limit = 20 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const filter = { anomalySeverity: { $in: ['high', 'medium', 'low'] } };
+    const filter = { anomalySeverity: { $in: ['high', 'medium', 'low'] }, isDeleted: { $ne: true } };
     
     if (severity && severity !== 'all') {
       filter.anomalySeverity = severity;
@@ -249,7 +249,8 @@ exports.getAnomalies = async (req, res, next) => {
       { 
         $match: { 
           anomalySeverity: { $in: ['high', 'medium', 'low'] },
-          anomalyResolvedAt: { $ne: null } 
+          anomalyResolvedAt: { $ne: null },
+          isDeleted: { $ne: true }
         } 
       },
       {
@@ -272,8 +273,8 @@ exports.getAnomalies = async (req, res, next) => {
       avgResolutionTimes[stat._id] = avgMinutes;
     });
 
-    const openHighCount = await Question.countDocuments({ anomalySeverity: 'high', anomalyResolvedAt: null });
-    const openMediumCount = await Question.countDocuments({ anomalySeverity: 'medium', anomalyResolvedAt: null });
+    const openHighCount = await Question.countDocuments({ anomalySeverity: 'high', anomalyResolvedAt: null, isDeleted: { $ne: true } });
+    const openMediumCount = await Question.countDocuments({ anomalySeverity: 'medium', anomalyResolvedAt: null, isDeleted: { $ne: true } });
 
     const fourWeeksAgo = new Date();
     fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
@@ -282,7 +283,8 @@ exports.getAnomalies = async (req, res, next) => {
       {
         $match: {
           anomalySeverity: { $in: ['high', 'medium', 'low'] },
-          createdAt: { $gte: fourWeeksAgo }
+          createdAt: { $gte: fourWeeksAgo },
+          isDeleted: { $ne: true }
         }
       },
       {
@@ -324,6 +326,15 @@ exports.resolveAnomaly = async (req, res, next) => {
     question.anomalyResolvedAt = new Date();
     question.anomalyResolvedBy = req.user._id;
     await question.save();
+
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'resolve_anomaly',
+      targetId: question._id,
+      targetType: 'Question',
+      reason: `Resolved anomaly on question: "${question.title}"`
+    });
 
     const populated = await Question.findById(question._id)
       .populate('author', 'username displayName email')
@@ -768,10 +779,62 @@ exports.moderateUser = async (req, res, next) => {
 exports.getSuspiciousActivity = async (req, res, next) => {
   try {
     const SuspiciousActivity = require('../models/SuspiciousActivity');
-    const activities = await SuspiciousActivity.find()
+    const docs = await SuspiciousActivity.find()
       .populate('affectedUsers', 'username displayName email')
-      .sort({ flagDate: -1 });
+      .populate('resolvedBy', 'username displayName')
+      .sort({ flagDate: -1 })
+      .lean();
+
+    const activities = docs.map(act => {
+      let confidence = 50;
+      const userCount = act.affectedUsers ? act.affectedUsers.length : 0;
+      if (act.type === 'ip_abuse') {
+        confidence = Math.min(100, userCount * 20);
+      } else if (act.type === 'device_abuse') {
+        confidence = Math.min(100, userCount * 33);
+      }
+      return {
+        ...act,
+        activityType: act.type,
+        sharedValue: act.type === 'ip_abuse' ? act.ip : act.deviceId,
+        confidenceScore: confidence
+      };
+    });
+
     res.json({ activities });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.resolveSuspiciousActivity = async (req, res, next) => {
+  try {
+    const SuspiciousActivity = require('../models/SuspiciousActivity');
+    const activity = await SuspiciousActivity.findById(req.params.id);
+    if (!activity) throw new AppError('Suspicious activity log not found', 404);
+    
+    activity.isResolved = true;
+    activity.resolvedBy = req.user._id;
+    activity.resolvedAt = new Date();
+    await activity.save();
+
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'resolve_suspicious',
+      targetId: activity._id,
+      targetType: 'User',
+      reason: `Resolved suspicious activity of type: ${activity.type}`
+    });
+    
+    try {
+      const { emitToAdmin } = require('../socket');
+      emitToAdmin('moderation:updated', { action: 'resolve_suspicious', activityId: activity._id });
+    } catch (err) {
+      console.error('Socket notification error in resolveSuspiciousActivity:', err.message);
+    }
+    
+    res.json({ message: 'Suspicious activity resolved successfully', activity });
   } catch (err) {
     next(err);
   }
@@ -782,6 +845,7 @@ exports.getAuditLogs = async (req, res, next) => {
     const AuditLog = require('../models/AuditLog');
     const logs = await AuditLog.find()
       .populate('adminId', 'username displayName')
+      .populate('userId', 'username displayName')
       .sort({ timestamp: -1 });
     res.json({ logs });
   } catch (err) {

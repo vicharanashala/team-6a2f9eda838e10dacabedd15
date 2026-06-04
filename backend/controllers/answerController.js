@@ -41,6 +41,15 @@ exports.createAnswer = async (req, res, next) => {
       triggeredRule: req.body.triggeredRule || undefined
     });
 
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'create_answer',
+      targetId: answer._id,
+      targetType: 'Answer',
+      reason: `Created answer on question: "${question.title}"`
+    });
+
     await User.findByIdAndUpdate(req.user._id, { $inc: { answerCount: 1 } });
 
     const populated = await Answer.findById(answer._id)
@@ -174,8 +183,22 @@ exports.updateAnswer = async (req, res, next) => {
       throw new AppError('Not authorized', 403);
     }
 
+    const oldBody = answer.body;
     answer.body = req.body.body || answer.body;
     await answer.save();
+
+    const AuditLog = require('../models/AuditLog');
+    const changeReason = req.body.body && req.body.body !== oldBody 
+      ? `Updated answer body: "${oldBody}" -> "${req.body.body}"`
+      : 'Updated answer';
+
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'update_answer',
+      targetId: answer._id,
+      targetType: 'Answer',
+      reason: changeReason
+    });
 
     const populated = await Answer.findById(answer._id)
       .populate('author', 'username displayName avatar reputation');
@@ -197,6 +220,20 @@ exports.deleteAnswer = async (req, res, next) => {
     answer.isDeleted = true;
     answer.status = 'deleted';
     await answer.save();
+
+    const AuditLog = require('../models/AuditLog');
+    const Question = require('../models/Question');
+    const parentQuestion = await Question.findById(answer.question);
+    const questionTitle = parentQuestion ? parentQuestion.title : 'Unknown Question';
+    
+    await AuditLog.create({
+      userId: req.user._id,
+      action: 'delete_answer',
+      targetId: answer._id,
+      targetType: 'Answer',
+      reason: `Deleted answer on question: "${questionTitle}"`
+    });
+
     const { recalculateAnswerCount } = require('../utils/helpers');
     await recalculateAnswerCount(answer.question);
     res.json({ message: 'Answer deleted' });

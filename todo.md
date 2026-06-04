@@ -320,7 +320,17 @@ Medium-Impact Quality of Life
 
 #### Latest Fixes (June 4, 2026)
 
-1. **Optimized SpamGuard Rate Limiting & User Trust Levels**
+1. **Moderation Platform Anomalies, Suspicious Activities, and Auditing Optimization**
+   * *Problem*: Rejected posts were still displaying in the admin anomalies list. The Suspicious Activities tracking logs were missing several fields (type, shared identifier, confidence score, resolution status) and had no option/buttons for administrators to resolve flagged issues. The Audit Log was only tracking actions by administrators/moderators, not regular users' posting and edit history.
+   * *Resolution*:
+     1. Excluded deleted/rejected posts from the anomalies moderation queue, aggregate trend stats, resolvedStats, and open anomaly counts by adding the `isDeleted: { $ne: true }` filter.
+     2. Updated the `SuspiciousActivity` model schema to support `isResolved`, `resolvedBy`, and `resolvedAt`. Mapped database fields in `getSuspiciousActivity` to frontend keys (`activityType`, `sharedValue`, and dynamically calculated `confidenceScore` based on flag user density).
+     3. Added backend resolution route (`POST /admin/moderation/suspicious/:id/resolve`) and handler to resolve suspicious activities, recording them to the audit log.
+     4. Updated the frontend `Suspicious Activity Logs` tab to display an Actions column, status badges showing who resolved the activity, and a "Mark Resolved" button.
+     5. Modified `AuditLog` schema to make `adminId` optional and add `userId`. Instrumented `createQuestion`, `updateQuestion`, `deleteQuestion`, `createAnswer`, `updateAnswer`, and `deleteAnswer` to log every creation, edit, and deletion event to `AuditLog`.
+     6. Updated the frontend `Audit Logs` view to display performer `@username` dynamically based on either `adminId` or `userId`.
+
+2. **Optimized SpamGuard Rate Limiting & User Trust Levels**
    * *Bug*: Question/answer posting rate limits were too restrictive (e.g. 3 posts/day for new users), and the `retryAfter` calculation used a naive `findOne` query that failed to account for full post history. Deleted posts were also counted, and the 60s cooldown delayed E2E tests.
    * *Resolution*:
      1. Replaced the `findOne` queries in `spamGuard.js` with `find` (projecting `createdAt`) to query the full post history within the last 24h and 10m.
