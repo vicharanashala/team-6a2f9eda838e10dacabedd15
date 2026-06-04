@@ -320,6 +320,14 @@ Medium-Impact Quality of Life
 
 #### Latest Fixes (June 4, 2026)
 
+1. **Instant Notification Read Sync & Global Badge Updates**
+   * *Bug*: When users clicked on notification cards on the `/notifications` page, the notification was updated in the database but the local page state and global navbar badge did not update until a page refresh.
+   * *Resolution*: Integrated the `useNotifications` global context into the notifications page. Configured a click handler on cards that updates the local state and unread count instantly, and redirects correctly without blocking. Prevented propagation on the archive button.
+
+2. **Mobile/Device Compatibility — Answer Actions Layout Overflow**
+   * *Bug*: In question detail pages, the footer elements on answers (author badge + action buttons like Solved My Doubt, Unaccept, Add to FAQ, Delete, Report) were squeezed on a single line, causing severe clipping, overlapping, and text truncation on small/medium mobile screen sizes.
+   * *Resolution*: Updated the css structure to wrap flex elements and stack vertically on small screens (`flex-col md:flex-row md:items-center gap-4`), and enabled flex-wrapping (`flex-wrap items-center gap-2`) on the button groups to make them device and mobile compatible.
+
 1. **Vercel Build Error — Context Prerender / Null Destructure Fix**
    * *Bug*: The build failed on Vercel during static page prerendering with the error: `TypeError: Cannot destructure property 'unreadCount' of 'x(...)' as it is null.` This occurred because `layout.js` did not wrap the subtree with the `NotificationProvider` (so `useNotifications()` returned `null`), and `Navbar.js` did not check if the hook returned a null value.
    * *Resolution*:

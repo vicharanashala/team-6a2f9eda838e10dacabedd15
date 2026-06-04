@@ -698,8 +698,8 @@ export default function QuestionDetailPage() {
                     </div>
                     <div className="flex-1">
                       <MarkdownRenderer content={answer.body} />
-                      <div className="mt-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                      <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                           <Link href={`/users/${answer.author?.username}`} className="flex items-center gap-1.5 hover:text-primary-600 transition-colors">
                             {answer.author?.avatar ? (
                               <img 
@@ -716,7 +716,7 @@ export default function QuestionDetailPage() {
                           </Link>
                           <span>answered {formatDate(answer.createdAt)}</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           {answer.isOfficial && <span className="badge-green">Official</span>}
                           {answer.isAccepted && <span className="badge-green">Accepted</span>}
                           {answer.solvedMyDoubtCount >= 5 && <span className="badge-blue">Helpful ({answer.solvedMyDoubtCount})</span>}
