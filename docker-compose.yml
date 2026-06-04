@@ -1,22 +1,4 @@
 services:
-  mongodb:
-    image: mongo:7.0.14
-    container_name: quorafaq-mongodb
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
-    environment:
-      - PUID=${UID:-1000}
-      - PGID=${GID:-1000}
-
   redis:
     image: redis:7.2.5-alpine3.20
     container_name: quorafaq-redis
@@ -31,9 +13,6 @@ services:
       timeout: 5s
       retries: 8
       start_period: 10s
-    environment:
-      - PUID=${UID:-1000}
-      - PGID=${GID:-1000}
 
   elasticsearch:
     image: elasticsearch:8.11.0
@@ -45,20 +24,27 @@ services:
       - discovery.type=single-node
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
-      - PUID=${UID:-1000}
-      - PGID=${GID:-1000}
+      # Disable memory lock to avoid issues on Windows/WSL2/Mac
+      - bootstrap.memory_lock=false
     volumes:
       - elasticsearch_data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
       interval: 15s
       timeout: 10s
       retries: 20
-      start_period: 60s
+      start_period: 90s
     deploy:
       resources:
         limits:
           memory: 1G
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
 
   backend:
     build:
@@ -69,8 +55,6 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      mongodb:
-        condition: service_healthy
       redis:
         condition: service_healthy
       elasticsearch:
@@ -87,14 +71,28 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=5000
-      - MONGODB_URI=mongodb://mongodb:27017/quorafaq
+      # Override localhost URLs from secrets.env with Docker service names
       - REDIS_URL=redis://redis:6379
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - JWT_SECRET=${JWT_SECRET:-quorafaq_jwt_secret_dev}
+      - FASTAPI_URL=http://fastapi:8000
       - JWT_EXPIRES_IN=7d
       - CLIENT_URL=http://localhost:3000
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  fastapi:
+    build:
+      context: ./FastAPI_python_model
+      dockerfile: Dockerfile
+    container_name: quorafaq-fastapi
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./FastAPI_python_model:/app
+      - fastapi_cache:/root/.cache
+    environment:
+      - PORT=8000
 
   frontend:
     build:
@@ -113,17 +111,21 @@ services:
       - /app/node_modules
       - next_cache:/app/.next
     environment:
+      - PORT=3000
       - NEXT_PUBLIC_API_URL=http://localhost:5000/api
       - NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
+      # Internal proxy uses Docker service name, not localhost
       - API_PROXY_URL=http://backend:5000/api
+      # Enable polling for file watching on Windows/WSL2/Mac
       - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
       - NEXT_TELEMETRY_DISABLED=1
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
 volumes:
-  mongodb_data:
   redis_data:
   elasticsearch_data:
   next_cache:
   uploads:
+  fastapi_cache:

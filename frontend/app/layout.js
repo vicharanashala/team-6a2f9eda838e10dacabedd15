@@ -1,11 +1,14 @@
 import '@/styles/globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { SocketProvider } from '@/context/SocketContext';
+import { NotificationProvider } from '@/context/NotificationContext';
 import { KeyboardProvider } from '@/context/KeyboardContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import OnboardingModal from '@/components/OnboardingModal';
+import ReportIssueButton from '@/components/ReportIssueButton';
+import NetworkStatus from '@/components/NetworkStatus';
 import DotField from '@/components/DotField';
 import { Toaster } from 'react-hot-toast';
 
@@ -34,17 +37,21 @@ export default function RootLayout({ children }) {
         </div>
         <AuthProvider>
           <SocketProvider>
-            <KeyboardProvider>
-              <ThemeProvider>
-                <Navbar />
-                <OnboardingModal />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-                <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-              </ThemeProvider>
-            </KeyboardProvider>
+            <NotificationProvider>
+              <KeyboardProvider>
+                <ThemeProvider>
+                  <Navbar />
+                  <OnboardingModal />
+                  <ReportIssueButton />
+                  <NetworkStatus />
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                  <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+                </ThemeProvider>
+              </KeyboardProvider>
+            </NotificationProvider>
           </SocketProvider>
         </AuthProvider>
       </body>

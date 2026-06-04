@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../../secrets.env') });
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
@@ -5,6 +6,10 @@ const crypto = require('crypto');
 const config = require('../config');
 const User = require('../models/User');
 const FAQ = require('../models/FAQ');
+const Question = require('../models/Question');
+const Answer = require('../models/Answer');
+const Tag = require('../models/Tag');
+const Category = require('../models/Category');
 
 const slugify = (text) =>
   text
@@ -26,7 +31,7 @@ const seed = async () => {
       path.join(__dirname, '..', '..', '.integrity'),
       path.join(__dirname, '..', '..', '..', '.integrity'),
     ];
-    const integrityPath = integrityPaths.find(p => fs.existsSync(p));
+    const integrityPath = integrityPaths.find(p => fs.existsSync(p) && fs.statSync(p).isFile());
 
     // Verify integrity of seed data if checksum file exists
     if (fs.existsSync(integrityPath)) {
@@ -52,29 +57,63 @@ const seed = async () => {
           }
         }
       }
-//      if (!allValid) {
-//        console.error('Seed data integrity check failed. Aborting.');
-//        process.exit(1);
-//      }
     }
 
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
     const faqItems = JSON.parse(fs.readFileSync(faqsPath, 'utf-8'));
 
-    // Clear existing data
+    // Clean all mock questions, answers, tags, and FAQs
+    console.log('Cleaning mock database entries...');
     await Promise.all([
-      User.deleteMany({}),
       FAQ.deleteMany({}),
+      Question.deleteMany({}),
+      Answer.deleteMany({}),
+      Tag.deleteMany({}),
+      Category.deleteMany({}),
     ]);
 
-    // Seed admin user
-    await User.create({
-      username: 'admin',
-      email: 'admin@quorafaq.com',
-      password: 'admin123',
-      displayName: 'Admin',
-      role: 'admin',
+    console.log('Seeding categories...');
+    const categoriesToSeed = [];
+    let orderIndex = 0;
+    for (const [catId, catName] of Object.entries(metadata.categories)) {
+      categoriesToSeed.push({
+        name: catName,
+        icon: '📌',
+        order: orderIndex++,
+      });
+    }
+    await Category.insertMany(categoriesToSeed);
+    console.log('Categories seeded successfully');
+
+    // Keep real users (who registered via normal signup or Google sign-in)
+    // We only delete users who are part of our previous mock users list or duplicate admins.
+    const mockUsernames = ['alex_rivera', 'priya_patel', 'kabir_singh', 'ananya_coder', 'shannu_dev', 'rohan_mehta'];
+    const adminUsername = process.env.ADMIN_USERNAME || 'prashnasarathi';
+
+    await User.deleteMany({
+      $or: [
+        { username: { $in: mockUsernames } },
+        { username: adminUsername }
+      ]
     });
+
+    // Check if admin user already exists, if not, create it
+    let admin = await User.findOne({ username: adminUsername });
+    if (!admin) {
+      admin = await User.create({
+        username: adminUsername,
+        email: process.env.ADMIN_EMAIL || 'faqportal.in@gmail.com',
+        password: process.env.ADMIN_PASSWORD || 'prashnasarathi123',
+        displayName: process.env.ADMIN_DISPLAY_NAME || 'Prashnasarathi',
+        role: 'admin',
+        reputation: 100,
+      });
+      console.log('Created clean Admin user:', adminUsername);
+    } else {
+      console.log('Admin user already exists, preserved.');
+    }
+
+    console.log('Seeding standard FAQ categories and items...');
 
     // Group FAQ items by categoryId
     const grouped = {};
@@ -111,10 +150,11 @@ const seed = async () => {
 
     await FAQ.insertMany(faqPages);
 
-    console.log('Seed data inserted successfully');
-    console.log(`Users: ${await User.countDocuments()}`);
+    console.log('Database cleaned and standard FAQs seeded successfully!');
+    console.log(`Remaining Users: ${await User.countDocuments()}`);
     console.log(`FAQs: ${await FAQ.countDocuments()}`);
-    console.log(`FAQ items: ${faqItems.length}`);
+    console.log(`Questions: ${await Question.countDocuments()}`);
+    console.log(`Answers: ${await Answer.countDocuments()}`);
 
     process.exit(0);
   } catch (error) {

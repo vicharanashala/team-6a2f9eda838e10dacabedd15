@@ -21,6 +21,7 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 const authRoutes = require('./routes/auth');
 const questionRoutes = require('./routes/questions');
 const answerRoutes = require('./routes/answers');
+const postRoutes = require('./routes/posts');
 const voteRoutes = require('./routes/votes');
 const faqRoutes = require('./routes/faqs');
 const searchRoutes = require('./routes/search');
@@ -39,7 +40,17 @@ setupSocket(server);
 
 // Middleware
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: config.clientUrl, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowed = [config.clientUrl, /\.vercel\.app$/];
+    if (!origin || allowed.some(o => typeof o === 'string' ? o === origin : o.test(origin))) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -55,6 +66,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
 app.use('/api/answers', answerRoutes);
+app.use('/api/posts', postRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/search', searchRoutes);
@@ -79,6 +91,8 @@ const startServer = async () => {
 
   try {
     await seedDatabase();
+    const { cleanupOrphanedData } = require('./utils/cleanup');
+    await cleanupOrphanedData();
     await initIndices();
     await syncToElasticsearch();
   } catch (err) {
@@ -91,9 +105,26 @@ const startServer = async () => {
     // Start Anomaly Auto-Escalation Check Job every 60 seconds
     const { checkAndEscalateAnomalies } = require('./services/anomalyService');
     setInterval(checkAndEscalateAnomalies, 60000);
+
+    // Start Firebase Google user sync on startup and run it every 10 minutes
+    const { syncGoogleUsers } = require('./services/syncService');
+    syncGoogleUsers().catch(err => console.error('Initial Google user sync failed:', err.message));
+    setInterval(() => {
+      syncGoogleUsers().catch(err => console.error('Interval Google user sync failed:', err.message));
+    }, 600000); // 10 minutes
+
+    // Start Nodemailer Queue Worker
+    const { startEmailWorker } = require('./services/emailWorker');
+    startEmailWorker();
   });
 };
 
-startServer();
+if (process.env.VERCEL) {
+  // Vercel: connect DB only — Vercel handles HTTP serving, no listen() needed
+  connectDB().catch(err => console.error('DB connection error on Vercel:', err));
+} else {
+  startServer();
+}
 
-module.exports = { app, server };
+// Export app for Vercel serverless (needs plain Express app, not {app,server})
+module.exports = app;

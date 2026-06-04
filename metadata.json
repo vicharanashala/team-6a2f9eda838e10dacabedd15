@@ -1,22 +1,23 @@
 {
   "title": "Vicharanashala Internship — FAQ",
   "version": "v21.0.0",
-  "lastUpdated": "2026-05-19T17:35:00+05:30",
-  "totalCategories": 13,
-  "totalFaqs": 126,
+  "lastUpdated": "2026-06-02T22:00:00+05:30",
+  "totalCategories": 14,
+  "totalFaqs": 142,
   "categories": {
     "1": "About the internship",
     "2": "Timing and dates",
     "3": "NOC (No Objection Certificate)",
-    "4": "Selection, offer letter, and certificate",
-    "5": "Work, mentorship, and projects",
-    "6": "Code of conduct — communication channels",
+    "4": "Selection, Offer Letter, and Certificate",
+    "5": "Work, Mentorship, and Projects",
+    "6": "Code of Conduct — Communication Channels",
     "7": "Interviews Related",
     "8": "Certificate",
-    "9": "Rosetta — your internship journal",
-    "10": "Phase 1 — coursework, Vibe LMS, and live sessions",
-    "11": "Yaksha Chat Related",
-    "12": "ViBe Platform",
-    "13": "Team Formation"
+    "9": "Rosetta — Your Internship Journal",
+    "10": "Phase 1 — Coursework, ViBe LMS, and Live Sessions",
+    "11": "Spurti Points",
+    "12": "Yaksha Chat Related",
+    "13": "ViBe Platform",
+    "14": "Team Formation"
   }
 }

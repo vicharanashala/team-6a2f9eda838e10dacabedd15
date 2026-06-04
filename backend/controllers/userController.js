@@ -131,6 +131,8 @@ exports.completeOnboarding = async (req, res, next) => {
     }
     const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true });
 
+    let emailPreview = null;
+
     // Invalidate recommendation cache
     try {
       const { getRedis } = require('../config/redis');
@@ -140,7 +142,7 @@ exports.completeOnboarding = async (req, res, next) => {
       console.error('Redis delete recommendation cache error:', redisErr.message);
     }
 
-    res.json({ message: 'Onboarding completed', user: user.toPublicJSON() });
+    res.json({ message: 'Onboarding completed', user: user.toPublicJSON(), emailPreview });
   } catch (err) {
     next(err);
   }
@@ -327,3 +329,15 @@ exports.getLeaderboard = async (req, res, next) => {
     next(err);
   }
 };
+
+exports.getModerators = async (req, res, next) => {
+  try {
+    const moderators = await User.find({ role: { $in: ['moderator', 'admin'] } })
+      .select('username displayName avatar avatarUrl role reputation bio badges createdAt')
+      .sort({ reputation: -1, createdAt: 1 });
+    res.json({ moderators });
+  } catch (err) {
+    next(err);
+  }
+};
+

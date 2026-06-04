@@ -1,16 +1,39 @@
 const User = require('../models/User');
 const FAQ = require('../models/FAQ');
+const Question = require('../models/Question');
 
-const PHASE_CATEGORY_MAP = {
-  pre: ['About the internship', 'Timing and dates', 'NOC (No Objection Certificate)', 'Selection, offer letter, and certificate', 'Work, mentorship, and projects', 'Code of conduct — communication channels', 'Spurti Points', 'ViBe Platform', 'Getting Started'],
-  phase1_coursework: ['Phase 1', 'Vibe LMS', 'live sessions', 'Phase 1 — coursework, Vibe LMS, and live sessions'],
-  phase1_completed: ['Team Formation', 'Yaksha Chat', 'Team Formation', 'Yaksha Chat Related'],
-  phase2_project: ['Interviews', 'Certificate', 'Interviews Related'],
-  completed: ['Certificate', 'Alumni']
+// Phase → broad keyword list for matching FAQ categories and titles
+// Uses partial/substring matching so it works regardless of exact category name variations
+const PHASE_CATEGORY_KEYWORDS = {
+  pre: [
+    'internship', 'timing', 'dates', 'noc', 'objection', 'selection',
+    'offer letter', 'certificate', 'work', 'mentorship', 'projects',
+    'code of conduct', 'communication', 'spurti', 'vibe platform', 'getting started',
+    'about the internship',
+  ],
+  phase1_coursework: [
+    'phase 1', 'vibe lms', 'lms', 'live sessions', 'coursework', 'sessions',
+  ],
+  phase1_completed: [
+    'team formation', 'yaksha', 'chat', 'team',
+  ],
+  phase2_project: [
+    'interview', 'certificate', 'project', 'placement', 'phase 2',
+  ],
+  completed: ['certificate', 'alumni', 'completed'],
 };
 
-const getCategoriesForPhase = (phase) => {
-  return PHASE_CATEGORY_MAP[phase] || [];
+const isFaqMatchingPhase = (faq, phase) => {
+  const keywords = PHASE_CATEGORY_KEYWORDS[phase] || [];
+  if (keywords.length === 0) return false;
+
+  const haystack = [
+    faq.category || '',
+    faq.title || '',
+    ...(faq.tags || []),
+  ].join(' ').toLowerCase();
+
+  return keywords.some(kw => haystack.includes(kw));
 };
 
 /**
@@ -35,10 +58,8 @@ const recordTagAffinity = async (userId, tags) => {
       currentAffinity.push({ tag, timestamp: now });
     }
 
-    // Sort by timestamp descending
+    // Sort by timestamp descending, cap at 20
     currentAffinity.sort((a, b) => b.timestamp - a.timestamp);
-
-    // Cap at 20
     if (currentAffinity.length > 20) {
       currentAffinity = currentAffinity.slice(0, 20);
     }
@@ -51,77 +72,163 @@ const recordTagAffinity = async (userId, tags) => {
 };
 
 /**
- * Recommends FAQs based on phase mapping and tag affinity.
+ * Recommends FAQs based on user phase and tag affinity.
+ * Returns scored + sorted FAQ list with phaseMatch & matchingTagsCount flags.
  */
 const getRecommendedFAQs = async (userId) => {
   let user = null;
   if (userId) {
-    user = await User.findById(userId);
+    try {
+      user = await User.findById(userId);
+    } catch (_) {}
   }
 
   // Get all published FAQs
-  const allFAQs = await FAQ.find({ isPublished: true }).populate('author', 'username displayName').lean();
+  const allFAQs = await FAQ.find({ isPublished: true })
+    .populate('author', 'username displayName')
+    .lean();
 
   if (!user || !user.currentPhase) {
-    // FALLBACK: No phase selected -> Official FAQs + trending this week (highest viewCount)
-    const officialTrending = allFAQs
-      .map(faq => {
-        let score = 0;
-        if (faq.isOfficial) score += 10;
-        score += (faq.viewCount || 0) * 0.1;
-        return { ...faq, score };
-      })
+    // No phase: return official + most-viewed FAQs sorted by score
+    return allFAQs
+      .map(faq => ({
+        ...faq,
+        score: (faq.isOfficial ? 20 : 0) + Math.log((faq.viewCount || 0) + 1) * 2,
+        phaseMatch: false,
+        matchingTagsCount: 0,
+      }))
       .sort((a, b) => b.score - a.score);
-    return officialTrending;
   }
 
   const phase = user.currentPhase;
-  const phaseCategories = getCategoriesForPhase(phase);
   const affinityTags = (user.tagAffinity || []).map(item => item.tag.toLowerCase());
 
-  const scoredFAQs = allFAQs.map(faq => {
-    // 1. Phase Match (score + 100 if faq category matches one of the phase categories)
-    const faqCategoryClean = (faq.category || '').toLowerCase().trim();
-    const phaseMatch = phaseCategories.some(cat => {
-      const catClean = cat.toLowerCase().trim();
-      return faqCategoryClean === catClean || faqCategoryClean.includes(catClean) || catClean.includes(faqCategoryClean);
-    });
+  const phaseQueries = {
+    pre: 'pre internship selection process NOC certificate getting started onboarding',
+    phase1_coursework: 'phase 1 coursework live sessions modules lectures test assignment LMS Vibe',
+    phase1_completed: 'phase 1 completed team formation yaksha chat project group',
+    phase2_project: 'phase 2 project code reviews github checkin final evaluation placement interview',
+    completed: 'internship completed certificate alumni job placement resume referral graduation',
+  };
 
-    // 2. Matching Tags (matchingTags x 10)
+  const query = phaseQueries[phase] || phase;
+  let aiRecommendedTitles = [];
+  try {
+    const axios = require('axios');
+    const config = require('../config');
+    console.log(`[AI Recommend] Querying FastAPI search for phase "${phase}" with query: "${query}"`);
+    const response = await axios.post(`${config.fastApiUrl}/api/v1/search`, {
+      query,
+      documents: allFAQs.map(faq => faq.title)
+    }, { timeout: 3000 });
+
+    if (response.data && response.data.recommendations) {
+      aiRecommendedTitles = response.data.recommendations;
+      console.log(`[AI Recommend] FastAPI returned recommendations:`, aiRecommendedTitles);
+    }
+  } catch (err) {
+    console.error('[AI Recommend] FastAPI search call failed or timed out:', err.message);
+  }
+
+  const scoredFAQs = allFAQs.map(faq => {
+    // 1. Phase Match: keyword-based, broad matching
+    const phaseMatch = isFaqMatchingPhase(faq, phase);
+
+    // 2. AI Semantic Match from FastAPI
+    const aiMatch = aiRecommendedTitles.includes(faq.title);
+
+    // 3. Tag affinity overlap
     const faqTagsClean = (faq.tags || []).map(t => t.toLowerCase().trim());
     const matchingTagsCount = faqTagsClean.filter(t => affinityTags.includes(t)).length;
 
-    // 3. View Count (Math.log(viewCount) x 2)
-    const viewFactor = Math.log(faq.viewCount || 1) * 2;
+    // 4. View count (log scale)
+    const viewFactor = Math.log((faq.viewCount || 0) + 1) * 2;
 
-    // 4. Official Status (isOfficial ? 5 : 0)
-    const officialFactor = faq.isOfficial ? 5 : 0;
+    // 5. Official bonus
+    const officialFactor = faq.isOfficial ? 10 : 0;
 
-    const score = (phaseMatch ? 100 : 0) + (matchingTagsCount * 10) + viewFactor + officialFactor;
+    // Phase Match adds 50, AI Semantic Match adds 100
+    const score = (phaseMatch ? 50 : 0) + (aiMatch ? 100 : 0) + (matchingTagsCount * 10) + viewFactor + officialFactor;
 
-    return {
-      ...faq,
-      score,
-      phaseMatch,
-      matchingTagsCount
-    };
+    return { ...faq, score, phaseMatch: phaseMatch || aiMatch, matchingTagsCount };
   });
 
-  // Sort by score descending
   scoredFAQs.sort((a, b) => b.score - a.score);
 
-  // Fallbacks:
-  // If no tag history -> Phase-matched FAQs only (already handled by matchingTags = 0 in formula)
-  // If no matches -> Recently updated FAQs
+  // If nothing scored, fall back to recency
   const hasAnyMatches = scoredFAQs.some(faq => faq.score > 0);
   if (!hasAnyMatches) {
-    return allFAQs.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    return allFAQs
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      .map(faq => ({ ...faq, phaseMatch: false, matchingTagsCount: 0 }));
   }
 
   return scoredFAQs;
 };
 
+/**
+ * Recommends questions based on user's tag affinity (used by /api/recommendations/recommended).
+ */
+const getRecommendedQuestions = async (userId, page = 1, limit = 20) => {
+  let affinityTags = [];
+  if (userId) {
+    try {
+      const user = await User.findById(userId);
+      if (user && user.tagAffinity) {
+        affinityTags = user.tagAffinity.map(a => a.tag.toLowerCase());
+      }
+    } catch (_) {}
+  }
+
+  const skip = (page - 1) * limit;
+  const filter = { isDeleted: false, status: { $ne: 'closed' } };
+
+  let questions;
+  if (affinityTags.length > 0) {
+    // Try to get tag-matched questions
+    const Tag = require('../models/Tag');
+    const matchingTags = await Tag.find({ name: { $in: affinityTags } }).lean();
+    if (matchingTags.length > 0) {
+      filter.tags = { $in: matchingTags.map(t => t._id) };
+    }
+  }
+
+  questions = await Question.find(filter)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate('author', 'username displayName avatar reputation')
+    .populate('tags', 'name color')
+    .lean();
+
+  const total = await Question.countDocuments(filter);
+  return { questions, total, page, limit };
+};
+
+/**
+ * Returns trending questions (most views + votes in the last 7 days).
+ */
+const getTrendingQuestions = async (page = 1, limit = 20) => {
+  const skip = (page - 1) * limit;
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const questions = await Question.find({
+    isDeleted: false,
+    createdAt: { $gte: sevenDaysAgo },
+  })
+    .sort({ viewCount: -1, upvotes: -1 })
+    .skip(skip)
+    .limit(limit)
+    .populate('author', 'username displayName avatar reputation')
+    .populate('tags', 'name color')
+    .lean();
+
+  return questions;
+};
+
 module.exports = {
   recordTagAffinity,
-  getRecommendedFAQs
+  getRecommendedFAQs,
+  getRecommendedQuestions,
+  getTrendingQuestions,
 };

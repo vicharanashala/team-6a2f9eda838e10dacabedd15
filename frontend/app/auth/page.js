@@ -41,8 +41,7 @@ function AuthPageContent() {
     setLoading(true);
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const idToken = credential?.idToken;
+      const idToken = await result.user.getIdToken();
       if (!idToken) {
         throw new Error('Could not retrieve Google ID token.');
       }

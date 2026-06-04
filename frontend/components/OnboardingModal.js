@@ -63,6 +63,7 @@ export default function OnboardingModal() {
   const [dismissed, setDismissed] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState('pre');
   const [isQuickPhaseFill, setIsQuickPhaseFill] = useState(false);
+  const [emailPreview, setEmailPreview] = useState(null);
 
   useEffect(() => {
     if (!user || loading) {
@@ -71,8 +72,8 @@ export default function OnboardingModal() {
     }
     if (user.role === 'admin' || user.role === 'moderator') return;
 
-    // Prevent repeated popups if user dismissed the prompt in current session
-    if (typeof window !== 'undefined' && sessionStorage.getItem(`phase_prompt_dismissed_${user.id}`)) {
+    // Prevent repeated popups if user dismissed the prompt
+    if (typeof window !== 'undefined' && localStorage.getItem(`phase_prompt_dismissed_${user.id}`)) {
       return;
     }
 
@@ -95,10 +96,14 @@ export default function OnboardingModal() {
 
   const handleDismiss = async (phaseValue = null) => {
     try {
-      await completeOnboarding(phaseValue);
+      const data = await completeOnboarding(phaseValue);
+      if (data && data.emailPreview) {
+        setEmailPreview(data.emailPreview);
+        return;
+      }
     } catch (_) {}
     if (typeof window !== 'undefined' && user) {
-      sessionStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
+      localStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
     }
     setDismissed(true);
     setIsOpen(false);
@@ -120,12 +125,75 @@ export default function OnboardingModal() {
 
   const handleSkip = () => {
     if (typeof window !== 'undefined' && user) {
-      sessionStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
+      localStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
     }
     handleDismiss(null);
   };
 
-  if (!isOpen || dismissed) return null;
+  if (!isOpen || dismissed) {
+    if (emailPreview) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-[var(--color-bg-secondary)] rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div className="bg-gradient-to-r from-primary-600 to-cyan-500 p-6 text-white text-left">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">📬</span>
+                  <div>
+                    <h2 className="text-lg font-bold text-white leading-tight">Welcome Email Sent!</h2>
+                    <p className="text-xs text-white/80">SMTP Simulated Dispatch (Local Preview)</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && user) {
+                      localStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
+                    }
+                    setEmailPreview(null);
+                    setDismissed(true);
+                    setIsOpen(false);
+                  }} 
+                  className="text-white/80 hover:text-white text-2xl font-semibold focus:outline-none"
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4 text-left">
+              <div className="bg-[var(--color-bg-tertiary)] p-3 rounded-lg border border-[var(--color-border)] text-sm space-y-1">
+                <div><span className="font-semibold text-[var(--color-text-secondary)]">From:</span> PrashnaSārathi Notifications &lt;no-reply@faqportal.in&gt;</div>
+                <div><span className="font-semibold text-[var(--color-text-secondary)]">To:</span> {user?.email}</div>
+                <div><span className="font-semibold text-[var(--color-text-secondary)]">Subject:</span> {emailPreview.subject}</div>
+              </div>
+              
+              <div className="border border-[var(--color-border)] rounded-xl overflow-hidden bg-white max-h-[50vh] overflow-y-auto">
+                <div dangerouslySetInnerHTML={{ __html: emailPreview.html }} />
+              </div>
+            </div>
+            
+            <div className="px-6 pb-6 pt-2 flex justify-end">
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined' && user) {
+                    localStorage.setItem(`phase_prompt_dismissed_${user.id}`, 'true');
+                  }
+                  setEmailPreview(null);
+                  setDismissed(true);
+                  setIsOpen(false);
+                }}
+                className="btn-primary px-6 py-2.5 text-sm font-semibold rounded-xl"
+              >
+                Continue to Platform
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;

@@ -72,16 +72,46 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['pre', 'phase1_coursework', 'phase1_completed', 'phase2_project', 'completed']
   },
+  receivedTop10Email: { type: Boolean, default: false },
   tagAffinity: [{
     tag: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
   }],
+  // Spam Prevention & Content Moderation Fields
+  trustScore: { type: Number, default: 0 },
+  trustLevel: {
+    type: String,
+    enum: ["new", "regular", "trusted"],
+    default: "new"
+  },
+  status: {
+    type: String,
+    enum: ["active", "warned", "shadow_banned", "suspended", "blocked"],
+    default: "active"
+  },
+  suspendedUntil: { type: Date },
+  violationCount: { type: Number, default: 0 },
+  lastPostedAt: { type: Date },
+  ipHistory: [{ type: String }],
+  deviceFingerprints: [{ type: String }],
+  premodApproved: { type: Boolean, default: false },
 }, { timestamps: true });
 
 userSchema.index({ username: 'text', displayName: 'text', bio: 'text' });
 userSchema.index({ role: 1 });
 
 userSchema.pre('save', async function (next) {
+  // Update trust level based on trust score
+  if (this.isModified('trustScore') || this.isNew) {
+    if (this.trustScore <= 50) {
+      this.trustLevel = 'new';
+    } else if (this.trustScore <= 200) {
+      this.trustLevel = 'regular';
+    } else {
+      this.trustLevel = 'trusted';
+    }
+  }
+
   if (!this.password || !this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
@@ -110,6 +140,12 @@ userSchema.methods.toPublicJSON = function () {
     hasCompletedOnboarding: this.hasCompletedOnboarding,
     currentPhase: this.currentPhase,
     authProvider: this.authProvider,
+    trustScore: this.trustScore,
+    trustLevel: this.trustLevel,
+    status: this.status,
+    suspendedUntil: this.suspendedUntil,
+    violationCount: this.violationCount,
+    premodApproved: this.premodApproved,
     createdAt: this.createdAt,
   };
 };

@@ -120,6 +120,13 @@ const processAnomalyClassification = async (questionId) => {
     } else {
       await question.save();
     }
+
+    try {
+      const { emitToAdmin } = require('../socket');
+      emitToAdmin('moderation:updated', { action: 'anomaly_classified', questionId: question._id, severity });
+    } catch (err) {
+      console.error('Socket notification error for anomaly:', err.message);
+    }
   } catch (err) {
     console.error('Error processing anomaly classification:', err);
   }

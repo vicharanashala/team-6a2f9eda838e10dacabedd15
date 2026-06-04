@@ -264,25 +264,9 @@ exports.markFAQHelpful = async (req, res, next) => {
 exports.getRecommendedFAQs = async (req, res, next) => {
   try {
     const { getRecommendedFAQs } = require('../services/recommendationService');
-    const { getRedis } = require('../config/redis');
-
-    const userId = req.user?._id?.toString() || req.query.userId || 'guest';
-    const cacheKey = `recommendations:user:${userId}`;
-    const redis = getRedis();
-
-    // Check cache
-    const cached = await redis.get(cacheKey).catch(() => null);
-    if (cached) {
-      return res.json({ faqs: JSON.parse(cached) });
-    }
-
-    // Get recommendations
-    const recommendations = await getRecommendedFAQs(userId === 'guest' ? null : userId);
-
-    // Save to cache for 60 minutes
-    await redis.setex(cacheKey, 3600, JSON.stringify(recommendations)).catch(() => {});
-
-    res.json({ faqs: recommendations });
+    const userId = req.user ? req.user._id : null;
+    const faqs = await getRecommendedFAQs(userId);
+    res.json({ faqs });
   } catch (err) {
     next(err);
   }

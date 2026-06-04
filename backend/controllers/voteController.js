@@ -58,9 +58,20 @@ exports.vote = async (req, res, next) => {
       await existingVote.deleteOne();
       await Model.findByIdAndUpdate(targetId, { $inc: { [`${voteType}s`]: -1 } });
       if (target.author.toString() !== req.user._id.toString()) {
-        await User.findByIdAndUpdate(target.author, { $inc: { reputation: voteType === 'upvote' ? -10 : 10 } });
+        const authorUser = await User.findById(target.author);
+        if (authorUser) {
+          authorUser.reputation = Math.max(0, authorUser.reputation + (voteType === 'upvote' ? -10 : 10));
+          if (voteType === 'upvote') {
+            authorUser.trustScore = Math.max(0, authorUser.trustScore - 2);
+          }
+          await authorUser.save();
+        }
       }
       releaseVoteLock(req.user._id, targetId);
+      try {
+        const { broadcastLeaderboard } = require('../services/leaderboardService');
+        await broadcastLeaderboard();
+      } catch (lErr) {}
       return res.json({ message: 'Vote removed', vote: null });
     }
 
@@ -72,9 +83,22 @@ exports.vote = async (req, res, next) => {
       await existingVote.save();
       await Model.findByIdAndUpdate(targetId, { $inc: { [`${oldType}s`]: -1, [`${voteType}s`]: 1 } });
       if (target.author.toString() !== req.user._id.toString()) {
-        await User.findByIdAndUpdate(target.author, { $inc: { reputation: voteType === 'upvote' ? 10 : -10 } });
+        const authorUser = await User.findById(target.author);
+        if (authorUser) {
+          authorUser.reputation = Math.max(0, authorUser.reputation + (voteType === 'upvote' ? 10 : -10));
+          if (voteType === 'upvote') {
+            authorUser.trustScore += 2;
+          } else {
+            authorUser.trustScore = Math.max(0, authorUser.trustScore - 2);
+          }
+          await authorUser.save();
+        }
       }
       releaseVoteLock(req.user._id, targetId);
+      try {
+        const { broadcastLeaderboard } = require('../services/leaderboardService');
+        await broadcastLeaderboard();
+      } catch (lErr) {}
       return res.json({ message: 'Vote updated', vote: existingVote });
     }
 
@@ -89,17 +113,30 @@ exports.vote = async (req, res, next) => {
     await Model.findByIdAndUpdate(targetId, { $inc: { [`${voteType}s`]: 1 } });
 
     if (target.author.toString() !== req.user._id.toString()) {
-      const repChange = voteType === 'upvote' ? 10 : -10;
-      await User.findByIdAndUpdate(target.author, { $inc: { reputation: repChange } });
+      const authorUser = await User.findById(target.author);
+      if (authorUser) {
+        authorUser.reputation = Math.max(0, authorUser.reputation + (voteType === 'upvote' ? 10 : -10));
+        if (voteType === 'upvote') {
+          authorUser.trustScore += 2;
+        }
+        await authorUser.save();
+      }
     }
 
     if (voteType === 'upvote' && target.author.toString() !== req.user._id.toString()) {
+      const questionId = targetType === 'Question'
+        ? targetId
+        : (target.question && target.question._id ? target.question._id.toString() : target.question.toString());
+      const linkUrl = targetType === 'Question'
+        ? `/questions/${targetId}`
+        : `/questions/${questionId}#answer-${target._id.toString()}`;
+
       await Notification.create({
         recipient: target.author,
         type: 'upvote',
         title: 'You received an upvote',
         message: `Your ${targetType.toLowerCase()} received an upvote`,
-        link: `/${targetType === 'Question' ? 'questions' : 'answers'}/${targetId}`,
+        link: linkUrl,
         referenceType: targetType,
         reference: targetId,
       });
@@ -115,6 +152,14 @@ exports.vote = async (req, res, next) => {
         spam: 'This is spam',
         other: 'See feedback below',
       };
+
+      const questionId = targetType === 'Question'
+        ? targetId
+        : (target.question && target.question._id ? target.question._id.toString() : target.question.toString());
+      const linkUrl = targetType === 'Question'
+        ? `/questions/${targetId}`
+        : `/questions/${questionId}#answer-${target._id.toString()}`;
+
       await Notification.create({
         recipient: target.author,
         type: 'downvote',
@@ -122,7 +167,7 @@ exports.vote = async (req, res, next) => {
         message: reasonText
           ? `${reasonLabels[reason] || 'Feedback'}: ${reasonText}`
           : `${reasonLabels[reason] || 'Feedback'}: A downvote was received`,
-        link: `/${targetType === 'Question' ? 'questions' : 'questions'}/${targetId}`,
+        link: linkUrl,
         referenceType: targetType,
         reference: targetId,
       });
@@ -130,6 +175,10 @@ exports.vote = async (req, res, next) => {
     }
 
     releaseVoteLock(req.user._id, targetId);
+    try {
+      const { broadcastLeaderboard } = require('../services/leaderboardService');
+      await broadcastLeaderboard();
+    } catch (lErr) {}
     res.status(201).json({ message: 'Voted', vote });
   } catch (err) {
     releaseVoteLock(req.user._id, targetId);

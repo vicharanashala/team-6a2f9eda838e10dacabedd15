@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { formatDate } from '@/lib/utils';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -22,6 +24,8 @@ const notificationIcons = {
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const { markAsRead, markAllRead: markAllReadGlobal } = useNotifications() || {};
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -41,14 +45,35 @@ export default function NotificationsPage() {
     }
   };
 
-  const markAllRead = async () => {
+  const handleMarkAllRead = async () => {
     try {
-      await api.put('/notifications/read');
+      if (markAllReadGlobal) {
+        await markAllReadGlobal();
+      } else {
+        await api.put('/notifications/read');
+      }
       setNotifications(notifications.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
       toast.success('All marked as read');
     } catch (err) {
       toast.error(err.message);
+    }
+  };
+
+  const handleNotificationClick = async (e, notification) => {
+    if (!notification.isRead) {
+      setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      try {
+        if (markAsRead) {
+          await markAsRead([notification._id]);
+        } else {
+          await api.put('/notifications/read', { ids: [notification._id] });
+        }
+      } catch (_) {}
+    }
+    if (notification.link && !e.target.closest('a')) {
+      router.push(notification.link);
     }
   };
 
@@ -76,7 +101,7 @@ export default function NotificationsPage() {
           {unreadCount > 0 && <p className="text-sm text-[var(--color-text-secondary)]">{unreadCount} unread</p>}
         </div>
         {unreadCount > 0 && (
-          <button onClick={markAllRead} className="btn-secondary btn-sm">Mark all as read</button>
+          <button onClick={handleMarkAllRead} className="btn-secondary btn-sm">Mark all as read</button>
         )}
       </div>
 
@@ -99,28 +124,28 @@ export default function NotificationsPage() {
           {notifications.map(notification => (
             <div
               key={notification._id}
-              className={`card p-4 flex items-start gap-3 transition-colors ${
-                !notification.isRead ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800' : ''
+              onClick={(e) => handleNotificationClick(e, notification)}
+              className={`card p-4 flex items-start gap-3 transition-colors cursor-pointer hover:bg-[var(--color-bg-tertiary)]/40 ${
+                !notification.isRead ? 'bg-primary-50/40 dark:bg-primary-950/10 border-primary-200 dark:border-primary-900/50 shadow-sm' : ''
               }`}
             >
               <span className="text-xl shrink-0">{notificationIcons[notification.type] || '🔔'}</span>
               <div className="flex-1 min-w-0">
                 {notification.link ? (
-                  <Link href={notification.link} className="hover:text-primary-600" onClick={() => {
-                    if (!notification.isRead) {
-                      api.put('/notifications/read', { ids: [notification._id] }).catch(() => {});
-                    }
-                  }}>
-                    <p className={`text-sm ${!notification.isRead ? 'font-medium' : ''}`}>{notification.title}</p>
+                  <Link href={notification.link} className="hover:text-primary-600 block" onClick={(e) => handleNotificationClick(e, notification)}>
+                    <p className={`text-sm ${!notification.isRead ? 'font-semibold' : ''}`}>{notification.title}</p>
                   </Link>
                 ) : (
-                  <p className={`text-sm ${!notification.isRead ? 'font-medium' : ''}`}>{notification.title}</p>
+                  <p className={`text-sm ${!notification.isRead ? 'font-semibold' : ''}`}>{notification.title}</p>
                 )}
                 {notification.message && <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">{notification.message}</p>}
                 <p className="text-xs text-[var(--color-text-secondary)] mt-1 opacity-60">{formatDate(notification.createdAt)}</p>
               </div>
               <button
-                onClick={() => archiveNotification(notification._id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  archiveNotification(notification._id);
+                }}
                 className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm shrink-0"
                 title="Archive"
               >

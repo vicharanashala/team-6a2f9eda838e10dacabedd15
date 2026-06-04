@@ -6,28 +6,28 @@ const FAQ = require('../models/FAQ');
 const Vote = require('../models/Vote');
 
 const getDashboardStats = async () => {
-  const redis = getRedis();
-  const cacheKey = 'analytics:dashboard';
-
-  try {
-    const cached = await redis.get(cacheKey);
-    if (cached) return JSON.parse(cached);
-  } catch (_) {}
-
-  const [totalQuestions, totalAnswers, totalUsers, totalFAQs, totalVotes] = await Promise.all([
+  const [
+    totalQuestions,
+    totalAnswers,
+    totalUsers,
+    totalFAQs,
+    totalVotes,
+    questionsToday,
+    resolvedQuestions
+  ] = await Promise.all([
     Question.countDocuments({ isDeleted: false }),
     Answer.countDocuments({ isDeleted: false }),
     User.countDocuments(),
     FAQ.countDocuments({ isPublished: true }),
     Vote.countDocuments(),
+    Question.countDocuments({
+      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    }),
+    Question.countDocuments({ acceptedAnswer: { $ne: null } })
   ]);
 
-  const questionsToday = await Question.countDocuments({
-    createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-  });
-
   const resolutionRate = totalQuestions > 0
-    ? Math.round((await Question.countDocuments({ acceptedAnswer: { $ne: null } }) / totalQuestions) * 100)
+    ? Math.round((resolvedQuestions / totalQuestions) * 100)
     : 0;
 
   const stats = {
@@ -39,10 +39,6 @@ const getDashboardStats = async () => {
     questionsToday,
     resolutionRate,
   };
-
-  try {
-    await redis.setex(cacheKey, 300, JSON.stringify(stats));
-  } catch (_) {}
 
   return stats;
 };

@@ -5,7 +5,9 @@ import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000';
+const SOCKET_URL = typeof window !== 'undefined'
+  ? ''
+  : (process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5000');
 
 export function SocketProvider({ children }) {
   const { user } = useAuth();
@@ -23,15 +25,19 @@ export function SocketProvider({ children }) {
     const token = localStorage.getItem('token');
     const newSocket = io(SOCKET_URL, {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      path: '/socket.io',
+      transports: ['polling', 'websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
     });
 
     newSocket.on('connect', () => {
-      console.log('Socket connected');
+      console.log('Socket connected:', newSocket.id);
     });
 
     newSocket.on('connect_error', (err) => {
-      console.error('Socket error:', err.message);
+      console.error('Socket connection error:', err.message);
     });
 
     setSocket(newSocket);

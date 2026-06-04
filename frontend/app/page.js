@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import RecommendedFAQs from '@/components/RecommendedFAQs';
 
+
 const CATEGORY_ICONS = {
   'About the internship': '💼',
   'Timing and dates': '📅',
@@ -237,11 +238,23 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {selectedCategory === 'All Categories' && (
+                {selectedCategory === 'All Categories' && user && (
                   <div className="mb-8 p-6 bg-[var(--color-bg-secondary)]/30 border border-[var(--color-border)]/40 rounded-2xl">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-lg">💡</span>
-                      <h3 className="text-base font-bold text-[var(--color-text)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary)] to-purple-400">Recommended For You</h3>
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">💡</span>
+                        <h3 className="text-base font-bold text-[var(--color-text)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary)] to-purple-400">
+                          {user.currentPhase ? 'Recommended For Your Phase' : 'Recommended For You'}
+                        </h3>
+                      </div>
+                      {!user.currentPhase && (
+                        <Link
+                          href="/auth?mode=login"
+                          className="text-[11px] font-semibold text-[var(--color-primary)] border border-[var(--color-primary)]/25 rounded-lg px-2.5 py-1 hover:bg-[var(--color-primary)]/10 transition-colors shrink-0"
+                        >
+                          Set Phase →
+                        </Link>
+                      )}
                     </div>
                     <RecommendedFAQs limit={8} layout="grid" />
                   </div>
@@ -346,7 +359,26 @@ export default function HomePage() {
             )}
           </main>
         </div>
+
+        {/* Community Guidelines & Policies Banner */}
+        <section className="mt-16 pt-8 border-t border-[var(--color-border)]/40">
+          <div className="bg-gradient-to-r from-[var(--color-bg-secondary)] to-[var(--color-bg-tertiary)]/30 border border-[var(--color-border)]/50 rounded-2xl p-6 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+            <div className="flex-1">
+              <div className="flex items-center gap-2.5 mb-2">
+                <span className="text-xl">🛡️</span>
+                <h3 className="text-lg font-bold text-[var(--color-text)]">Community Guidelines & Spam Policies</h3>
+              </div>
+              <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed max-w-3xl">
+                To maintain a high-quality Q&A resource, all questions are filtered in real-time by AI spam guards. Please keep posts supportive, pick confidence levels honestly, and tag your questions correctly.
+              </p>
+            </div>
+            <Link href="/guidelines" className="btn-secondary whitespace-nowrap shrink-0">
+              Read Full Guidelines &rarr;
+            </Link>
+          </div>
+        </section>
       </div>
+
 
       {/* Add Category Modal */}
       {showCategoryModal && (

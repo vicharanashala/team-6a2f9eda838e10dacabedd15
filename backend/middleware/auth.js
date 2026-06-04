@@ -14,6 +14,21 @@ const auth = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
+
+    // Check account status
+    if (user.status === 'blocked') {
+      return res.status(403).json({ blocked: true, message: 'Account restricted' });
+    }
+    if (user.status === 'suspended') {
+      if (user.suspendedUntil && user.suspendedUntil > new Date()) {
+        return res.status(403).json({ suspended: true, retryAfter: user.suspendedUntil.getTime() });
+      } else {
+        // Auto-restore expired suspension
+        user.status = 'active';
+        await user.save();
+      }
+    }
+
     req.user = user;
     next();
   } catch (err) {
@@ -27,7 +42,21 @@ const optionalAuth = async (req, res, next) => {
     if (header && header.startsWith('Bearer ')) {
       const token = header.split(' ')[1];
       const decoded = jwt.verify(token, config.jwt.secret);
-      req.user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
+      if (user) {
+        if (user.status === 'blocked') {
+          return res.status(403).json({ blocked: true, message: 'Account restricted' });
+        }
+        if (user.status === 'suspended') {
+          if (user.suspendedUntil && user.suspendedUntil > new Date()) {
+            return res.status(403).json({ suspended: true, retryAfter: user.suspendedUntil.getTime() });
+          } else {
+            user.status = 'active';
+            await user.save();
+          }
+        }
+        req.user = user;
+      }
     }
   } catch (_) {
     // ignore

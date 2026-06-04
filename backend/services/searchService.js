@@ -691,7 +691,7 @@ const seedDatabase = async () => {
 
     const metadataPath = path.join(__dirname, '..', '..', 'metadata.json');
     const faqsPath = path.join(__dirname, '..', '..', 'faqs-complete.json');
-    const integrityPath = [path.join(__dirname, '..', '..', '.integrity'), path.join(__dirname, '..', '..', '..', '.integrity')].find(p => fs.existsSync(p));
+    const integrityPath = [path.join(__dirname, '..', '..', '.integrity'), path.join(__dirname, '..', '..', '..', '.integrity')].find(p => fs.existsSync(p) && fs.statSync(p).isFile());
 
     if (fs.existsSync(integrityPath)) {
       const integrityData = fs.readFileSync(integrityPath, 'utf-8');
@@ -714,6 +714,23 @@ const seedDatabase = async () => {
 
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'));
     const faqItems = JSON.parse(fs.readFileSync(faqsPath, 'utf-8'));
+
+    const Category = require('../models/Category');
+    const existingCategories = await Category.countDocuments();
+    if (existingCategories === 0) {
+      console.log('Seeding categories...');
+      const categoriesToSeed = [];
+      let orderIndex = 0;
+      for (const [catId, catName] of Object.entries(metadata.categories)) {
+        categoriesToSeed.push({
+          name: catName,
+          icon: '📌',
+          order: orderIndex++,
+        });
+      }
+      await Category.insertMany(categoriesToSeed);
+      console.log('Categories seeded successfully');
+    }
 
     const existingFaqs = await FAQ.countDocuments();
     if (existingFaqs === 0) {
@@ -757,12 +774,27 @@ const seedDatabase = async () => {
 
     console.log('Seeding additional users...');
     const seedUsers = [
-      { username: 'admin', email: 'admin@quorafaq.com', password: 'admin123', displayName: 'Administrator', bio: 'Site administrator with full access', role: 'admin', reputation: 10000, badges: ['Founder', 'Administrator'], isBanned: false },
-      { username: 'moderator', email: 'moderator@quorafaq.com', password: 'mod12345', displayName: 'Senior Moderator', bio: 'Community moderator', role: 'moderator', reputation: 5000, badges: ['Moderator', 'Helper'], isBanned: false },
-      { username: 'student', email: 'student@quorafaq.com', password: 'student123', displayName: 'Regular Member', bio: 'Active community member', role: 'user', reputation: 250, badges: ['Contributor'], isBanned: false },
-      { username: 'alice', email: 'alice@quorafaq.com', password: 'alice123', displayName: 'Alice Johnson', bio: 'Computer Science student', role: 'user', reputation: 100, badges: ['Newcomer'], isBanned: false },
-      { username: 'bob', email: 'bob@quorafaq.com', password: 'bob123', displayName: 'Bob Smith', bio: 'Engineering student', role: 'user', reputation: 150, badges: ['Curious Learner'], isBanned: false },
+      { username: 'admin', email: 'admin@quorafaq.com', password: 'admin123', displayName: 'Administrator', bio: 'Site administrator with full access', role: 'admin', reputation: 10000, badges: ['Founder', 'Administrator'], isBanned: false }
     ];
+
+    if (process.env.NODE_ENV !== 'production') {
+      seedUsers.push(
+        { username: 'moderator', email: 'moderator@quorafaq.com', password: 'mod12345', displayName: 'Senior Moderator', bio: 'Community moderator', role: 'moderator', reputation: 5000, badges: ['Moderator', 'Helper'], isBanned: false },
+        { username: 'student', email: 'student@quorafaq.com', password: 'student123', displayName: 'Regular Member', bio: 'Active community member', role: 'user', reputation: 250, badges: ['Contributor'], isBanned: false },
+        { username: 'alice', email: 'alice@quorafaq.com', password: 'alice123', displayName: 'Alice Johnson', bio: 'Computer Science student', role: 'user', reputation: 100, badges: ['Newcomer'], isBanned: false },
+        { username: 'bob', email: 'bob@quorafaq.com', password: 'bob123', displayName: 'Bob Smith', bio: 'Engineering student', role: 'user', reputation: 150, badges: ['Curious Learner'], isBanned: false }
+      );
+    } else {
+      // In production, delete mock users if they exist to keep DB clean
+      const mockUsernames = ['moderator', 'student', 'alice', 'bob'];
+      const mockUsers = await User.find({ username: { $in: mockUsernames } });
+      for (const mu of mockUsers) {
+        // Delete their questions & answers to thoroughly clean up
+        await Question.deleteMany({ author: mu._id });
+        await User.deleteOne({ _id: mu._id });
+      }
+      console.log('Cleaned up mock users in production mode.');
+    }
 
     for (const u of seedUsers) {
       const existingByEmail = await User.findOne({ email: u.email });
@@ -776,7 +808,7 @@ const seedDatabase = async () => {
         await User.create(u);
       }
     }
-    console.log('Users seeded successfully');
+    console.log('Users seeded/verified successfully');
   } catch (err) {
     console.error('Seed error:', err.message);
   }

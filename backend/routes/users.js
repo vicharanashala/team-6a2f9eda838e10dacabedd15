@@ -21,6 +21,7 @@ router.delete('/me/saved/faqs/:faqId', auth, ctrl.unsaveFAQ);
 
 // Wildcard :username routes come AFTER all /me/* routes
 router.get('/leaderboard', ctrl.getLeaderboard);
+router.get('/moderators', ctrl.getModerators);
 router.get('/:username', ctrl.getUserProfile);
 router.get('/:username/questions', ctrl.getUserQuestions);
 router.get('/:username/answers', ctrl.getUserAnswers);

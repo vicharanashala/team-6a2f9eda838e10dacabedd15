@@ -19,4 +19,15 @@ const buildPaginationMeta = (total, page, limit) => ({
   hasPrev: page > 1,
 });
 
-module.exports = { generateSlug, paginate, buildPaginationMeta };
+const recalculateAnswerCount = async (questionId) => {
+  const Answer = require('../models/Answer');
+  const Question = require('../models/Question');
+  const activeCount = await Answer.countDocuments({
+    question: questionId,
+    visibility: 'public',
+    isDeleted: false
+  });
+  await Question.findByIdAndUpdate(questionId, { answerCount: activeCount });
+};
+
+module.exports = { generateSlug, paginate, buildPaginationMeta, recalculateAnswerCount };

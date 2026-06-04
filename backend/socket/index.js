@@ -30,7 +30,10 @@ const setupSocket = (server) => {
   io.on('connection', (socket) => {
     const userId = socket.user._id.toString();
     socket.join(`user:${userId}`);
-    console.log(`User connected: ${socket.user.username}`);
+    if (socket.user.role === 'admin' || socket.user.role === 'moderator') {
+      socket.join('admin');
+      console.log(`Admin/Moderator joined admin room: ${socket.user.username}`);
+    }
 
     socket.on('join:question', (questionId) => {
       socket.join(`question:${questionId}`);
@@ -65,4 +68,10 @@ const emitToQuestion = (questionId, event, data) => {
   }
 };
 
-module.exports = { setupSocket, getIO, emitToUser, emitToQuestion };
+const emitToAdmin = (event, data) => {
+  if (io) {
+    io.to('admin').emit(event, data);
+  }
+};
+
+module.exports = { setupSocket, getIO, emitToUser, emitToQuestion, emitToAdmin };

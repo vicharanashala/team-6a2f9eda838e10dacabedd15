@@ -1,15 +1,17 @@
 const router = require('express').Router();
 const { auth, optionalAuth, moderatorOrAdmin } = require('../middleware/auth');
 const { questionValidation } = require('../utils/validators');
+const { spamGuard } = require('../middleware/spamGuard');
 const ctrl = require('../controllers/questionController');
 const { flagContent } = require('../services/moderationService');
 
 router.get('/similar', ctrl.findSimilar);
+router.post('/validate', optionalAuth, ctrl.validateQuestionText);
 router.get('/', optionalAuth, ctrl.getQuestions);
 router.get('/:id', optionalAuth, ctrl.getQuestion);
 router.get('/:id/similar', ctrl.getSimilarQuestions);
 router.get('/:id/related', ctrl.getRelatedQuestions);
-router.post('/', auth, questionValidation, ctrl.createQuestion);
+router.post('/', auth, spamGuard, questionValidation, ctrl.createQuestion);
 router.put('/:id', auth, ctrl.updateQuestion);
 router.patch('/:id/duplicate', auth, ctrl.markAsDuplicate);
 router.patch('/:id/me-too', auth, ctrl.toggleMeToo);

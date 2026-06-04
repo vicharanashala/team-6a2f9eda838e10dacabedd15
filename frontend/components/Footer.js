@@ -28,8 +28,13 @@ export default function Footer() {
         </div>
         <div className="mt-10 pt-6 border-t border-[var(--color-border)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--color-text-muted)]">
           <span>&copy; {new Date().getFullYear()} PrashnaSārathi. Open source project.</span>
-          <span>Built with care for the community</span>
+          <div className="flex items-center gap-4">
+            <Link href="/guidelines" className="hover:text-[var(--color-primary)] transition-colors">Guidelines & Policies</Link>
+            <span>•</span>
+            <span>Built with care for the community</span>
+          </div>
         </div>
+
       </div>
     </footer>
   );

@@ -65,11 +65,37 @@ const deleteContent = async ({ targetType, targetId }) => {
 };
 
 const banUser = async ({ userId, reason }) => {
-  await User.findByIdAndUpdate(userId, { isBanned: true, banReason: reason });
+  await User.findByIdAndUpdate(userId, { isBanned: true, banReason: reason, status: 'blocked' });
+  await Question.updateMany({ author: userId }, { visibility: 'hidden' });
+  await Answer.updateMany({ author: userId }, { visibility: 'hidden' });
+
+  try {
+    const { recalculateAnswerCount } = require('../utils/helpers');
+    const userAnswers = await Answer.find({ author: userId });
+    const questionIds = [...new Set(userAnswers.map(a => a.question.toString()))];
+    for (const qId of questionIds) {
+      await recalculateAnswerCount(qId);
+    }
+  } catch (err) {
+    console.error('Failed to recalculate answer counts in banUser:', err.message);
+  }
 };
 
 const unbanUser = async (userId) => {
-  await User.findByIdAndUpdate(userId, { isBanned: false, banReason: null });
+  await User.findByIdAndUpdate(userId, { isBanned: false, banReason: null, status: 'active', suspendedUntil: null });
+  await Question.updateMany({ author: userId, visibility: 'hidden' }, { visibility: 'public' });
+  await Answer.updateMany({ author: userId, visibility: 'hidden' }, { visibility: 'public' });
+
+  try {
+    const { recalculateAnswerCount } = require('../utils/helpers');
+    const userAnswers = await Answer.find({ author: userId });
+    const questionIds = [...new Set(userAnswers.map(a => a.question.toString()))];
+    for (const qId of questionIds) {
+      await recalculateAnswerCount(qId);
+    }
+  } catch (err) {
+    console.error('Failed to recalculate answer counts in unbanUser:', err.message);
+  }
 };
 
 module.exports = { flagContent, clearFlag, closeQuestion, deleteContent, banUser, unbanUser };

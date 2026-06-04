@@ -6,8 +6,16 @@ import toast from 'react-hot-toast';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const setUser = (u) => {
+    if (u) {
+      u._id = u.id || u._id;
+      u.id = u._id || u.id;
+    }
+    setUserState(u);
+  };
 
   const fetchUser = useCallback(async () => {
     const token = localStorage.getItem('token');
@@ -19,7 +27,9 @@ export function AuthProvider({ children }) {
       const data = await api.get('/auth/me');
       setUser(data.user);
     } catch (err) {
-      localStorage.removeItem('token');
+      if (err.status === 401 || err.status === 403) {
+        localStorage.removeItem('token');
+      }
     } finally {
       setLoading(false);
     }
