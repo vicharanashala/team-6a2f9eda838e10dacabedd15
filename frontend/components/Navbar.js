@@ -82,7 +82,7 @@ export default function Navbar({ onSearch }) {
                   {installOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setInstallOpen(false)} />
-                      <div className="absolute left-0 mt-2 w-44 bg-[var(--color-bg-secondary)] rounded-md shadow-xl border border-[var(--color-border)] z-20 py-1.5 animate-scale-in">
+                      <div className="absolute left-0 mt-2 w-48 bg-[var(--color-bg-secondary)] rounded-md shadow-xl border border-[var(--color-border)] z-20 py-1.5 animate-scale-in">
                         {isInstallable && (
                           <button
                             onClick={() => {
@@ -94,7 +94,7 @@ export default function Navbar({ onSearch }) {
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                             </svg>
-                            <span>PWA (Web)</span>
+                            <span>PWA App (Web)</span>
                           </button>
                         )}
                         <a
@@ -106,8 +106,41 @@ export default function Navbar({ onSearch }) {
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                           </svg>
-                          <span>Android (APK)</span>
+                          <span>Android App (APK)</span>
                         </a>
+                        <a
+                          href="/downloads/prashnasarathi-win.exe"
+                          download
+                          onClick={() => setInstallOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text)] transition-colors cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span>Windows App (.exe)</span>
+                        </a>
+                        <a
+                          href="/downloads/prashnasarathi-mac.dmg"
+                          download
+                          onClick={() => setInstallOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text)] transition-colors cursor-pointer"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925-3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 002.25 12c0 2.071 1.679 3.75 3.75 3.75h6z" />
+                          </svg>
+                          <span>macOS App (.dmg)</span>
+                        </a>
+                        <hr className="my-1 border-[var(--color-border)]" />
+                        <Link
+                          href="/downloads"
+                          onClick={() => setInstallOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-xs text-emerald-500 font-semibold hover:bg-emerald-500/10 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          <span>All Downloads</span>
+                        </Link>
                       </div>
                     </>
                   )}
@@ -305,6 +338,39 @@ export default function Navbar({ onSearch }) {
                     </svg>
                     <span>Android App (APK)</span>
                   </a>
+                  <a
+                    href="/downloads/prashnasarathi-win.exe"
+                    download
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[var(--color-text)] font-semibold hover:bg-[var(--color-bg-tertiary)] rounded-lg transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <span>Windows App (.exe)</span>
+                  </a>
+                  <a
+                    href="/downloads/prashnasarathi-mac.dmg"
+                    download
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-[var(--color-text)] font-semibold hover:bg-[var(--color-bg-tertiary)] rounded-lg transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925-3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 002.25 12c0 2.071 1.679 3.75 3.75 3.75h6z" />
+                    </svg>
+                    <span>macOS App (.dmg)</span>
+                  </a>
+                  <hr className="my-1 border-[var(--color-border)]/40" />
+                  <Link
+                    href="/downloads"
+                    onClick={() => setMenuOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-emerald-500 font-semibold hover:bg-emerald-500/10 rounded-lg transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span>View All Downloads</span>
+                  </Link>
                 </div>
               </div>
             </div>
