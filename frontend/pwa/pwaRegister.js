@@ -9,6 +9,7 @@ export function registerServiceWorker() {
         .register(swUrl)
         .then((registration) => {
           console.log('[PWA] Service Worker registered successfully with scope:', registration.scope);
+          registration.update();
           
           if ('Notification' in window && Notification.permission === 'default') {
             console.log('[PWA] Push notification support available.');
