@@ -523,6 +523,16 @@ Medium-Impact Quality of Life
    * *Resolution*: Replaced the temporary inline SVG logo on the navbar with the official illustration logo (`logo.png`). Built a premium HTML email notification template wrapper in `backend/utils/emailTemplate.js` and updated the email queue worker to attach the logo as an inline CID resource (`cid:logo`), ensuring proper display in email clients.
 8. **Homepage Tech Hero Central Alignment**
    * *Resolution*: Centered the homepage's tech hero section (`Vicharanashala Q&A Portal`) and search input bar, ensuring it is visually aligned, balanced, and responsive.
+9. **Platform Hardening, Account Safety, and Username Management**
+   * *Resolution*:
+     * Excluded banned/blocked accounts from public views, profiles, question/answer endpoints, and the leaderboard to prevent public visibility.
+     * Enforced owner account (`faqportal.in@gmail.com`) immunity so that no administrator can ban, suspend, delete, or demote the owner.
+     * Restrained admins/moderators from banning or suspending themselves and hid the options from their UI rows.
+     * Deprecated and removed the shadow ban options from both backend APIs and the admin dashboard.
+     * Allowed users to update their usernames via settings, validating uniqueness case-insensitively and preventing collisions.
+     * Updated the Google authentication registration flow to check and create unique usernames case-insensitively.
+     * Allowed suspended accounts to view public content but restricted them from write/mutation operations (POST/PUT/PATCH/DELETE).
+     * Added a visual "Owner" badge beside the owner account in both profile and admin pages.
 
 
 

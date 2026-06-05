@@ -149,6 +149,7 @@ userSchema.methods.toPublicJSON = function () {
     violationCount: this.violationCount,
     premodApproved: this.premodApproved,
     createdAt: this.createdAt,
+    isOwner: this.email === 'faqportal.in@gmail.com',
   };
 };
 

@@ -16,12 +16,14 @@ const auth = async (req, res, next) => {
     }
 
     // Check account status
-    if (user.status === 'blocked') {
+    if (user.status === 'blocked' || user.isBanned) {
       return res.status(403).json({ blocked: true, message: 'Account restricted' });
     }
     if (user.status === 'suspended') {
       if (user.suspendedUntil && user.suspendedUntil > new Date()) {
-        return res.status(403).json({ suspended: true, retryAfter: user.suspendedUntil.getTime() });
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+          return res.status(403).json({ suspended: true, retryAfter: user.suspendedUntil.getTime(), message: 'Account suspended from performing actions' });
+        }
       } else {
         // Auto-restore expired suspension
         user.status = 'active';
@@ -44,12 +46,14 @@ const optionalAuth = async (req, res, next) => {
       const decoded = jwt.verify(token, config.jwt.secret);
       const user = await User.findById(decoded.id).select('-password');
       if (user) {
-        if (user.status === 'blocked') {
+        if (user.status === 'blocked' || user.isBanned) {
           return res.status(403).json({ blocked: true, message: 'Account restricted' });
         }
         if (user.status === 'suspended') {
           if (user.suspendedUntil && user.suspendedUntil > new Date()) {
-            return res.status(403).json({ suspended: true, retryAfter: user.suspendedUntil.getTime() });
+            if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+              return res.status(403).json({ suspended: true, retryAfter: user.suspendedUntil.getTime(), message: 'Account suspended from performing actions' });
+            }
           } else {
             user.status = 'active';
             await user.save();

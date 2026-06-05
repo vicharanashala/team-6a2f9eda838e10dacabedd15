@@ -12,7 +12,7 @@ exports.getUserProfile = async (req, res, next) => {
   try {
     const safeUsername = req.params.username.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const user = await User.findOne({ username: { $regex: new RegExp(`^${safeUsername}$`, 'i') } });
-    if (!user) throw new AppError('User not found', 404);
+    if (!user || user.isBanned || user.status === 'blocked') throw new AppError('User not found', 404);
 
     const [questions, answers, questionLikes, answerLikes, questionVotes, answerVotes, savedQuestionsCount, savedFaqsCount] = await Promise.all([
       Question.countDocuments({ author: user._id, isDeleted: false }),
@@ -60,7 +60,7 @@ exports.getUserQuestions = async (req, res, next) => {
   try {
     const safeUsername = req.params.username.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const user = await User.findOne({ username: { $regex: new RegExp(`^${safeUsername}$`, 'i') } });
-    if (!user) throw new AppError('User not found', 404);
+    if (!user || user.isBanned || user.status === 'blocked') throw new AppError('User not found', 404);
 
     const { page, limit, skip } = paginate(req.query.page, req.query.limit);
     const [questions, total] = await Promise.all([
@@ -83,7 +83,7 @@ exports.getUserAnswers = async (req, res, next) => {
   try {
     const safeUsername = req.params.username.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const user = await User.findOne({ username: { $regex: new RegExp(`^${safeUsername}$`, 'i') } });
-    if (!user) throw new AppError('User not found', 404);
+    if (!user || user.isBanned || user.status === 'blocked') throw new AppError('User not found', 404);
 
     const { page, limit, skip } = paginate(req.query.page, req.query.limit);
     const [answers, total] = await Promise.all([
@@ -332,7 +332,7 @@ exports.getLeaderboard = async (req, res, next) => {
 
 exports.getModerators = async (req, res, next) => {
   try {
-    const moderators = await User.find({ role: { $in: ['moderator', 'admin'] } })
+    const moderators = await User.find({ role: { $in: ['moderator', 'admin'] }, isBanned: { $ne: true }, status: { $ne: 'blocked' } })
       .select('username displayName avatar avatarUrl role reputation bio badges createdAt')
       .sort({ reputation: -1, createdAt: 1 });
     res.json({ moderators });

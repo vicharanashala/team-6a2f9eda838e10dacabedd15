@@ -68,8 +68,12 @@ exports.updateUserRole = async (req, res, next) => {
     if (!['user', 'moderator', 'admin'].includes(role)) {
       throw new AppError('Invalid role', 400);
     }
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) throw new AppError('User not found', 404);
+    if (targetUser.email === 'faqportal.in@gmail.com') {
+      throw new AppError("Cannot change the site owner's role", 400);
+    }
     const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true }).select('-password');
-    if (!user) throw new AppError('User not found', 404);
 
     // Role promotion emails are disabled to prevent non-compliant outbound emails
 
@@ -91,6 +95,13 @@ exports.updateUserRole = async (req, res, next) => {
 exports.banUser = async (req, res, next) => {
   try {
     const { reason } = req.body;
+    if (req.params.id === req.user._id.toString()) {
+      throw new AppError('You cannot ban yourself', 400);
+    }
+    const target = await User.findById(req.params.id);
+    if (target && target.email === 'faqportal.in@gmail.com') {
+      throw new AppError('Cannot ban the site owner', 400);
+    }
     await banUser({ userId: req.params.id, reason: reason || 'Violation of terms' });
 
     try {
@@ -150,8 +161,14 @@ exports.unbanUser = async (req, res, next) => {
 exports.deleteUser = async (req, res, next) => {
   try {
     const userId = req.params.id;
+    if (userId === req.user._id.toString()) {
+      throw new AppError('You cannot delete yourself', 400);
+    }
     const user = await User.findById(userId);
     if (!user) throw new AppError('User not found', 404);
+    if (user.email === 'faqportal.in@gmail.com') {
+      throw new AppError('Cannot delete the site owner', 400);
+    }
 
     console.log(`[Admin Action] Deleting user ${user.username} (${user.email}) completely.`);
 
@@ -668,8 +685,20 @@ exports.moderateUser = async (req, res, next) => {
     const { userId, action, durationHours, reason } = req.body;
     const AuditLog = require('../models/AuditLog');
 
+    if (action === 'shadow_ban') {
+      throw new AppError('Shadow ban option is removed', 400);
+    }
+
+    if (userId === req.user._id.toString() && ['suspend', 'block', 'warn'].includes(action)) {
+      throw new AppError('You cannot perform this action on yourself', 400);
+    }
+
     const targetUser = await User.findById(userId);
     if (!targetUser) throw new AppError('User not found', 404);
+
+    if (targetUser.email === 'faqportal.in@gmail.com' && ['suspend', 'block', 'warn', 'shadow_ban'].includes(action)) {
+      throw new AppError('Cannot ban or suspend the site owner', 400);
+    }
 
     if (action === 'warn') {
       targetUser.status = 'warned';
@@ -707,19 +736,7 @@ exports.moderateUser = async (req, res, next) => {
         await recalculateAnswerCount(qId);
       }
     } else if (action === 'shadow_ban') {
-      targetUser.status = 'shadow_banned';
-      // Hide all posts
-      await Question.updateMany({ author: targetUser._id }, { visibility: 'hidden' });
-
-      const Answer = require('../models/Answer');
-      const userAnswers = await Answer.find({ author: targetUser._id });
-      const questionIds = [...new Set(userAnswers.map(a => a.question.toString()))];
-      await Answer.updateMany({ author: targetUser._id }, { visibility: 'hidden' });
-
-      const { recalculateAnswerCount } = require('../utils/helpers');
-      for (const qId of questionIds) {
-        await recalculateAnswerCount(qId);
-      }
+      throw new AppError('Shadow ban option is removed', 400);
     } else if (action === 'activate' || action === 'unsuspend' || action === 'unblock' || action === 'unshadow_ban') {
       targetUser.status = 'active';
       targetUser.suspendedUntil = null;

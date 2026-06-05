@@ -534,23 +534,34 @@ export default function AdminPage() {
               <tbody className="divide-y divide-[var(--color-border)]">
                 {users.map(u => (
                   <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                    <td className="px-4 py-3">
+                     <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium text-[var(--color-text)]">{u.displayName || u.username}</p>
+                        <p className="font-medium text-[var(--color-text)] flex items-center gap-1.5">
+                          {u.displayName || u.username}
+                          {u.email === 'faqportal.in@gmail.com' && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                              Owner
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-[var(--color-text-secondary)]">@{u.username}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">{u.email}</td>
                     <td className="px-4 py-3">
-                      <select
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                        className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-[var(--color-bg)] text-[var(--color-text)]"
-                      >
-                        <option value="user">User</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                      {u.email === 'faqportal.in@gmail.com' ? (
+                        <span className="text-xs font-mono text-[var(--color-text-secondary)] uppercase">Admin (Owner)</span>
+                      ) : (
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                          className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-[var(--color-bg)] text-[var(--color-text)]"
+                        >
+                          <option value="user">User</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {u.isBanned || u.status === 'blocked' ? (
@@ -576,24 +587,29 @@ export default function AdminPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)] text-xs">{formatDate(u.createdAt)}</td>
-                    <td className="px-4 py-3 flex items-center gap-2">
-                      {u.isBanned || u.status === 'blocked' || u.status === 'shadow_banned' || u.status === 'suspended' || u.status === 'warned' ? (
-                        <button
-                          onClick={() => handleUserAction(u._id, 'activate')}
-                          className="px-2.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors"
-                        >
-                          Activate / Unblock
-                        </button>
+                     <td className="px-4 py-3 flex items-center gap-2">
+                      {u._id === user?.id || u._id === user?._id || u.email === 'faqportal.in@gmail.com' ? (
+                        <span className="text-xs text-[var(--color-text-muted)] italic">System Account</span>
                       ) : (
-                        <div className="flex gap-1">
-                          <button onClick={() => handleBan(u._id)} className="btn-danger btn-sm">Ban</button>
-                          <button onClick={() => handleUserAction(u._id, 'suspend')} className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-[10px] font-bold">Suspend</button>
-                          <button onClick={() => handleUserAction(u._id, 'shadow_ban')} className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-[10px] font-bold">Shadow Ban</button>
-                        </div>
+                        <>
+                          {u.isBanned || u.status === 'blocked' || u.status === 'suspended' || u.status === 'warned' ? (
+                            <button
+                              onClick={() => handleUserAction(u._id, 'activate')}
+                              className="px-2.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors"
+                            >
+                              Activate / Unblock
+                            </button>
+                          ) : (
+                            <div className="flex gap-1">
+                              <button onClick={() => handleBan(u._id)} className="btn-danger btn-sm">Ban</button>
+                              <button onClick={() => handleUserAction(u._id, 'suspend')} className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-[10px] font-bold">Suspend</button>
+                            </div>
+                          )}
+                          <button onClick={() => handleDeleteUser(u._id, u.username)} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors">
+                            Delete
+                          </button>
+                        </>
                       )}
-                      <button onClick={() => handleDeleteUser(u._id, u.username)} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors">
-                        Delete
-                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1110,32 +1126,30 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">{formatDate(rep.createdAt)}</td>
                         <td className="px-4 py-3 text-right">
                           {postAuthor && (
-                            <div className="inline-flex gap-1.5">
-                              <button
-                                onClick={() => handleUserAction(postAuthor._id, 'warn')}
-                                className="px-2 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white rounded"
-                              >
-                                Warn
-                              </button>
-                              <button
-                                onClick={() => handleUserAction(postAuthor._id, 'suspend')}
-                                className="px-2 py-1 text-[10px] font-bold bg-orange-500 hover:bg-orange-600 text-white rounded"
-                              >
-                                Suspend
-                              </button>
-                              <button
-                                onClick={() => handleUserAction(postAuthor._id, 'block')}
-                                className="px-2 py-1 text-[10px] font-bold bg-red-600 hover:bg-red-700 text-white rounded"
-                              >
-                                Block
-                              </button>
-                              <button
-                                onClick={() => handleUserAction(postAuthor._id, 'shadow_ban')}
-                                className="px-2 py-1 text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white rounded"
-                              >
-                                Shadow Ban
-                              </button>
-                            </div>
+                            postAuthor._id === user?.id || postAuthor._id === user?._id || postAuthor.email === 'faqportal.in@gmail.com' ? (
+                              <span className="text-[10px] text-[var(--color-text-muted)] italic">System Account</span>
+                            ) : (
+                              <div className="inline-flex gap-1.5">
+                                <button
+                                  onClick={() => handleUserAction(postAuthor._id, 'warn')}
+                                  className="px-2 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white rounded"
+                                >
+                                  Warn
+                                </button>
+                                <button
+                                  onClick={() => handleUserAction(postAuthor._id, 'suspend')}
+                                  className="px-2 py-1 text-[10px] font-bold bg-orange-500 hover:bg-orange-600 text-white rounded"
+                                >
+                                  Suspend
+                                </button>
+                                <button
+                                  onClick={() => handleUserAction(postAuthor._id, 'block')}
+                                  className="px-2 py-1 text-[10px] font-bold bg-red-600 hover:bg-red-700 text-white rounded"
+                                >
+                                  Block
+                                </button>
+                              </div>
+                            )
                           )}
                         </td>
                       </tr>
