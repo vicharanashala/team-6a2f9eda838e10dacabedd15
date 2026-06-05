@@ -137,7 +137,7 @@ export default function UserProfilePage() {
                     🔗 {user.website.replace(/^https?:\/\//, '')}
                   </a>
                 )}
-                <span>📅 Joined {formatDate(user.createdAt)}</span>
+                <span>📅 Joined {formatDate(user.createdAt, true)}</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-4 mt-4 pt-3 border-t border-[var(--color-border)]/40">

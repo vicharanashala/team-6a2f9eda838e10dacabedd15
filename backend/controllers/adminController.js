@@ -1004,6 +1004,8 @@ exports.sendAdminAlert = async (req, res, next) => {
     await AuditLog.create({
       adminId: req.user._id,
       action: 'send_admin_alert',
+      targetId: req.user._id,
+      targetType: 'User',
       reason: `Broadcasted alert: "${message}"`
     });
 
