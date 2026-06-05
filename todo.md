@@ -539,10 +539,10 @@ Medium-Impact Quality of Life
     * *Resolution*:
       * Structured a new `frontend/pwa` directory to isolate PWA states, hooks, and providers.
       * Built a custom React hook `usePWA` to track installation availability (`beforeinstallprompt`), app-installed state, and connectivity status.
-      * Created a floating, responsive, glassmorphic `PwaInstallBanner` component to notify and prompt users on both desktop and mobile layouts.
+      * Integrated the PWA installation option directly inside the responsive `Navbar` (in both the main header for desktop users and the hamburger menu for mobile users), removing the floating prompt banner for a cleaner interface.
       * Formatted and generated standard PWA icon files (72x72 through 512x512) and native iOS/iPadOS splash screen files.
       * Implemented an online/offline notification banner (`OfflineIndicator`) to dynamically notify users of their network status.
-      * Developed a unified Service Worker (`sw.js`) utilizing static caching and Network-First dynamic API caching for offline FAQ browsing.
+      * Developed a unified Service Worker (`sw.js`) utilizing static caching and a 1000ms fetch timeout fallback for dynamic API calls. If the connection fails or lags, it aborts the network request after 1 second and instantly serves cached FAQs and questions, avoiding long-hanging skeleton screens.
       * Configured the app router manifest and apple-touch startup images metadata inside the root layout.
 
 
