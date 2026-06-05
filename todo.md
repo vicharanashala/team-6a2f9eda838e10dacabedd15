@@ -318,6 +318,30 @@ Medium-Impact Quality of Life
 
 ### Recent Fixes
 
+#### Latest Fixes (June 5, 2026)
+
+1. **Mandatory Rules & Regulations Acceptance Flow**
+   * *Problem*: Users could bypass platform rules and access features immediately upon login without reviewing terms or community expectations.
+   * *Resolution*:
+     * Added `hasAcceptedTerms` attribute to the `User` schema.
+     * Implemented `acceptTerms` controller and `POST /api/auth/accept-terms` backend endpoint.
+     * Created a premium React component `TermsAndConditionsModal` on the frontend, rendering it globally in `layout.js` to block the UI and force user agreement before accessing features.
+     * Modified `OnboardingModal` to display only after the terms and conditions have been accepted.
+
+2. **Immediate Vercel-friendly Email Queue Processing**
+   * *Problem*: Cron jobs do not run reliably in Vercel's ephemeral serverless environment, causing email notifications to fail or delay indefinitely.
+   * *Resolution*:
+     * Updated SMTP settings to pull from sanitized configuration variables, stripping any problematic outer quotes.
+     * Modified `enqueueEmail.js` to trigger the `processEmailQueue()` handler asynchronously within the same request thread immediately, sending emails instantly.
+
+3. **Admin Alert Socket.IO & Inbox Broadcast**
+   * *Problem*: Administrators had no way to push urgent announcements or platform updates to all users instantly in real-time.
+   * *Resolution*:
+     * Created `sendAdminAlert` in `adminController.js` and registered `/api/admin/alert` POST route.
+     * Implemented Socket.IO `broadcastAlert` method to publish real-time alerts.
+     * Added a **"Broadcast Alerts"** composer tab in the admin panel.
+     * Integrated a global socket listener on the client (`NotificationContext.js`) that displays a persistent, custom-designed system alert toast when an admin broadcasts a message, updating the notification inbox count instantly.
+
 #### Latest Fixes (June 4, 2026)
 
 1. **Moderation Platform Anomalies, Suspicious Activities, and Auditing Optimization**
