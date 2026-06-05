@@ -50,11 +50,20 @@ async function enqueueEmail({ to, userName, subject, body, contentTitle }) {
     const titleText = contentTitle || finalSubject;
     const finalBody = `Hi ${userName},\n\n${body}\n\n---\nTopic: ${titleText}\nSent: ${timestamp}`;
     
+    let finalHtml = '';
+    try {
+      const { getHtmlTemplate } = require('./emailTemplate');
+      finalHtml = getHtmlTemplate(userName, finalSubject, body, titleText, timestamp);
+    } catch (templateErr) {
+      console.error('[Enqueue] Error generating HTML template:', templateErr.message);
+    }
+
     const emailJob = await EmailQueue.create({
       to: targetEmail,
       userName,
       subject: finalSubject,
       body: finalBody,
+      html: finalHtml,
       status: 'pending',
     });
     

@@ -41,12 +41,7 @@ export default function Navbar({ onSearch }) {
           <div className="flex items-center justify-between h-12">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text)] tracking-tight">
-                <div className="w-5.5 h-5.5 bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20 rounded-md flex items-center justify-center text-[var(--color-primary)] shadow-sm">
-                  <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-                    <circle cx="8" cy="8" r="2" fill="currentColor" opacity="0.5"/>
-                  </svg>
-                </div>
+                <img src="/logo.png" alt="PrashnaSārathi Logo" className="w-7 h-7 object-contain" />
                 <span>PrashnaSārathi</span>
               </Link>
               <div className="hidden md:flex items-center gap-1 border-l border-[var(--color-border)] pl-4 h-5">
