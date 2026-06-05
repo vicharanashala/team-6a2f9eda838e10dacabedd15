@@ -342,6 +342,20 @@ Medium-Impact Quality of Life
      * Added a **"Broadcast Alerts"** composer tab in the admin panel.
      * Integrated a global socket listener on the client (`NotificationContext.js`) that displays a persistent, custom-designed system alert toast when an admin broadcasts a message, updating the notification inbox count instantly.
 
+4. **AuditLog Schema Validation Error Fix**
+   * *Problem*: Sending an alert message crashed on the backend with an `AuditLog validation failed` error because the schema requires both `targetId` and `targetType` fields.
+   * *Resolution*: Updated the `sendAdminAlert` handler in `adminController.js` to explicitly provide `targetId: req.user._id` and `targetType: 'User'`, fulfilling the model validation constraints.
+
+5. **24-Hour Date & Time Formatting Cutoff**
+   * *Problem*: Users wanted absolute dates to display on their profiles rather than relative statements like "Joined 2d ago", and across the site after 24 hours of any activity.
+   * *Resolution*:
+     * Updated `formatDate` in `frontend/lib/utils.js` to support an `absolute` parameter, and to automatically return the absolute localized date (e.g., "Jun 5, 2026") if the elapsed time is older than 24 hours.
+     * Modified the joined date display on the profile page (`frontend/app/users/[username]/page.js`) to call `formatDate(user.createdAt, true)` to always display absolute dates.
+
+6. **Tag Verification & Filtering**
+   * *Problem*: Unused, empty, or unverified tags (without any associated public/approved questions) were cluttered on the tags page.
+   * *Resolution*: Refactored `getTags` in `backend/controllers/tagController.js` to run a MongoDB aggregation pipeline on `Question`. It now aggregates question counts per tag and filters out any tags that do not have at least one public, approved, and non-deleted question.
+
 #### Latest Fixes (June 4, 2026)
 
 1. **Moderation Platform Anomalies, Suspicious Activities, and Auditing Optimization**
