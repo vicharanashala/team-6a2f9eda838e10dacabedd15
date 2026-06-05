@@ -1,5 +1,5 @@
-const CACHE_NAME = 'prashnasarathi-pwa-cache-v7';
-const DATA_CACHE_NAME = 'prashnasarathi-data-cache-v7';
+const CACHE_NAME = 'prashnasarathi-pwa-cache-v8';
+const DATA_CACHE_NAME = 'prashnasarathi-data-cache-v8';
 
 // Helper to fetch with a timeout fallback
 function fetchWithTimeout(request, timeout = 1000) {
@@ -28,6 +28,11 @@ const STATIC_ASSETS = [
   '/faqs',
   '/questions',
   '/guidelines',
+  '/notifications',
+  '/saved',
+  '/search',
+  '/tags',
+  '/users',
   '/logo.png',
   '/pwa/icons/icon-72x72.png',
   '/pwa/icons/icon-96x96.png',
@@ -122,8 +127,14 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Serve the static offline page if the user is offline
-          return caches.match('/offline.html');
+          // Serve the actual cached site page, home shell, or offline fallback page
+          return caches.match(request).then((res) => {
+            if (res) return res;
+            return caches.match('/', { ignoreSearch: true }).then((homeRes) => {
+              if (homeRes) return homeRes;
+              return caches.match('/offline.html');
+            });
+          });
         })
     );
     return;
@@ -138,7 +149,9 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(request)
         .then((response) => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+          const requestUrl = new URL(request.url);
+          const isSameOrigin = requestUrl.origin === self.location.origin;
+          if (!response || response.status !== 200 || (!isSameOrigin && response.type !== 'basic')) {
             return response;
           }
 
