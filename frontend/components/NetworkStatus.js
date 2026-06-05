@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 export default function NetworkStatus() {
   const [status, setStatus] = useState('good'); // 'good' | 'slow' | 'offline'
