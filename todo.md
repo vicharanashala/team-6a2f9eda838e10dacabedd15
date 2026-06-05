@@ -521,6 +521,9 @@ Medium-Impact Quality of Life
    * *Resolution*: Added automated email notifications for when users are warned, suspended, shadow-banned, banned, or re-activated. Integrated the email trigger hooks into both `exports.banUser` and `exports.moderateUser` in `backend/controllers/adminController.js`, utilizing Nodemailer and the database queue.
 7. **Official Logo Integration & Premium HTML Email Templates**
    * *Resolution*: Replaced the temporary inline SVG logo on the navbar with the official illustration logo (`logo.png`). Built a premium HTML email notification template wrapper in `backend/utils/emailTemplate.js` and updated the email queue worker to attach the logo as an inline CID resource (`cid:logo`), ensuring proper display in email clients.
+8. **Homepage Tech Hero Central Alignment**
+   * *Resolution*: Centered the homepage's tech hero section (`Vicharanashala Q&A Portal`) and search input bar, ensuring it is visually aligned, balanced, and responsive.
+
 
 
 
