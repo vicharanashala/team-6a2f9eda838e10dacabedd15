@@ -28,8 +28,8 @@ if (Test-Path $OutPath) {
     Remove-Item $OutPath
 }
 
-# Run csc compiler embedding app_bundle.zip
-& C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /resource:app_bundle.zip,app_bundle.zip /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /out:$OutPath Installer.cs
+# Run csc compiler embedding app_bundle.zip and setting the file icon
+& C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /win32icon:logo.ico /resource:app_bundle.zip,app_bundle.zip /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /out:$OutPath Installer.cs
 
 if (!(Test-Path $OutPath)) {
     Write-Error "Compilation failed!"

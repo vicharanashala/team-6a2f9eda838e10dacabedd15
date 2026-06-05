@@ -138,7 +138,7 @@ namespace PrashnaSarathiInstaller
                 }
 
                 worker.ReportProgress(85, "Creating shortcuts...");
-                CreateShortcut("PrashnaSārathi", Path.Combine(destDir, "PrashnaSārathi.exe"), destDir);
+                CreateShortcut("PrashnaSārathi", Path.Combine(destDir, "PrashnaSarathi.exe"), destDir);
 
                 worker.ReportProgress(100, "Done");
             };
@@ -184,6 +184,7 @@ namespace PrashnaSarathiInstaller
                 dynamic shortcut = shell.CreateShortcut(path);
                 shortcut.TargetPath = targetPath;
                 shortcut.WorkingDirectory = workDir;
+                shortcut.IconLocation = targetPath + ",0";
                 shortcut.Save();
             } catch {}
         }
