@@ -157,20 +157,25 @@ export default function DownloadCenter() {
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-[var(--color-text)]">Windows Application</h2>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Desktop Package (.7z)</p>
+                  <p className="text-xs text-[var(--color-text-secondary)]">Single Setup Installer (.exe)</p>
                 </div>
               </div>
               <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                Native Windows client for laptop and desktop users. Simply download, extract, and launch PrashnaSārathi.exe.
+                Native Windows client for laptop and desktop users. Download and run the single setup file to install the app and create shortcuts automatically.
               </p>
+              
+              <div className="mt-1 border border-amber-500/20 rounded-xl p-3 bg-amber-500/5 text-[10px] text-amber-400/90 leading-relaxed">
+                <span className="font-semibold block mb-0.5">⚠️ Security Note:</span>
+                Since this is a custom, unsigned application, Chrome may show an &quot;uncommon download&quot; or &quot;suspicious&quot; alert, and Windows SmartScreen might pop up. This is expected. Click <strong>Keep</strong> / <strong>More Info &gt; Run anyway</strong> to install safely.
+              </div>
             </div>
             <div className="mt-6">
               <a
-                href="/downloads/prashnasarathi-win.7z"
+                href="/downloads/prashnasarathi-win.exe"
                 download
                 className="w-full py-2.5 text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-600 rounded-xl transition-all shadow-md shadow-indigo-500/10 cursor-pointer flex items-center justify-center gap-1.5"
               >
-                Download 7z Package
+                Download Setup Installer
               </a>
             </div>
           </div>
