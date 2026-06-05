@@ -79,7 +79,9 @@ export default function NetworkStatus() {
   useEffect(() => {
     if (isFirstLoad.current) {
       isFirstLoad.current = false;
-      return;
+      if (status === 'good') {
+        return;
+      }
     }
 
     if (status === 'offline') {

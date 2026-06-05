@@ -541,7 +541,8 @@ Medium-Impact Quality of Life
       * Built a custom React hook `usePWA` to track installation availability (`beforeinstallprompt`), app-installed state, and connectivity status.
       * Integrated the PWA installation option directly inside the responsive `Navbar` (in both the main header for desktop users and the hamburger menu for mobile users), removing the floating prompt banner for a cleaner interface.
       * Formatted and generated standard PWA icon files (72x72 through 512x512) and native iOS/iPadOS splash screen files.
-      * Integrated beautiful, system-wide connection status pop-up toasts (`react-hot-toast`) inside the robust, active-pinging `NetworkStatus` component to notify users instantly when going online, offline, or experiencing slow connections.
+      * Integrated beautiful, system-wide connection status pop-up toasts (`react-hot-toast`) inside the robust, active-pinging `NetworkStatus` component to notify users instantly when going online, offline, or experiencing slow connections (including showing the toast on initial load if starting in an offline/slow state).
+      * Pre-fetched core API endpoints (such as FAQs and default sorted Questions lists) inside the `PwaProvider` mount phase to populate the Service Worker data cache while online, guaranteeing instant data loading when navigating offline.
       * Developed a unified Service Worker (`sw.js`) utilizing static caching and a 1000ms fetch timeout fallback for dynamic API calls. If the connection fails or lags, it aborts the network request after 1 second and instantly serves cached FAQs and questions, avoiding long-hanging skeleton screens.
       * Configured the app router manifest and apple-touch startup images metadata inside the root layout.
 
