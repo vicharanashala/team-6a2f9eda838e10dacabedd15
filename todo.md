@@ -617,6 +617,18 @@ Medium-Impact Quality of Life
 
 
 
+#### Latest Fixes (June 6, 2026 - Round 2)
+
+1. **Centralized Real-Time Notification Pipeline via Mongoose hooks**
+   * *Root Cause*: In-app notifications created in various controllers (for upvotes, downvotes, new answers, accepted answers, and followed question notifications) were created using direct `Notification.create(...)` or `Notification.insertMany(...)` database calls. These bypassed the Socket.IO emit and push notification routines completely. Consequently, background push notifications were not sent, and foreground alerts were only partially dispatched (with empty titles/messages).
+   * *Resolution*: Added Mongoose `post('save')` and `post('insertMany')` hooks to `backend/models/Notification.js`. Whenever a notification document is written, the database model automatically dispatches a Socket.IO `notification:new` event with the complete payload, and automatically executes `sendNotificationToUser(...)` to deliver push alerts (FCM for native Android/iOS and VAPID for PWA/Web).
+2. **Elimination of Duplicate and Empty Client-Side Notifications**
+   * *Resolution*: Simplified `createNotification` in `backend/services/notificationService.js` and removed manual, partial `emitToUser(..., 'notification:new')` calls inside `voteController.js`, `answerController.js`, and `adminController.js`. This guarantees that users receive a single, high-fidelity notification popup containing the correct title and message every time, preventing duplicates and empty banner glitches.
+3. **Foreground Real-Time In-App Toast Overlays**
+   * *Resolution*: Updated `handleNotification` and `handleAdminAlert` handlers inside `frontend/context/NotificationContext.js` to trigger a beautiful in-app popup using `react-hot-toast` with custom layouts and custom icons (🔔 and ⚠️) when notifications are received in the foreground.
+4. **Native Mobile Google Sign-In with Sheet Overlay Integration**
+   * *Resolution*: Installed `@codetrix-studio/capacitor-google-auth` on the Android wrapper and Next.js frontend, and configured the plugin in `capacitor-app/capacitor.config.ts`. Rewrote the sign-in routine in `frontend/app/auth/page.js` to invoke the native SDK's accounts chooser sheet dynamically, login to Firebase via credential generation, and fall back to the WebView redirect flow in case of configuration anomalies.
+
 #### Latest Fixes (June 6, 2026)
 
 1. **Default-Enabled Push Notifications for All Users**

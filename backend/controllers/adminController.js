@@ -582,7 +582,6 @@ exports.approvePost = async (req, res, next) => {
             referenceType: 'Answer',
             reference: post._id,
           });
-          emitToUser(q.author.toString(), 'notification:new', { answer: populated });
 
           // Send email notification to question author
           try {

@@ -30,6 +30,11 @@ const config: CapacitorConfig = {
     },
     App: {
       // Config for App listeners (Deep Links, Back Button etc.)
+    },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      clientId: '927820350675-uf8p3dpe9m4o6e93v320hdbu942j4pvt.apps.googleusercontent.com',
+      forceCodeForRefreshToken: true
     }
   }
 };

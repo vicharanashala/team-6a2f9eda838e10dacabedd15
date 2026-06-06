@@ -81,9 +81,40 @@ function AuthPageContent() {
     try {
       const isCapacitor = typeof window !== 'undefined' && window.Capacitor;
       if (isCapacitor) {
-        console.log('[Google Auth] Capacitor detected. Using redirect flow...');
-        await signInWithRedirect(auth, googleProvider);
-        return; // Redirect navigates the WebView, no need to proceed
+        console.log('[Google Auth] Capacitor detected. Attempting native Google Sign-In...');
+        try {
+          const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+          
+          try {
+            await GoogleAuth.initialize({
+              clientId: '927820350675-uf8p3dpe9m4o6e93v320hdbu942j4pvt.apps.googleusercontent.com',
+              scopes: ['profile', 'email'],
+              grantOfflineAccess: true,
+            });
+          } catch (initErr) {
+            console.warn('[Google Auth] Initialize error (might be already initialized):', initErr);
+          }
+
+          const googleUser = await GoogleAuth.signIn();
+          const nativeIdToken = googleUser.authentication.idToken;
+          
+          if (!nativeIdToken) {
+            throw new Error('Native Google sign-in did not return an ID token.');
+          }
+
+          const { signInWithCredential, GoogleAuthProvider } = await import('firebase/auth');
+          const credential = GoogleAuthProvider.credential(nativeIdToken);
+          const result = await signInWithCredential(auth, credential);
+          
+          const idToken = await result.user.getIdToken();
+          await loginWithGoogle(idToken);
+          router.push('/');
+          return;
+        } catch (nativeErr) {
+          console.error('[Google Auth] Native sign-in failed, falling back to Webview redirect:', nativeErr);
+          await signInWithRedirect(auth, googleProvider);
+          return; // Redirect navigates the WebView
+        }
       }
 
       // Try popup first (most reliable on all web platforms, including Safari and PWA, when triggered from user click)

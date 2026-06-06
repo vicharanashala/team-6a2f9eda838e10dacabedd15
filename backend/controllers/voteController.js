@@ -140,7 +140,6 @@ exports.vote = async (req, res, next) => {
         referenceType: targetType,
         reference: targetId,
       });
-      emitToUser(target.author.toString(), 'notification:new', { upvote: true });
     }
 
     if (voteType === 'downvote' && target.author.toString() !== req.user._id.toString()) {
@@ -171,7 +170,6 @@ exports.vote = async (req, res, next) => {
         referenceType: targetType,
         reference: targetId,
       });
-      emitToUser(target.author.toString(), 'notification:new', { downvote: true });
     }
 
     releaseVoteLock(req.user._id, targetId);

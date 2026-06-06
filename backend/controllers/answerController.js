@@ -71,7 +71,6 @@ exports.createAnswer = async (req, res, next) => {
           referenceType: 'Answer',
           reference: answer._id,
         });
-        emitToUser(question.author.toString(), 'notification:new', { answer: populated });
 
         // Send email notification to question author
         try {
@@ -289,7 +288,6 @@ exports.acceptAnswer = async (req, res, next) => {
       referenceType: 'Answer',
       reference: answer._id,
     });
-    emitToUser(answer.author.toString(), 'notification:new', { accepted: true });
 
     if (question.meTooUsers && question.meTooUsers.length > 0) {
       const meTooNotifications = question.meTooUsers.map(userId => ({
@@ -302,9 +300,6 @@ exports.acceptAnswer = async (req, res, next) => {
         reference: question._id,
       }));
       await Notification.insertMany(meTooNotifications);
-      question.meTooUsers.forEach(userId => {
-        emitToUser(userId.toString(), 'notification:new', { questionAnswered: true });
-      });
 
       // Doubt solved email notifications are disabled to prevent non-compliant outbound emails
     }

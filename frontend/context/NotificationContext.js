@@ -95,6 +95,17 @@ export function NotificationProvider({ children }) {
       // Fetch latest notifications to keep the state perfectly synced with real DB IDs
       fetchNotificationsList();
       
+      toast((t) => (
+        <div className="flex flex-col gap-1">
+          <p className="font-bold text-sm text-[var(--color-text)]">{data.title || 'New Notification'}</p>
+          <p className="text-xs text-[var(--color-text-secondary)]">{data.message || data.body || ''}</p>
+        </div>
+      ), {
+        icon: '🔔',
+        duration: 4000,
+        position: 'top-right'
+      });
+
       if (browserPermission === 'granted') {
         showBrowserNotification(data);
       }
@@ -109,10 +120,21 @@ export function NotificationProvider({ children }) {
       // Immediately trigger a refetch so the new system broadcast is synced down
       fetchNotificationsList();
       
+      toast((t) => (
+        <div className="flex flex-col gap-1">
+          <p className="font-bold text-sm text-[var(--color-text)]">{data.title || 'System Alert'}</p>
+          <p className="text-xs text-[var(--color-text-secondary)]">{data.message || ''}</p>
+        </div>
+      ), {
+        icon: '⚠️',
+        duration: 5000,
+        position: 'top-right'
+      });
+
       // Also trigger browser notification
       if (browserPermission === 'granted') {
         showBrowserNotification({
-          title: 'System Alert',
+          title: data.title || 'System Alert',
           message: data.message
         });
       }
