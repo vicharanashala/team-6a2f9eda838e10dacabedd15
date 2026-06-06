@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useSocket } from '@/context/SocketContext';
 import api from '@/lib/api';
+import toast from 'react-hot-toast';
+
 
 
 export default function AppUpdateChecker() {
@@ -10,7 +12,7 @@ export default function AppUpdateChecker() {
   const [currentVersion, setCurrentVersion] = useState('');
   const socket = useSocket();
 
-  const checkUpdates = async () => {
+  const checkUpdates = async (isManual = false) => {
     try {
       let installedVersionName = '1.0.0';
       let installedVersionCode = 1;
@@ -32,8 +34,11 @@ export default function AppUpdateChecker() {
           console.warn('Failed to get Tauri version:', tauriErr);
         }
       }
-      // 3. Fallback: standard web environment (do not show native modal by default on standard web load)
+      // 3. Fallback: standard web environment
       else {
+        if (isManual) {
+          toast.success('Your app is up to date (Web Version).');
+        }
         return;
       }
 
@@ -41,7 +46,10 @@ export default function AppUpdateChecker() {
 
       // Fetch version info from backend
       const response = await fetch(`${api.baseUrl}/app-version`);
-      if (!response.ok) return;
+      if (!response.ok) {
+        if (isManual) toast.error('Failed to connect to update server.');
+        return;
+      }
       const data = await response.json();
 
       // Compare versionCode (preferred) or versionName
@@ -51,11 +59,22 @@ export default function AppUpdateChecker() {
       if (isNewer) {
         setUpdateInfo(data);
         setShowModal(true);
+        if (isManual) {
+          toast.success(`New version v${data.latestVersion} is available!`);
+        }
+      } else {
+        if (isManual) {
+          toast.success('Your app is already up to date!');
+        }
       }
     } catch (err) {
       console.error('[Update Checker] Failed to check for updates:', err);
+      if (isManual) {
+        toast.error('Failed to check for updates.');
+      }
     }
   };
+
 
   useEffect(() => {
     // Initial startup check
@@ -82,6 +101,22 @@ export default function AppUpdateChecker() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const handleManualCheck = () => {
+      checkUpdates(true);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('app:check-update-manual', handleManualCheck);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('app:check-update-manual', handleManualCheck);
+      }
+    };
+  }, []);
+
 
   useEffect(() => {
     if (!socket) return;
@@ -135,17 +170,21 @@ export default function AppUpdateChecker() {
   const handleUpdate = () => {
     if (!updateInfo) return;
     
-    // Redirect user to the direct update URL (APK or downloads page)
-    if (typeof window !== 'undefined' && window.Capacitor) {
-      window.open(updateInfo.apkUrl, '_system');
-    } else {
-      window.open('/downloads', '_blank');
+    let targetUrl = updateInfo.apkUrl;
+    if (targetUrl && !targetUrl.startsWith('http')) {
+      targetUrl = `https://prashnasarathi.vercel.app${targetUrl}`;
     }
     
-    if (!updateInfo.forceUpdate) {
-      setShowModal(false);
+    // Redirect user to the direct update URL (APK or downloads page)
+    if (typeof window !== 'undefined' && window.Capacitor) {
+      window.open(targetUrl, '_system');
+    } else {
+      window.open(targetUrl, '_blank');
     }
+    
+    setShowModal(false);
   };
+
 
   if (!showModal || !updateInfo) return null;
 
@@ -177,14 +216,12 @@ export default function AppUpdateChecker() {
         </div>
 
         <div className="flex gap-2.5 w-full mt-2">
-          {!updateInfo.forceUpdate && (
-            <button
-              onClick={() => setShowModal(false)}
-              className="flex-1 py-2 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] border border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] rounded-xl transition-all cursor-pointer"
-            >
-              Later
-            </button>
-          )}
+          <button
+            onClick={() => setShowModal(false)}
+            className="flex-1 py-2 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] border border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] rounded-xl transition-all cursor-pointer animate-scale-in"
+          >
+            Later
+          </button>
           <button
             onClick={handleUpdate}
             className="flex-1 py-2 text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all shadow-md shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-1.5"

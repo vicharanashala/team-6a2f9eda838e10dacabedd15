@@ -186,21 +186,36 @@ export default function UserProfilePage() {
               </span>
             )}
             {isOwnProfile && (
-              <button
-                onClick={() => {
-                  setEditDisplayName(user.displayName || '');
-                  setEditUsername(user.username || '');
-                  setEditBio(user.bio || '');
-                  setEditPhase(user.currentPhase || 'pre');
-                  setShowEditModal(true);
-                }}
-                className="px-4 py-2 text-xs font-semibold rounded-xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] transition-all flex items-center gap-1.5 bg-[var(--color-bg-secondary)]/80 sm:mt-auto"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                Edit Profile
-              </button>
+              <div className="flex flex-row sm:flex-col gap-2 sm:mt-auto w-full sm:w-auto">
+                <button
+                  onClick={() => {
+                    setEditDisplayName(user.displayName || '');
+                    setEditUsername(user.username || '');
+                    setEditBio(user.bio || '');
+                    setEditPhase(user.currentPhase || 'pre');
+                    setShowEditModal(true);
+                  }}
+                  className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold rounded-xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 hover:text-[var(--color-primary)] transition-all flex items-center justify-center gap-1.5 bg-[var(--color-bg-secondary)]/80 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Edit Profile
+                </button>
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('app:check-update-manual'));
+                    }
+                  }}
+                  className="flex-1 sm:flex-initial px-4 py-2 text-xs font-semibold rounded-xl border border-[var(--color-border)] hover:border-emerald-500/40 hover:text-emerald-500 transition-all flex items-center justify-center gap-1.5 bg-[var(--color-bg-secondary)]/80 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                  Check Updates
+                </button>
+              </div>
             )}
           </div>
         </div>
