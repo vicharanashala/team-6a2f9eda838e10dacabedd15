@@ -1,57 +1,125 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useSocket } from '@/context/SocketContext';
 
 export default function AppUpdateChecker() {
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [currentVersion, setCurrentVersion] = useState('');
+  const socket = useSocket();
 
-  useEffect(() => {
-    // Only run if we are inside the Capacitor webview wrapper
-    if (typeof window === 'undefined' || !window.Capacitor) {
-      return;
-    }
+  const checkUpdates = async () => {
+    try {
+      let installedVersionName = '1.0.0';
+      let installedVersionCode = 1;
 
-    const checkUpdates = async () => {
-      try {
-        // Dynamically require @capacitor/app so it doesn't break standard browser compilation
+      // 1. Capacitor environment
+      if (typeof window !== 'undefined' && window.Capacitor) {
         const { App } = require('@capacitor/app');
         const info = await App.getInfo();
-        
-        const installedVersionName = info.version || '1.0.0';
-        const installedVersionCode = parseInt(info.build, 10) || 1;
-        setCurrentVersion(installedVersionName);
-
-        // Fetch version info from backend
-        const response = await fetch('/api/app-version');
-        if (!response.ok) return;
-        const data = await response.json();
-
-        // Compare versionCode (preferred) or versionName
-        const isNewer = data.latestVersionCode > installedVersionCode || 
-                        (data.latestVersion !== installedVersionName && installedVersionCode === 1);
-
-        if (isNewer) {
-          setUpdateInfo(data);
-          setShowModal(true);
-        }
-      } catch (err) {
-        console.error('[Update Checker] Failed to check for updates:', err);
+        installedVersionName = info.version || '1.0.0';
+        installedVersionCode = parseInt(info.build, 10) || 1;
       }
-    };
+      // 2. Tauri environment
+      else if (typeof window !== 'undefined' && window.__TAURI__) {
+        try {
+          const { getVersion } = require('@tauri-apps/api/app');
+          installedVersionName = await getVersion();
+          installedVersionCode = 1; // Default code
+        } catch (tauriErr) {
+          console.warn('Failed to get Tauri version:', tauriErr);
+        }
+      }
+      // 3. Fallback: standard web environment (do not show native modal by default on standard web load)
+      else {
+        return;
+      }
 
-    // Delay the check slightly after app load to ensure smooth startup animation
+      setCurrentVersion(installedVersionName);
+
+      // Fetch version info from backend
+      const response = await fetch('/api/app-version');
+      if (!response.ok) return;
+      const data = await response.json();
+
+      // Compare versionCode (preferred) or versionName
+      const isNewer = data.latestVersionCode > installedVersionCode || 
+                      (data.latestVersion !== installedVersionName && installedVersionCode === 1);
+
+      if (isNewer) {
+        setUpdateInfo(data);
+        setShowModal(true);
+      }
+    } catch (err) {
+      console.error('[Update Checker] Failed to check for updates:', err);
+    }
+  };
+
+  useEffect(() => {
+    // Initial startup check
     const timer = setTimeout(checkUpdates, 3000);
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!socket) return;
+
+    // Listen to real-time app update push events from admin panel
+    socket.on('app:update', (data) => {
+      console.log('[Update Checker] Real-time app update received:', data);
+      
+      const triggerRealtimeCheck = async () => {
+        try {
+          let installedVersionName = '1.0.0';
+          let installedVersionCode = 1;
+
+          if (typeof window !== 'undefined' && window.Capacitor) {
+            const { App } = require('@capacitor/app');
+            const info = await App.getInfo();
+            installedVersionName = info.version || '1.0.0';
+            installedVersionCode = parseInt(info.build, 10) || 1;
+          } else if (typeof window !== 'undefined' && window.__TAURI__) {
+            try {
+              const { getVersion } = require('@tauri-apps/api/app');
+              installedVersionName = await getVersion();
+            } catch (_) {}
+          } else {
+            // Web clients can display an alert of updates and trigger page refresh
+            alert(`A new app version (v${data.latestVersion}) is available! The page will now reload.`);
+            window.location.reload();
+            return;
+          }
+
+          const isNewer = data.latestVersionCode > installedVersionCode || 
+                          (data.latestVersion !== installedVersionName && installedVersionCode === 1);
+
+          if (isNewer) {
+            setUpdateInfo(data);
+            setShowModal(true);
+          }
+        } catch (err) {
+          console.error('[Update Checker] Real-time comparison failed:', err);
+        }
+      };
+
+      triggerRealtimeCheck();
+    });
+
+    return () => {
+      socket.off('app:update');
+    };
+  }, [socket]);
+
   const handleUpdate = () => {
     if (!updateInfo) return;
     
-    // Redirect user to the direct APK file in native browser system
-    window.open(updateInfo.apkUrl, '_system');
+    // Redirect user to the direct update URL (APK or downloads page)
+    if (typeof window !== 'undefined' && window.Capacitor) {
+      window.open(updateInfo.apkUrl, '_system');
+    } else {
+      window.open('/downloads', '_blank');
+    }
     
-    // If not a forced update, close the dialog after initiating download
     if (!updateInfo.forceUpdate) {
       setShowModal(false);
     }

@@ -40,5 +40,7 @@ router.get('/moderation/suspicious', auth, moderatorOrAdmin, ctrl.getSuspiciousA
 router.post('/moderation/suspicious/:id/resolve', auth, moderatorOrAdmin, ctrl.resolveSuspiciousActivity);
 router.get('/moderation/audit-logs', auth, moderatorOrAdmin, ctrl.getAuditLogs);
 router.post('/alert', auth, adminOnly, ctrl.sendAdminAlert);
+router.post('/emails/broadcast', auth, adminOnly, ctrl.sendEmailBroadcast);
+router.post('/app-version', auth, adminOnly, ctrl.updateAppVersion);
 
 module.exports = router;

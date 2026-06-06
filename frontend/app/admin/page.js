@@ -60,6 +60,83 @@ export default function AdminPage() {
     }
   };
 
+  // Broadcast Email States
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailContentTitle, setEmailContentTitle] = useState('Admin Broadcast Announcement');
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  // App Updates States
+  const [appVersion, setAppVersion] = useState('1.1.0');
+  const [appVersionCode, setAppVersionCode] = useState(2);
+  const [appApkUrl, setAppApkUrl] = useState('https://prashnasarathi.vercel.app/downloads/prashnasarathi-app.apk');
+  const [appChangelog, setAppChangelog] = useState('');
+  const [appForceUpdate, setAppForceUpdate] = useState(false);
+  const [updatingApp, setUpdatingApp] = useState(false);
+
+  const handleSendEmailBroadcast = async (e) => {
+    e.preventDefault();
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      toast.error('Please enter a subject and body');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const res = await api.post('/admin/emails/broadcast', {
+        subject: emailSubject,
+        body: emailBody,
+        contentTitle: emailContentTitle
+      });
+      toast.success(res.message || 'Email broadcast enqueued successfully!');
+      setEmailSubject('');
+      setEmailBody('');
+      setEmailContentTitle('Admin Broadcast Announcement');
+    } catch (err) {
+      toast.error(err.message || 'Failed to enqueue email broadcast');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const fetchCurrentAppVersion = async () => {
+    try {
+      const response = await fetch('/api/app-version');
+      if (response.ok) {
+        const data = await response.json();
+        setAppVersion(data.latestVersion || '1.1.0');
+        setAppVersionCode(data.latestVersionCode || 2);
+        setAppApkUrl(data.apkUrl || 'https://prashnasarathi.vercel.app/downloads/prashnasarathi-app.apk');
+        setAppChangelog(data.changelog || '');
+        setAppForceUpdate(!!data.forceUpdate);
+      }
+    } catch (err) {
+      console.error('Failed to fetch current version settings:', err);
+    }
+  };
+
+  const handleUpdateAppVersion = async (e) => {
+    e.preventDefault();
+    if (!appVersion.trim() || !appApkUrl.trim()) {
+      toast.error('Please enter a version and download URL');
+      return;
+    }
+    setUpdatingApp(true);
+    try {
+      const res = await api.post('/admin/app-version', {
+        latestVersion: appVersion,
+        latestVersionCode: parseInt(appVersionCode),
+        apkUrl: appApkUrl,
+        changelog: appChangelog,
+        forceUpdate: appForceUpdate
+      });
+      toast.success(res.message || 'App version updated and live update broadcasted!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update app version');
+    } finally {
+      setUpdatingApp(false);
+    }
+  };
+
   useEffect(() => {
     if (authLoading) return;
     if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
@@ -90,6 +167,8 @@ export default function AdminPage() {
           await fetchSiteReports();
         } else if (tab === 'emails' && user.role === 'admin') {
           await Promise.all([fetchEmails(), fetchBounces()]);
+        } else if (tab === 'appUpdates' && user.role === 'admin') {
+          await fetchCurrentAppVersion();
         }
       } catch (err) {
         console.error("Error loading admin data:", err);
@@ -411,7 +490,7 @@ export default function AdminPage() {
     tabs.push('moderationQueue', 'reportedPosts', 'suspiciousActivities', 'auditLogs');
   }
   if (user?.role === 'admin') {
-    tabs.push('siteReports', 'emails', 'broadcast');
+    tabs.push('siteReports', 'emails', 'broadcast', 'broadcastEmail', 'appUpdates');
   }
   if (user?.role !== 'admin') {
     const uIdx = tabs.indexOf('users');
@@ -450,6 +529,8 @@ export default function AdminPage() {
              t === 'siteReports' ? 'Site Reports' :
              t === 'emails' ? 'Email Queue' :
              t === 'broadcast' ? 'Broadcast Alerts' :
+             t === 'broadcastEmail' ? 'Broadcast Email' :
+             t === 'appUpdates' ? 'App Updates' :
              t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
@@ -1485,6 +1566,152 @@ export default function AdminPage() {
               className="w-full btn-primary py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-50 transition-all duration-200"
             >
               {broadcasting ? 'Broadcasting...' : 'Broadcast Alert Now'}
+            </button>
+          </form>
+        </div>
+      ) : tab === 'broadcastEmail' && user?.role === 'admin' ? (
+        <div className="card p-6 max-w-2xl mx-auto border border-[var(--color-border)] rounded-2xl shadow-xl bg-[var(--color-bg-secondary)] relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500" />
+          <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center gap-2">
+            <span>📧</span> Send Email Broadcast to All Users
+          </h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-6 leading-relaxed">
+            Compose and enqueue an email to all active, non-banned users registered on the platform. The outbound emails will be enqueued in the delivery system queue to conform to sending limits.
+          </p>
+          <form onSubmit={handleSendEmailBroadcast} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                Template Header Title
+              </label>
+              <input
+                type="text"
+                value={emailContentTitle}
+                onChange={(e) => setEmailContentTitle(e.target.value)}
+                placeholder="e.g. Admin Broadcast Announcement"
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                Email Subject
+              </label>
+              <input
+                type="text"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Enter email subject line..."
+                required
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                Email Body Message (HTML or Plain Text)
+              </label>
+              <textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                placeholder="Compose the email body..."
+                rows={6}
+                required
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}
+              className="w-full btn-primary py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-50 transition-all duration-200 cursor-pointer"
+            >
+              {sendingEmail ? 'Enqueuing Emails...' : 'Send Broadcast Email Now'}
+            </button>
+          </form>
+        </div>
+      ) : tab === 'appUpdates' && user?.role === 'admin' ? (
+        <div className="card p-6 max-w-2xl mx-auto border border-[var(--color-border)] rounded-2xl shadow-xl bg-[var(--color-bg-secondary)] relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-primary-500 to-indigo-500" />
+          <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center gap-2">
+            <span>🚀</span> Publish App Update
+          </h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-6 leading-relaxed">
+            Update the target version parameters for hybrid/native wrappers (Capacitor/Tauri). Saving will immediately trigger an in-app prompt or update lockout (if forced) for all active online clients via Socket.IO, and update the download center.
+          </p>
+          <form onSubmit={handleUpdateAppVersion} className="space-y-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                  Version Name (latestVersion)
+                </label>
+                <input
+                  type="text"
+                  value={appVersion}
+                  onChange={(e) => setAppVersion(e.target.value)}
+                  placeholder="e.g. 1.2.0"
+                  required
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                  Version Code (Integer build)
+                </label>
+                <input
+                  type="number"
+                  value={appVersionCode}
+                  onChange={(e) => setAppVersionCode(e.target.value)}
+                  placeholder="e.g. 3"
+                  required
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                Download APK / Setup Link (apkUrl)
+              </label>
+              <input
+                type="url"
+                value={appApkUrl}
+                onChange={(e) => setAppApkUrl(e.target.value)}
+                placeholder="e.g. https://domain.com/downloads/prashnasarathi-app.apk"
+                required
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                Changelog / Release Notes
+              </label>
+              <textarea
+                value={appChangelog}
+                onChange={(e) => setAppChangelog(e.target.value)}
+                placeholder="Describe new features, fixes, or security enhancements..."
+                rows={4}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+              />
+            </div>
+            <div className="flex items-center gap-3 p-4 bg-red-500/5 border border-red-500/10 rounded-xl">
+              <input
+                type="checkbox"
+                id="forceUpdate"
+                checked={appForceUpdate}
+                onChange={(e) => setAppForceUpdate(e.target.checked)}
+                className="w-4 h-4 text-red-600 border-[var(--color-border)] rounded focus:ring-red-500 bg-[var(--color-bg)]"
+              />
+              <div>
+                <label htmlFor="forceUpdate" className="text-sm font-bold text-red-600 cursor-pointer select-none">
+                  Force Mandatory Update
+                </label>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                  Checking this locks out users from accessing the app until they download the latest update.
+                </p>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={updatingApp || !appVersion.trim() || !appApkUrl.trim()}
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md shadow-emerald-600/10 flex items-center justify-center gap-2 disabled:opacity-50 transition-all duration-200 cursor-pointer"
+            >
+              {updatingApp ? 'Publishing Updates...' : 'Publish Update & Broadcast Now'}
             </button>
           </form>
         </div>

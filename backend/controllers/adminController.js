@@ -1053,5 +1053,106 @@ exports.sendAdminAlert = async (req, res, next) => {
   }
 };
 
+exports.sendEmailBroadcast = async (req, res, next) => {
+  try {
+    const { subject, body, contentTitle } = req.body;
+    if (!subject || !body) {
+      throw new AppError('Subject and body are required', 400);
+    }
+
+    const User = require('../models/User');
+    const enqueueEmail = require('../utils/enqueueEmail');
+
+    // 1. Get all active, non-banned users with emails
+    const users = await User.find({ isBanned: false }).select('email displayName username');
+    
+    // 2. Enqueue emails for all users
+    let enqueuedCount = 0;
+    for (const u of users) {
+      if (u.email) {
+        await enqueueEmail({
+          to: u.email,
+          userName: u.displayName || u.username,
+          subject: subject,
+          body: body,
+          contentTitle: contentTitle || 'Admin Broadcast Announcement'
+        });
+        enqueuedCount++;
+      }
+    }
+
+    // 3. Log to Audit Log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'email_broadcast',
+      targetId: req.user._id,
+      targetType: 'User',
+      reason: `Sent email broadcast to ${enqueuedCount} users: "${subject}"`
+    });
+
+    res.json({ success: true, message: `Email broadcast enqueued for ${enqueuedCount} user(s)` });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateAppVersion = async (req, res, next) => {
+  try {
+    const { latestVersion, latestVersionCode, apkUrl, changelog, forceUpdate } = req.body;
+    if (!latestVersion || !latestVersionCode || !apkUrl) {
+      throw new AppError('latestVersion, latestVersionCode, and apkUrl are required', 400);
+    }
+
+    const AppVersion = require('../models/AppVersion');
+    let versionInfo = await AppVersion.findOne().sort({ createdAt: -1 });
+    
+    if (versionInfo) {
+      versionInfo.latestVersion = latestVersion;
+      versionInfo.latestVersionCode = parseInt(latestVersionCode);
+      versionInfo.apkUrl = apkUrl;
+      versionInfo.changelog = changelog || '';
+      versionInfo.forceUpdate = !!forceUpdate;
+      await versionInfo.save();
+    } else {
+      versionInfo = await AppVersion.create({
+        latestVersion,
+        latestVersionCode: parseInt(latestVersionCode),
+        apkUrl,
+        changelog: changelog || '',
+        forceUpdate: !!forceUpdate
+      });
+    }
+
+    // Broadcast update notification to all apps in real-time via Socket.IO
+    try {
+      const { broadcastAlert } = require('../socket');
+      broadcastAlert('app:update', {
+        latestVersion: versionInfo.latestVersion,
+        latestVersionCode: versionInfo.latestVersionCode,
+        changelog: versionInfo.changelog,
+        forceUpdate: versionInfo.forceUpdate,
+        apkUrl: versionInfo.apkUrl
+      });
+    } catch (socketErr) {
+      console.error('Socket broadcast failed for app update:', socketErr.message);
+    }
+
+    // Audit log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'update_app_version',
+      targetId: versionInfo._id,
+      targetType: 'FAQ',
+      reason: `Updated app version to ${latestVersion} (${latestVersionCode})`
+    });
+
+    res.json({ success: true, message: 'App version updated and live broadcast sent', version: versionInfo });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 

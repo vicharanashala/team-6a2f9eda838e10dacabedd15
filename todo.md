@@ -53,6 +53,8 @@
 - [x] Delete questions/answers
 - [x] Verify / Mark outdated FAQ questions
 - [x] Accept answer on any question
+- [x] Bulk email broadcasting to all active users
+- [x] Live application version management and socket-driven in-app updates
 
 ### UI/UX
 - [x] Dark mode toggle (localStorage, system preference)
@@ -591,7 +593,17 @@ Medium-Impact Quality of Life
 
 
 
-#### Latest Fixes (June 2, 2026)
+#### Latest Fixes (June 6, 2026)
+
+1. **Administrative Email Broadcasting**
+   * *Root Cause*: Admins needed a direct way to broadcast bulk announcements or announcements via email to all active platform members at once.
+   * *Resolution*: Created the `POST /api/admin/emails/broadcast` endpoint and enqueued outbound messages via the Nodemailer delivery system. Built a dedicated "Broadcast Email" tab in the React Admin Dashboard for drafting and enqueuing these announcements.
+   
+2. **Dynamic In-App Updates & Live Version Checking**
+   * *Root Cause*: Hardcoded version configs made it impossible to force update native wrappers or show live update prompts dynamically across Web, Capacitor, and Tauri.
+   * *Resolution*: Introduced a MongoDB-backed `AppVersion` model and registered the `POST /api/admin/app-version` management route. Created the "App Updates" tab in the Admin Dashboard to publish release meta, pushing live Socket.IO update notifications to clients. Reconstructed the Download Center to dynamically fetch and display version details and APK download URLs.
+
+#### Older Fixes (June 2, 2026)
 
 1. **Firebase Admin User Synchronization & Real-time Pruning**
    * *Root Cause*: Public client-side Google Auth APIs could not securely verify if a user's account was deleted in Firebase console due to Firebase's default Email Enumeration Protection policies.

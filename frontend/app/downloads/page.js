@@ -8,7 +8,8 @@ export default function DownloadCenter() {
     latestVersion: '1.1.0',
     latestVersionCode: 2,
     changelog: 'Performance improvements, smoother client-side navigation transitions, and native deep linking support.',
-    updateDate: 'June 5, 2026'
+    apkUrl: '/downloads/prashnasarathi-app.apk',
+    updateDate: 'June 6, 2026'
   });
 
   useEffect(() => {
@@ -17,11 +18,18 @@ export default function DownloadCenter() {
         const response = await fetch('/api/app-version');
         if (response.ok) {
           const data = await response.json();
+          const date = data.updatedAt ? new Date(data.updatedAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }) : 'June 6, 2026';
+          
           setVersionInfo({
             latestVersion: data.latestVersion,
             latestVersionCode: data.latestVersionCode,
             changelog: data.changelog,
-            updateDate: 'June 5, 2026' // Matches the date of today's release cycle
+            apkUrl: data.apkUrl || '/downloads/prashnasarathi-app.apk',
+            updateDate: date
           });
         }
       } catch (err) {
@@ -107,7 +115,7 @@ export default function DownloadCenter() {
             </div>
             <div className="mt-6">
               <a
-                href="/downloads/prashnasarathi-app.apk"
+                href={versionInfo.apkUrl}
                 download
                 className="w-full py-2.5 text-xs font-semibold text-white bg-green-500 hover:bg-green-600 rounded-xl transition-all shadow-md shadow-green-500/10 cursor-pointer flex items-center justify-center gap-1.5"
               >
