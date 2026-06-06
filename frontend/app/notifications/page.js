@@ -31,7 +31,9 @@ export default function NotificationsPage() {
     markAsRead, 
     markAllRead: markAllReadGlobal, 
     archiveNotification,
-    refreshNotifications 
+    refreshNotifications,
+    browserPermission,
+    requestBrowserPermission
   } = useNotifications() || {};
   const [loading, setLoading] = useState(!notifications.length);
 
@@ -105,6 +107,28 @@ export default function NotificationsPage() {
           <button onClick={handleMarkAllRead} className="btn-secondary btn-sm">Mark all as read</button>
         )}
       </div>
+
+      {browserPermission !== 'granted' && (
+        <div className="mb-6 p-4 rounded-xl border border-primary-500/30 bg-primary-500/5 dark:border-primary-500/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5">🔔</span>
+            <div>
+              <h3 className="font-semibold text-sm text-[var(--color-text)]">Enable Push Notifications</h3>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                {browserPermission === 'denied' 
+                  ? 'Notifications are blocked in your browser. Click here to request permission again or verify your settings.' 
+                  : 'Get real-time OS-level system alerts for answers, upvotes, and announcements on this device.'}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={requestBrowserPermission}
+            className="btn-primary text-xs font-semibold px-4 py-2 rounded-lg shrink-0 self-start sm:self-center"
+          >
+            {browserPermission === 'denied' ? 'Request Again' : 'Enable Banners'}
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
