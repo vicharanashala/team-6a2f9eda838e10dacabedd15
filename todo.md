@@ -619,7 +619,17 @@ Medium-Impact Quality of Life
 
 #### Latest Fixes (June 6, 2026)
 
-1. **Cross-Platform Push Notification Engine (FCM & VAPID)**
+1. **Google Sign-In Mobile Redirection Support**
+   * *Resolution*: Configured the `allowNavigation` array inside `capacitor-app/capacitor.config.ts` to explicitly allow Google accounts and Firebase Auth redirect domains to load inside the app WebView. This prevents the OAuth flow from jumping to the external system browser and leaves the native app in a working, authenticated state.
+2. **Resilient Desktop & Web Push Notification Lifecycle**
+   * *Resolution*: Optimized the client-side `NotificationContext.js` by tracking logins with `lastCheckedUserRef` to prevent duplicate notification permission prompts and eliminate duplicate toast alerts. Integrated detection for Tauri/Electron PC environments, bypassing service worker Web Push subscription errors while keeping real-time HTML5 local notifications active via Socket.IO.
+3. **Self-Healing Backend VAPID Key Generation**
+   * *Resolution*: Updated `backend/services/pushService.js` to dynamically generate a valid VAPID public/private key pair on startup if VAPID keys are missing from the environment variables. This prevents client subscription network errors and allows push notifications to function automatically.
+4. **Capacitor Browser Native Update Launcher**
+   * *Resolution*: Refactored `AppUpdateChecker.js` to utilize the `@capacitor/browser` native plugin to launch update URLs (such as direct APK downloads). This fixes the issue where clicking "Update Now" failed to open download links.
+5. **TypeError Protection in App Updates Admin Panel**
+   * *Resolution*: Enforced explicit `String` coercion on version names and APK download URLs within `frontend/app/admin/page.js` before executing string `.trim()` methods, eliminating white-screen rendering crashes.
+6. **Cross-Platform Push Notification Engine (FCM & VAPID)**
    * *Resolution*: Refactored `backend/services/pushService.js` to support dual-channel real-time push notification delivery. PWA and Web users are targeted via standard Web Push (VAPID), while native Android/iOS hybrid wrapper clients are registered to receive background push notifications using Firebase Cloud Messaging (FCM) even when the application is closed.
 2. **Capacitor Native Push Notifications Integration**
    * *Resolution*: Installed `@capacitor/push-notifications` native plugin. Configured native permission prompts and device registration inside `NotificationContext.js`. Generated a fresh Android debug APK (`prashnasarathi-app.apk`) including native push capabilities and updated the download repository.

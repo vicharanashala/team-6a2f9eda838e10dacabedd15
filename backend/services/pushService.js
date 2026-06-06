@@ -50,13 +50,34 @@ const getFirebaseMessaging = () => {
   return firebaseMessaging;
 };
 
-const hasVapidKeys = config.webPush && config.webPush.publicKey && config.webPush.privateKey;
+let vapidKeys = {
+  publicKey: config.webPush ? config.webPush.publicKey : null,
+  privateKey: config.webPush ? config.webPush.privateKey : null
+};
+
+let hasVapidKeys = vapidKeys.publicKey && vapidKeys.privateKey;
+
+if (!hasVapidKeys) {
+  try {
+    const keys = webpush.generateVAPIDKeys();
+    vapidKeys.publicKey = keys.publicKey;
+    vapidKeys.privateKey = keys.privateKey;
+    hasVapidKeys = true;
+    if (config.webPush) {
+      config.webPush.publicKey = keys.publicKey;
+      config.webPush.privateKey = keys.privateKey;
+    }
+    console.log('🔑 Dynamic VAPID keys generated for this server run.');
+  } catch (err) {
+    console.error('Failed to generate dynamic VAPID keys:', err);
+  }
+}
 
 if (hasVapidKeys) {
   webpush.setVapidDetails(
-    config.webPush.subject || 'mailto:admin@quorafaq.com',
-    config.webPush.publicKey,
-    config.webPush.privateKey
+    (config.webPush && config.webPush.subject) || 'mailto:admin@quorafaq.com',
+    vapidKeys.publicKey,
+    vapidKeys.privateKey
   );
 } else {
   console.warn('WebPush VAPID details not configured. Web push notifications are disabled.');

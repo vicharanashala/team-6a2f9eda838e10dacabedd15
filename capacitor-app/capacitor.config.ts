@@ -6,7 +6,14 @@ const config: CapacitorConfig = {
   webDir: 'out',
   server: {
     url: 'https://prashnasarathi.vercel.app',
-    cleartext: true
+    cleartext: true,
+    allowNavigation: [
+      'prashnasarathi.vercel.app',
+      '*.firebaseapp.com',
+      'accounts.google.com',
+      '*.google.com',
+      '*.googleapis.com'
+    ]
   },
   plugins: {
     SplashScreen: {

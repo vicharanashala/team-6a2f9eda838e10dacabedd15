@@ -103,10 +103,10 @@ export default function AdminPage() {
       const response = await fetch(`${api.baseUrl}/app-version`);
       if (response.ok) {
         const data = await response.json();
-        setAppVersion(data.latestVersion || '1.1.0');
+        setAppVersion(String(data.latestVersion || '1.1.0'));
         setAppVersionCode(data.latestVersionCode || 2);
-        setAppApkUrl(data.apkUrl || 'https://prashnasarathi.vercel.app/downloads/prashnasarathi-app.apk');
-        setAppChangelog(data.changelog || '');
+        setAppApkUrl(String(data.apkUrl || 'https://prashnasarathi.vercel.app/downloads/prashnasarathi-app.apk'));
+        setAppChangelog(String(data.changelog || ''));
         setAppForceUpdate(!!data.forceUpdate);
       }
     } catch (err) {
@@ -116,7 +116,9 @@ export default function AdminPage() {
 
   const handleUpdateAppVersion = async (e) => {
     e.preventDefault();
-    if (!appVersion.trim() || !appApkUrl.trim()) {
+    const ver = String(appVersion || '').trim();
+    const url = String(appApkUrl || '').trim();
+    if (!ver || !url) {
       toast.error('Please enter a version and download URL');
       return;
     }
@@ -1708,7 +1710,7 @@ export default function AdminPage() {
             </div>
             <button
               type="submit"
-              disabled={updatingApp || !appVersion.trim() || !appApkUrl.trim()}
+              disabled={updatingApp || !String(appVersion || '').trim() || !String(appApkUrl || '').trim()}
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold shadow-md shadow-emerald-600/10 flex items-center justify-center gap-2 disabled:opacity-50 transition-all duration-200 cursor-pointer"
             >
               {updatingApp ? 'Publishing Updates...' : 'Publish Update & Broadcast Now'}

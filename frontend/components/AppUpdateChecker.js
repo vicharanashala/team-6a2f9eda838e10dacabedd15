@@ -167,7 +167,7 @@ export default function AppUpdateChecker() {
     };
   }, [socket]);
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!updateInfo) return;
     
     let targetUrl = updateInfo.apkUrl;
@@ -177,7 +177,13 @@ export default function AppUpdateChecker() {
     
     // Redirect user to the direct update URL (APK or downloads page)
     if (typeof window !== 'undefined' && window.Capacitor) {
-      window.open(targetUrl, '_system');
+      try {
+        const { Browser } = require('@capacitor/browser');
+        await Browser.open({ url: targetUrl });
+      } catch (err) {
+        console.error('Failed to open native browser:', err);
+        window.open(targetUrl, '_system');
+      }
     } else {
       window.open(targetUrl, '_blank');
     }

@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
 import toast from 'react-hot-toast';
@@ -16,6 +16,14 @@ export function NotificationProvider({ children }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [browserPermission, setBrowserPermission] = useState('default');
   const [isPushEnabled, setIsPushEnabled] = useState(false);
+  const lastCheckedUserRef = useRef(null);
+
+  const isDesktop = typeof window !== 'undefined' && 
+    (!!window.__TAURI__ || 
+     window.location.origin.startsWith('tauri://') || 
+     window.location.origin.startsWith('file:') || 
+     (typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('electron')) ||
+     window.location.href.startsWith('file:'));
 
   const fetchNotificationsList = useCallback(async () => {
     if (!user) return;
@@ -51,19 +59,34 @@ export function NotificationProvider({ children }) {
       setNotifications([]);
       setUnreadAdminAlerts([]);
       setIsPushEnabled(false);
+      lastCheckedUserRef.current = null;
       return;
     }
 
     fetchNotificationsList();
 
-    if (typeof window !== 'undefined' && window.Capacitor) {
-      registerCapacitorPush();
-    } else {
-      checkPushSubscription().then(() => {
+    const userId = user._id || user.id;
+    if (lastCheckedUserRef.current !== userId) {
+      lastCheckedUserRef.current = userId;
+
+      if (typeof window !== 'undefined' && window.Capacitor) {
+        registerCapacitorPush();
+      } else if (isDesktop) {
         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-          requestBrowserPermission();
+          Notification.requestPermission().then(permission => {
+            setBrowserPermission(permission);
+            if (permission === 'granted') {
+              toast.success('Real-time notifications enabled');
+            }
+          });
         }
-      });
+      } else {
+        checkPushSubscription().then(() => {
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+            requestBrowserPermission();
+          }
+        });
+      }
     }
 
     if (!socket) return;
@@ -102,7 +125,7 @@ export function NotificationProvider({ children }) {
       socket.off('notification:new', handleNotification);
       socket.off('admin:alert', handleAdminAlert);
     };
-  }, [user, socket, browserPermission, fetchNotificationsList]);
+  }, [user, socket, browserPermission, fetchNotificationsList, isDesktop]);
 
   const registerCapacitorPush = async () => {
     if (typeof window === 'undefined' || !window.Capacitor) return;
@@ -233,6 +256,11 @@ export function NotificationProvider({ children }) {
       const registration = await navigator.serviceWorker.ready;
       
       const publicKeyResponse = await api.get('/notifications/push/vapid-public-key');
+      if (!publicKeyResponse || !publicKeyResponse.publicKey) {
+        console.warn('Web Push VAPID keys are not configured on the backend.');
+        return;
+      }
+
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKeyResponse.publicKey),
@@ -288,11 +316,15 @@ export function NotificationProvider({ children }) {
     setBrowserPermission(permission);
     
     if (permission === 'granted') {
-      await subscribeToPush();
+      if (!isDesktop) {
+        await subscribeToPush();
+      } else {
+        toast.success('Real-time notifications enabled');
+      }
     } else if (permission === 'denied') {
       toast.error('Browser notifications blocked');
     }
-  }, [subscribeToPush]);
+  }, [subscribeToPush, isDesktop]);
 
   const markAsRead = useCallback(async (ids) => {
     try {
