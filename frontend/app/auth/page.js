@@ -15,25 +15,6 @@ function AuthPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [showCapacitorGoogleModal, setShowCapacitorGoogleModal] = useState(false);
-  const [capacitorGoogleEmail, setCapacitorGoogleEmail] = useState('');
-
-  const handleCapacitorGoogleSubmit = async (e) => {
-    e.preventDefault();
-    if (!capacitorGoogleEmail.trim()) return;
-    setError('');
-    setLoading(true);
-    setShowCapacitorGoogleModal(false);
-    try {
-      await loginWithGoogle(`mock_google_token_${capacitorGoogleEmail}`);
-      router.push('/');
-    } catch (err) {
-      setError(err.message || 'Google Sign-in failed');
-      toast.error(err.message || 'Google Sign-in failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Handle redirect login result on mount
   useEffect(() => {
@@ -78,11 +59,6 @@ function AuthPageContent() {
   }
 
   const handleGoogleSignIn = async () => {
-    if (typeof window !== 'undefined' && window.Capacitor) {
-      setShowCapacitorGoogleModal(true);
-      return;
-    }
-
     if (!isFirebaseConfigured) {
       const email = prompt('Google Sign-in is not configured. Enter an email to perform a simulated Google Sign-in:', 'google-user@example.com');
       if (!email) return;
@@ -118,9 +94,8 @@ function AuthPageContent() {
         await signInWithRedirect(auth, googleProvider);
       } catch (redirectErr) {
         console.error('[Google Auth] Redirect also failed:', redirectErr);
-        setError('Google Sign-in failed. Please use the fallback email verification.');
-        toast.error('Google Sign-in failed. Opening fallback verification.');
-        setShowCapacitorGoogleModal(true);
+        setError('Google Sign-in failed.');
+        toast.error('Google Sign-in failed.');
       }
     } finally {
       setLoading(false);
@@ -197,18 +172,6 @@ function AuthPageContent() {
             Sign in with Google
           </button>
 
-          <div className="text-center mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setCapacitorGoogleEmail('');
-                setShowCapacitorGoogleModal(true);
-              }}
-              className="text-[11px] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] transition-colors underline decoration-dotted cursor-pointer"
-            >
-              Google Sign-in issues? Click here to use email fallback
-            </button>
-          </div>
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
@@ -273,7 +236,6 @@ function AuthPageContent() {
               )}
             </button>
           </form>
-
           <div className="mt-6 text-center text-sm text-[var(--color-text-secondary)]">
             {mode === 'login' ? (
               <>
@@ -293,57 +255,6 @@ function AuthPageContent() {
           </div>
         </div>
       </div>
-
-      {showCapacitorGoogleModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md px-4 py-6">
-          <div className="w-full max-w-sm bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-6 shadow-2xl flex flex-col gap-4 animate-scale-in relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-400 via-red-500 to-yellow-500" />
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl">
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-6.887 4.114-4.832 0-8.75-3.918-8.75-8.75s3.918-8.75 8.75-8.75c2.196 0 4.113.816 5.58 2.196l3.18-3.18C18.665.997 15.65 0 12.24 0 5.48 0 0 5.48 0 12.24s5.48 12.24 12.24 12.24c7.054 0 11.75-4.962 11.75-11.962 0-.806-.08-1.583-.223-2.233H12.24z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-base font-bold text-[var(--color-text)]">Sign in with Google</h2>
-                <p className="text-[10px] text-[var(--color-text-muted)] font-medium uppercase tracking-wider">
-                  Mobile App Verification
-                </p>
-              </div>
-            </div>
-            <form onSubmit={handleCapacitorGoogleSubmit} className="space-y-4 mt-2">
-              <div>
-                <label className="block text-xs font-semibold text-[var(--color-text)] mb-1.5">
-                  Enter your Google Account Email:
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={capacitorGoogleEmail}
-                  onChange={(e) => setCapacitorGoogleEmail(e.target.value)}
-                  placeholder="name@gmail.com"
-                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
-                />
-              </div>
-              <div className="flex gap-2.5 w-full mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCapacitorGoogleModal(false)}
-                  className="flex-1 py-2 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] border border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] rounded-xl transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-md shadow-blue-600/20 cursor-pointer"
-                >
-                  Sign In
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

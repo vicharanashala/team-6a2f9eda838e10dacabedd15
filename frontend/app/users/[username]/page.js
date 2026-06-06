@@ -275,7 +275,7 @@ export default function UserProfilePage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {questions.map(q => <QuestionCard key={q._id} question={q} absoluteDate={true} />)}
+            {questions.filter(Boolean).map(q => <QuestionCard key={q._id} question={q} absoluteDate={true} />)}
           </div>
         )
       ) : tab === 'answers' ? (
@@ -285,7 +285,7 @@ export default function UserProfilePage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {answers.map(answer => (
+            {answers.filter(a => a && a.question).map(answer => (
               <Link key={answer._id} href={`/questions/${answer.question?._id || answer.question}`} className="bg-[var(--color-bg-secondary)]/80 border border-[var(--color-border)]/60 rounded-2xl p-5 block transition-all duration-300 hover:shadow-lg hover:border-[var(--color-primary)]/30 hover:-translate-y-0.5">
                 <div className="flex items-center gap-2 mb-2">
                   {answer.isAccepted && (
@@ -332,7 +332,7 @@ export default function UserProfilePage() {
               <div className="bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/40 rounded-2xl p-12 text-center text-[var(--color-text-secondary)]">No saved questions yet</div>
             ) : (
               <div className="space-y-4">
-                {savedQuestions.map(item => (
+                {savedQuestions.filter(item => item && item.question).map(item => (
                   <QuestionCard key={item._id} question={item.question} absoluteDate={true} />
                 ))}
               </div>
@@ -342,7 +342,7 @@ export default function UserProfilePage() {
               <div className="bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/40 rounded-2xl p-12 text-center text-[var(--color-text-secondary)]">No saved FAQs yet</div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {savedFaqs.map(item => (
+                {savedFaqs.filter(item => item && item.faq).map(item => (
                   <FAQCard key={item._id} faq={item.faq} />
                 ))}
               </div>

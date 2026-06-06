@@ -6,8 +6,10 @@ import toast from 'react-hot-toast';
 
 export default function FAQCard({ faq, isSelected, onSelect, onDeleteSuccess }) {
   const { user } = useAuth();
-  const [isSaved, setIsSaved] = useState(faq.isSaved || false);
+  const [isSaved, setIsSaved] = useState(faq?.isSaved || false);
   const [saving, setSaving] = useState(false);
+
+  if (!faq) return null;
 
   const isAdminOrMod = user && (user.role === 'admin' || user.role === 'moderator');
 

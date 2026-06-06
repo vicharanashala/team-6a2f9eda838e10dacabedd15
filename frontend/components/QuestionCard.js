@@ -9,23 +9,25 @@ import DownvoteReasonModal from './DownvoteReasonModal';
 
 export default function QuestionCard({ question, absoluteDate = false }) {
   const { user } = useAuth();
-  const [upvotes, setUpvotes] = useState(question.upvotes || 0);
-  const [downvotes, setDownvotes] = useState(question.downvotes || 0);
+  const [upvotes, setUpvotes] = useState(question?.upvotes || 0);
+  const [downvotes, setDownvotes] = useState(question?.downvotes || 0);
   const [userVote, setUserVote] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [meTooCount, setMeTooCount] = useState(question.meTooCount || 0);
-  const [hasMeToo, setHasMeToo] = useState(question.hasMeToo || false);
+  const [meTooCount, setMeTooCount] = useState(question?.meTooCount || 0);
+  const [hasMeToo, setHasMeToo] = useState(question?.hasMeToo || false);
   const [meTooLoading, setMeTooLoading] = useState(false);
   const [showDownvoteModal, setShowDownvoteModal] = useState(false);
   const [pendingDownvote, setPendingDownvote] = useState(false);
 
   useEffect(() => {
-    if (user && question._id) {
+    if (user && question?._id) {
       api.get(`/votes/batch`, { ids: question._id, targetType: 'Question' })
         .then(data => setUserVote(data[question._id] || null))
         .catch(() => {});
     }
-  }, [user, question._id]);
+  }, [user, question?._id]);
+
+  if (!question) return null;
 
   const handleVote = async (e, voteType, reasonData = null) => {
     e.preventDefault();
