@@ -279,8 +279,8 @@ export function NotificationProvider({ children }) {
     const title = data.title || 'New notification';
     const options = {
       body: data.message || '',
-      icon: '/icon.png',
-      badge: '/badge.png',
+      icon: '/logo.png', // Guaranteed to exist (logo.png)
+      badge: '/pwa/icons/icon-72x72.png', // Guaranteed to exist
       tag: 'notification',
       requireInteraction: false,
       data: {
@@ -288,28 +288,36 @@ export function NotificationProvider({ children }) {
       }
     };
 
+    // Prefer Service Worker Notification (most reliable for Chrome on Windows/Android and PWAs)
+    if ('serviceWorker' in navigator) {
+      console.log('[Notification Debug] Service Worker detected. Attempting SW notification...');
+      navigator.serviceWorker.ready.then(reg => {
+        console.log('[Notification Debug] SW ready. Invoking reg.showNotification...');
+        reg.showNotification(title, options);
+        console.log('[Notification Debug] SW showNotification call complete.');
+      }).catch(swErr => {
+        console.error('[Notification Debug] SW showNotification promise failed, falling back to standard Notification:', swErr);
+        fallbackToStandardNotification(title, options);
+      });
+    } else {
+      console.log('[Notification Debug] Service Worker not supported. Falling back to standard Notification...');
+      fallbackToStandardNotification(title, options);
+    }
+  };
+
+  const fallbackToStandardNotification = (title, options) => {
     try {
       console.log('[Notification Debug] Creating standard window.Notification:', title, options);
       const notification = new window.Notification(title, options);
       notification.onclick = (e) => {
         e.preventDefault();
         window.focus();
-        const targetLink = data.link || '/notifications';
+        const targetLink = options.data?.link || '/notifications';
         window.location.href = targetLink;
       };
       console.log('[Notification Debug] Standard notification instantiated successfully:', notification);
     } catch (err) {
-      console.log('[Notification Debug] Standard Notification constructor failed, falling back to service worker:', err);
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(reg => {
-          console.log('[Notification Debug] SW ready. Invoking reg.showNotification...', reg);
-          reg.showNotification(title, options);
-        }).catch(swErr => {
-          console.error('[Notification Debug] SW showNotification promise failed:', swErr);
-        });
-      } else {
-        console.warn('[Notification Debug] Service Worker not supported in navigator');
-      }
+      console.error('[Notification Debug] Standard Notification constructor failed:', err);
     }
   };
 
