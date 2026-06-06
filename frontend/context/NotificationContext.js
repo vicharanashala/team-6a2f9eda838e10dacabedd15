@@ -4,15 +4,34 @@ import { useAuth } from './AuthContext';
 import { useSocket } from './SocketContext';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
+import AdminAlertModal from '@/components/AdminAlertModal';
 
 const NotificationContext = createContext(null);
 
 export function NotificationProvider({ children }) {
   const { user } = useAuth();
   const socket = useSocket();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadAdminAlerts, setUnreadAdminAlerts] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [browserPermission, setBrowserPermission] = useState('default');
   const [isPushEnabled, setIsPushEnabled] = useState(false);
+
+  const fetchNotificationsList = useCallback(async () => {
+    if (!user) return;
+    try {
+      const data = await api.get('/notifications');
+      const list = data.notifications || [];
+      setNotifications(list);
+      setUnreadCount(data.unreadCount || 0);
+
+      // Extract unread system admin alerts
+      const alerts = list.filter(n => n.type === 'system' && n.title === 'Admin Alert' && !n.isRead);
+      setUnreadAdminAlerts(alerts);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+  }, [user]);
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -20,7 +39,7 @@ export function NotificationProvider({ children }) {
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/push-service-worker.js').catch(err => {
+      navigator.serviceWorker.register('/sw.js').catch(err => {
         console.log('Service worker registration failed:', err);
       });
     }
@@ -29,29 +48,52 @@ export function NotificationProvider({ children }) {
   useEffect(() => {
     if (!user) {
       setUnreadCount(0);
+      setNotifications([]);
+      setUnreadAdminAlerts([]);
       setIsPushEnabled(false);
       return;
     }
 
-    fetchUnreadCount();
+    fetchNotificationsList();
     checkPushSubscription();
 
     if (!socket) return;
 
     const handleNotification = (data) => {
-      setUnreadCount(prev => prev + 1);
+      // Fetch latest notifications to keep the state perfectly synced with real DB IDs
+      fetchNotificationsList();
       
       if (browserPermission === 'granted') {
         showBrowserNotification(data);
       }
     };
 
+    const handleAdminAlert = (data) => {
+      // Ignore alert if it was sent by this user
+      if (user && (user._id === data.senderId || user.id === data.senderId)) {
+        return;
+      }
+
+      // Immediately trigger a refetch so the new system broadcast is synced down
+      fetchNotificationsList();
+      
+      // Also trigger browser notification
+      if (browserPermission === 'granted') {
+        showBrowserNotification({
+          title: 'System Alert',
+          message: data.message
+        });
+      }
+    };
+
     socket.on('notification:new', handleNotification);
+    socket.on('admin:alert', handleAdminAlert);
 
     return () => {
       socket.off('notification:new', handleNotification);
+      socket.off('admin:alert', handleAdminAlert);
     };
-  }, [user, socket, browserPermission]);
+  }, [user, socket, browserPermission, fetchNotificationsList]);
 
   const checkPushSubscription = async () => {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -60,13 +102,6 @@ export function NotificationProvider({ children }) {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       setIsPushEnabled(!!subscription);
-    } catch (_) {}
-  };
-
-  const fetchUnreadCount = async () => {
-    try {
-      const data = await api.get('/notifications/unread-count');
-      setUnreadCount(data.count || 0);
     } catch (_) {}
   };
 
@@ -168,20 +203,38 @@ export function NotificationProvider({ children }) {
   const markAsRead = useCallback(async (ids) => {
     try {
       await api.put('/notifications/read', { ids });
-      setUnreadCount(prev => Math.max(0, prev - (ids?.length || prev)));
+      setNotifications(prev =>
+        prev.map(n => ids.includes(n._id) ? { ...n, isRead: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - ids.length));
+      setUnreadAdminAlerts(prev => prev.filter(n => !ids.includes(n._id)));
     } catch (_) {}
   }, []);
 
   const markAllRead = useCallback(async () => {
     try {
       await api.put('/notifications/read');
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
+      setUnreadAdminAlerts([]);
     } catch (_) {}
   }, []);
+
+  const archiveNotification = useCallback(async (id) => {
+    try {
+      await api.put(`/notifications/${id}/archive`);
+      setNotifications(prev => prev.filter(n => n._id !== id));
+      setUnreadAdminAlerts(prev => prev.filter(n => n._id !== id));
+      // Re-fetch count/details
+      fetchNotificationsList();
+    } catch (_) {}
+  }, [fetchNotificationsList]);
 
   return (
     <NotificationContext.Provider value={{
       unreadCount,
+      notifications,
+      unreadAdminAlerts,
       browserPermission,
       isPushEnabled,
       requestBrowserPermission,
@@ -189,9 +242,11 @@ export function NotificationProvider({ children }) {
       unsubscribeFromPush,
       markAsRead,
       markAllRead,
-      refreshUnreadCount: fetchUnreadCount,
+      archiveNotification,
+      refreshNotifications: fetchNotificationsList,
     }}>
       {children}
+      <AdminAlertModal />
     </NotificationContext.Provider>
   );
 }

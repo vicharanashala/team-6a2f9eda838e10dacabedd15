@@ -92,8 +92,20 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const acceptTerms = async () => {
+    const data = await api.post('/auth/accept-terms');
+    if (data.user) {
+      setUser(data.user);
+    } else {
+      const meData = await api.get('/auth/me');
+      setUser(meData.user);
+    }
+    toast.success('Terms and conditions accepted');
+    return data;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, register, logout, updateProfile, completeOnboarding }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, register, logout, updateProfile, completeOnboarding, acceptTerms }}>
       {children}
     </AuthContext.Provider>
   );

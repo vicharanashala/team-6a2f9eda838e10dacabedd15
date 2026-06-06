@@ -61,3 +61,18 @@ Thumbs.db
 .yarn/
 .eslintcache
 .integrity
+
+# Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+venv/
+.venv/
+
+# Capacitor and Desktop App Build folders
+capacitor-app/android/
+desktop-app/dist/
+desktop-app/node_modules/
+

@@ -11,7 +11,7 @@ const DRAFT_TAGS_KEY = 'question_draft_tags';
 
 export default function AskQuestionPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [form, setForm] = useState({ title: '', body: '', category: '', tagInput: '', anonymous: false });
   const [tags, setTags] = useState([]);
   const [tagSuggestions, setTagSuggestions] = useState([]);
@@ -47,6 +47,7 @@ export default function AskQuestionPage() {
   };
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/auth?mode=login');
       return;
@@ -57,7 +58,7 @@ export default function AskQuestionPage() {
     if (savedTags) setTags(JSON.parse(savedTags));
     api.get('/tags').then(d => setTagSuggestions(d.tags || [])).catch(() => {});
     api.get('/categories').then(d => setCategories(d.categories || [])).catch(() => {});
-  }, [user]);
+  }, [user, authLoading]);
 
   useEffect(() => {
     if (!form.title && !form.body) return;
@@ -195,6 +196,15 @@ export default function AskQuestionPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse space-y-6">
+        <div className="h-8 bg-[var(--color-border)] rounded w-1/4" />
+        <div className="h-4 bg-[var(--color-border)] rounded w-1/2" />
+        <div className="h-64 bg-[var(--color-border)] rounded-md w-full" />
+      </div>
+    );
+  }
   if (!user) return null;
 
   return (

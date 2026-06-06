@@ -16,6 +16,7 @@ const getLeaderboardData = async () => {
     { $limit: 20 },
     { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
     { $unwind: '$user' },
+    { $match: { 'user.isBanned': { $ne: true } } },
     { $project: {
         _id: 0,
         resolvedCount: 1,

@@ -7,6 +7,7 @@ try {
 const User = require('../models/User');
 const Question = require('../models/Question');
 const Answer = require('../models/Answer');
+const config = require('../config');
 
 let lastSyncTime = 0;
 const SYNC_INTERVAL = 30000; // 30 seconds cooldown
@@ -17,7 +18,7 @@ const getFirebaseAdmin = () => {
   if (!admin) return null; // firebase-admin package not installed
   if (firebaseAdminApp) return firebaseAdminApp;
 
-  const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
+  const serviceAccountEnv = config.firebase?.serviceAccount || process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!serviceAccountEnv) {
     return null;
   }

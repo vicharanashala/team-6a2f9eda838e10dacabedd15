@@ -1,7 +1,5 @@
 const nodemailer = require('nodemailer');
-
-const gmailUser = process.env.GMAIL_USER || process.env.SMTP_USER || 'faqportal.in@gmail.com';
-const gmailPassword = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS || 'your_app_password_here';
+const config = require('./index');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
@@ -12,8 +10,8 @@ const transporter = nodemailer.createTransport({
   maxConnections: 1,
   rateLimit: 1, // 1 message per second
   auth: {
-    user: gmailUser,
-    pass: gmailPassword
+    user: config.smtp.user,
+    pass: config.smtp.pass
   }
 });
 

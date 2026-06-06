@@ -45,7 +45,7 @@ def validate_user_question(data: QuestionInput):
     ai_result = classifier(text, candidate_labels=labels)
     meaningful_score = ai_result['scores'][ai_result['labels'].index("meaningful question")]
     
-    if meaningful_score >= 0.85:
+    if meaningful_score >= 0.50:
         return {"valid": True, "reason": "Passes safety check."}
     else:
         return {"valid": False, "reason": "AI flagged this as unreadable noise."}

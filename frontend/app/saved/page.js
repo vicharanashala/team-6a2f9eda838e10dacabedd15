@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function SavedPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState('questions');
   const [savedQuestions, setSavedQuestions] = useState([]);
@@ -80,6 +80,7 @@ export default function SavedPage() {
   }, []);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       router.push('/auth?mode=login');
       return;
@@ -92,7 +93,7 @@ export default function SavedPage() {
       fetchMeTooQuestions();
     }
     fetchTags();
-  }, [user, router, tab, selectedTag, fetchSavedQuestions, fetchSavedFaqs, fetchTags, fetchMeTooQuestions]);
+  }, [user, authLoading, router, tab, selectedTag, fetchSavedQuestions, fetchSavedFaqs, fetchTags, fetchMeTooQuestions]);
 
   const handleUnsaveQuestion = async (questionId, e) => {
     e.preventDefault();
@@ -323,9 +324,18 @@ export default function SavedPage() {
     );
   };
 
+  if (authLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse space-y-6">
+        <div className="h-8 bg-[var(--color-border)] rounded w-1/4" />
+        <div className="h-4 bg-[var(--color-border)] rounded w-1/2" />
+        <div className="h-64 bg-[var(--color-border)] rounded-md w-full" />
+      </div>
+    );
+  }
   if (!user) return null;
 
-return (
+  return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[var(--color-text)]">

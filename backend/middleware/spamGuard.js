@@ -106,6 +106,11 @@ const spamGuard = async (req, res, next) => {
     const user = req.user;
     if (!user) return next();
 
+    // Admins and moderators bypass all automated spam guard checks
+    if (user.role === 'admin' || user.role === 'moderator') {
+      return next();
+    }
+
     const isQuestion = req.body.title !== undefined;
     const title = req.body.title || '';
     const body = req.body.body || '';
@@ -118,50 +123,53 @@ const spamGuard = async (req, res, next) => {
     const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const questions24h = await Question.countDocuments({ author: user._id, createdAt: { $gte: oneDayAgo } });
-    const answers24h = await Answer.countDocuments({ author: user._id, createdAt: { $gte: oneDayAgo } });
-    const totalPosts24h = questions24h + answers24h;
+    let dailyLimit = 30;
+    let tenMinsLimit = 15;
+    if (user.trustLevel === 'new') {
+      dailyLimit = 10;
+      tenMinsLimit = 5;
+    } else if (user.trustLevel === 'trusted') {
+      dailyLimit = 100;
+      tenMinsLimit = 50;
+    }
 
-    let dailyLimit = 10;
-    if (user.trustLevel === 'new') dailyLimit = 3;
-    if (user.trustLevel === 'trusted') dailyLimit = 25;
-
-    if (totalPosts24h >= dailyLimit) {
-      // Find oldest post in 24h to compute retryAfter
-      const oldestPost = await Promise.all([
-        Question.findOne({ author: user._id, createdAt: { $gte: oneDayAgo } }).sort({ createdAt: 1 }),
-        Answer.findOne({ author: user._id, createdAt: { $gte: oneDayAgo } }).sort({ createdAt: 1 })
-      ]);
-      const posts = oldestPost.filter(Boolean);
-      posts.sort((x, y) => x.createdAt - y.createdAt);
-      const retryAfter = posts[0] ? Math.max(0, Math.ceil((posts[0].createdAt.getTime() + 24 * 60 * 60 * 1000 - Date.now()) / 1000)) : 86400;
+    // 1. Daily rate limit check
+    const questions24hDocs = await Question.find({ author: user._id, isDeleted: false, createdAt: { $gte: oneDayAgo } }, 'createdAt');
+    const answers24hDocs = await Answer.find({ author: user._id, isDeleted: false, createdAt: { $gte: oneDayAgo } }, 'createdAt');
+    const posts24h = [...questions24hDocs, ...answers24hDocs];
+    
+    if (posts24h.length >= dailyLimit) {
+      posts24h.sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime());
+      const targetIndex = posts24h.length - dailyLimit;
+      const targetPost = posts24h[targetIndex];
+      const retryAfter = targetPost
+        ? Math.max(1, Math.ceil((targetPost.createdAt.getTime() + 24 * 60 * 60 * 1000 - Date.now()) / 1000))
+        : 86400;
 
       return res.status(429).json({ blocked: false, reason: "Rate limit exceeded", retryAfter });
     }
 
-    if (user.trustLevel === 'new') {
-      const questions10m = await Question.countDocuments({ author: user._id, createdAt: { $gte: tenMinsAgo } });
-      const answers10m = await Answer.countDocuments({ author: user._id, createdAt: { $gte: tenMinsAgo } });
-      const totalPosts10m = questions10m + answers10m;
+    // 2. 10-minute rate limit check
+    const questions10mDocs = await Question.find({ author: user._id, isDeleted: false, createdAt: { $gte: tenMinsAgo } }, 'createdAt');
+    const answers10mDocs = await Answer.find({ author: user._id, isDeleted: false, createdAt: { $gte: tenMinsAgo } }, 'createdAt');
+    const posts10m = [...questions10mDocs, ...answers10mDocs];
 
-      if (totalPosts10m >= 3) {
-        const oldestPost = await Promise.all([
-          Question.findOne({ author: user._id, createdAt: { $gte: tenMinsAgo } }).sort({ createdAt: 1 }),
-          Answer.findOne({ author: user._id, createdAt: { $gte: tenMinsAgo } }).sort({ createdAt: 1 })
-        ]);
-        const posts = oldestPost.filter(Boolean);
-        posts.sort((x, y) => x.createdAt - y.createdAt);
-        const retryAfter = posts[0] ? Math.max(0, Math.ceil((posts[0].createdAt.getTime() + 10 * 60 * 1000 - Date.now()) / 1000)) : 600;
+    if (posts10m.length >= tenMinsLimit) {
+      posts10m.sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime());
+      const targetIndex = posts10m.length - tenMinsLimit;
+      const targetPost = posts10m[targetIndex];
+      const retryAfter = targetPost
+        ? Math.max(1, Math.ceil((targetPost.createdAt.getTime() + 10 * 60 * 1000 - Date.now()) / 1000))
+        : 600;
 
-        return res.status(429).json({ blocked: false, reason: "Rate limit exceeded", retryAfter });
-      }
+      return res.status(429).json({ blocked: false, reason: "Rate limit exceeded", retryAfter });
     }
 
     // B. Cooldown Escalation
     if (user.lastPostedAt) {
-      let cooldownSeconds = 60; // 0 violations
-      if (user.violationCount === 1) cooldownSeconds = 300; // 5 min
-      if (user.violationCount === 2) cooldownSeconds = 3600; // 1 hour
+      let cooldownSeconds = process.env.NODE_ENV === 'development' ? 0 : 60; // 0 violations
+      if (user.violationCount === 1) cooldownSeconds = process.env.NODE_ENV === 'development' ? 2 : 300; // 5 min
+      if (user.violationCount === 2) cooldownSeconds = process.env.NODE_ENV === 'development' ? 5 : 3600; // 1 hour
       if (user.violationCount >= 3) {
         // Suspend for 24h
         user.status = 'suspended';

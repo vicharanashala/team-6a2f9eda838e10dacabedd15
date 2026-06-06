@@ -36,7 +36,8 @@ async function runTests() {
     body: JSON.stringify({
       title: 'Cannot access my courses',
       body: 'Please help immediately, blocked from, nobody is helping. Extremely urgent.',
-      tags: ['Vibe LMS']
+      tags: ['Vibe LMS'],
+      category: 'ViBe Platform'
     }),
   });
   console.log(`Question created: ID=${highQ.question._id}`);
@@ -46,7 +47,7 @@ async function runTests() {
     throw new Error(`Expected severity 'high', got '${highQ.question.anomalySeverity}'`);
   }
   console.log('✓ High-severity auto-classification verified!');
-
+ 
   // 3. Post a low-severity question
   console.log('\n3. Posting low-severity question...');
   const lowQ = await request('/questions', {
@@ -55,7 +56,8 @@ async function runTests() {
     body: JSON.stringify({
       title: 'How to write binary search in Python',
       body: 'Can someone provide a simple implementation of the binary search algorithm in Python?',
-      tags: ['Getting Started']
+      tags: ['Getting Started'],
+      category: 'ViBe Platform'
     }),
   });
   console.log(`Question created: ID=${lowQ.question._id}`);

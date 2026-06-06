@@ -70,6 +70,10 @@ export default function OnboardingModal() {
       setIsOpen(false);
       return;
     }
+    if (!user.hasAcceptedTerms) {
+      setIsOpen(false);
+      return;
+    }
     if (user.role === 'admin' || user.role === 'moderator') return;
 
     // Prevent repeated popups if user dismissed the prompt

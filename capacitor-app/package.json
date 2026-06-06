@@ -1,0 +1,25 @@
+{
+  "name": "prashnasarathi-capacitor",
+  "version": "1.0.0",
+  "description": "Capacitor Android App wrapper for PrashnaSārathi",
+  "scripts": {
+    "cap:sync": "npx cap sync",
+    "cap:open": "npx cap open android",
+    "cap:add": "npx cap add android",
+    "cap:copy": "npx cap copy",
+    "build:resources": "cordova-res android --skip-config --copy"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/camera": "^6.0.1",
+    "@capacitor/cli": "^6.1.2",
+    "@capacitor/core": "^6.1.2",
+    "@capacitor/push-notifications": "^6.0.1",
+    "@capacitor/splash-screen": "^6.0.1"
+  },
+  "devDependencies": {
+    "cordova-res": "^0.15.4",
+    "typescript": "^6.0.3"
+  }
+}

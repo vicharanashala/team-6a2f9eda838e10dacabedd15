@@ -84,6 +84,21 @@ exports.updateProfile = async (req, res, next) => {
       if (req.body[field] !== undefined) updates[field] = req.body[field];
     }
 
+    if (req.body.username !== undefined) {
+      const newUsername = req.body.username.trim();
+      const usernameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
+      if (!usernameRegex.test(newUsername)) {
+        throw new AppError('Username must be 3-30 characters and contain only letters, numbers, underscores, or hyphens', 400);
+      }
+      const existingUser = await User.findOne({
+        username: { $regex: new RegExp(`^${newUsername}$`, 'i') }
+      });
+      if (existingUser && existingUser._id.toString() !== req.user._id.toString()) {
+        throw new AppError('Username is already taken', 409);
+      }
+      updates.username = newUsername.toLowerCase();
+    }
+
     if (req.file) {
       const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
       updates.avatar = base64Image;
@@ -111,13 +126,13 @@ exports.updateProfile = async (req, res, next) => {
 };
 
 const generateUniqueUsername = async (email) => {
-  const base = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) || 'user';
+  const base = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').substring(0, 20).toLowerCase() || 'user';
   let username = base;
-  let exists = await User.findOne({ username });
+  let exists = await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
   let counter = 1;
   while (exists) {
     username = `${base}${counter}`;
-    exists = await User.findOne({ username });
+    exists = await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
     counter++;
   }
   return username;
@@ -140,7 +155,7 @@ exports.googleLogin = async (req, res, next) => {
         picture: `https://ui-avatars.com/api/?name=${email.split('@')[0]}`
       };
     } else {
-      const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+      const apiKey = config.firebase?.apiKey || process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
       if (apiKey) {
         try {
           const lookupResponse = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`, {
@@ -310,6 +325,20 @@ exports.googleLogin = async (req, res, next) => {
       user: user.toPublicJSON(),
       isNew: true
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.acceptTerms = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+    user.hasAcceptedTerms = true;
+    await user.save();
+    res.json({ success: true, user: user.toPublicJSON() });
   } catch (err) {
     next(err);
   }

@@ -74,4 +74,10 @@ const emitToAdmin = (event, data) => {
   }
 };
 
-module.exports = { setupSocket, getIO, emitToUser, emitToQuestion, emitToAdmin };
+const broadcastAlert = (event, data) => {
+  if (io) {
+    io.emit(event, data);
+  }
+};
+
+module.exports = { setupSocket, getIO, emitToUser, emitToQuestion, emitToAdmin, broadcastAlert };

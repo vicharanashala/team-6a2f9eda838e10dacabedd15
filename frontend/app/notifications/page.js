@@ -25,25 +25,26 @@ const notificationIcons = {
 export default function NotificationsPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { markAsRead, markAllRead: markAllReadGlobal } = useNotifications() || {};
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const { 
+    notifications = [], 
+    unreadCount = 0, 
+    markAsRead, 
+    markAllRead: markAllReadGlobal, 
+    archiveNotification,
+    refreshNotifications 
+  } = useNotifications() || {};
+  const [loading, setLoading] = useState(!notifications.length);
 
   useEffect(() => {
     if (!user) return;
-    fetchNotifications();
-  }, [user]);
-
-  const fetchNotifications = async () => {
-    try {
-      const data = await api.get('/notifications');
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-    } catch (_) {} finally {
+    const load = async () => {
+      if (refreshNotifications) {
+        await refreshNotifications();
+      }
       setLoading(false);
-    }
-  };
+    };
+    load();
+  }, [user, refreshNotifications]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -52,8 +53,6 @@ export default function NotificationsPage() {
       } else {
         await api.put('/notifications/read');
       }
-      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-      setUnreadCount(0);
       toast.success('All marked as read');
     } catch (err) {
       toast.error(err.message);
@@ -62,8 +61,6 @@ export default function NotificationsPage() {
 
   const handleNotificationClick = async (e, notification) => {
     if (!notification.isRead) {
-      setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
       try {
         if (markAsRead) {
           await markAsRead([notification._id]);
@@ -77,12 +74,16 @@ export default function NotificationsPage() {
     }
   };
 
-  const archiveNotification = async (id) => {
+  const handleArchive = async (id) => {
     try {
-      await api.put(`/notifications/${id}/archive`);
-      setNotifications(notifications.filter(n => n._id !== id));
+      if (archiveNotification) {
+        await archiveNotification(id);
+      } else {
+        await api.put(`/notifications/${id}/archive`);
+      }
+      toast.success('Notification archived');
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message || 'Failed to archive notification');
     }
   };
 
@@ -144,7 +145,7 @@ export default function NotificationsPage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  archiveNotification(notification._id);
+                  handleArchive(notification._id);
                 }}
                 className="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm shrink-0"
                 title="Archive"

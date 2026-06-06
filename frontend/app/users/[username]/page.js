@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import QuestionCard from '@/components/QuestionCard';
@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 
 export default function UserProfilePage() {
   const { username } = useParams();
+  const router = useRouter();
   const { user: currentUser, updateProfile } = useAuth();
   const [user, setUser] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -24,6 +25,7 @@ export default function UserProfilePage() {
   // Edit profile states
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editPhase, setEditPhase] = useState('pre');
   const [editAvatarFile, setEditAvatarFile] = useState(null);
@@ -55,6 +57,7 @@ export default function UserProfilePage() {
     try {
       const formData = new FormData();
       formData.append('displayName', editDisplayName.trim());
+      formData.append('username', editUsername.trim());
       formData.append('bio', editBio.trim());
       formData.append('currentPhase', editPhase);
       if (editAvatarFile) {
@@ -64,6 +67,9 @@ export default function UserProfilePage() {
       setUser(prev => ({ ...prev, ...data.user }));
       setShowEditModal(false);
       setEditAvatarFile(null);
+      if (data.user.username !== username) {
+        router.push(`/users/${data.user.username}`);
+      }
     } catch (err) {
       toast.error(err.message || 'Failed to update profile');
     } finally {
@@ -137,7 +143,7 @@ export default function UserProfilePage() {
                     🔗 {user.website.replace(/^https?:\/\//, '')}
                   </a>
                 )}
-                <span>📅 Joined {formatDate(user.createdAt)}</span>
+                <span>📅 Joined {formatDate(user.createdAt, true)}</span>
               </div>
 
               <div className="flex flex-wrap items-center gap-x-6 gap-y-4 mt-4 pt-3 border-t border-[var(--color-border)]/40">
@@ -166,7 +172,11 @@ export default function UserProfilePage() {
           </div>
 
           <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-4 self-stretch sm:self-auto shrink-0">
-            {user.role !== 'user' && (
+            {user.isOwner ? (
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                Owner
+              </span>
+            ) : user.role !== 'user' && (
               <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                 user.role === 'admin' 
                   ? 'bg-red-500/10 text-red-600 dark:text-red-400' 
@@ -179,6 +189,7 @@ export default function UserProfilePage() {
               <button
                 onClick={() => {
                   setEditDisplayName(user.displayName || '');
+                  setEditUsername(user.username || '');
                   setEditBio(user.bio || '');
                   setEditPhase(user.currentPhase || 'pre');
                   setShowEditModal(true);
@@ -249,7 +260,7 @@ export default function UserProfilePage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {questions.map(q => <QuestionCard key={q._id} question={q} />)}
+            {questions.map(q => <QuestionCard key={q._id} question={q} absoluteDate={true} />)}
           </div>
         )
       ) : tab === 'answers' ? (
@@ -270,7 +281,7 @@ export default function UserProfilePage() {
                   <span className="text-xs text-[var(--color-text-muted)]">{answer.upvotes || 0} votes</span>
                 </div>
                 <p className="text-sm text-[var(--color-text-secondary)] line-clamp-3 leading-relaxed">{answer.body?.slice(0, 300)}</p>
-                <p className="text-[10px] text-[var(--color-text-muted)] mt-3">Answered {formatDate(answer.createdAt)}</p>
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-3">Answered {formatDate(answer.createdAt, true)}</p>
               </Link>
             ))}
           </div>
@@ -307,7 +318,7 @@ export default function UserProfilePage() {
             ) : (
               <div className="space-y-4">
                 {savedQuestions.map(item => (
-                  <QuestionCard key={item._id} question={item.question} />
+                  <QuestionCard key={item._id} question={item.question} absoluteDate={true} />
                 ))}
               </div>
             )
@@ -332,6 +343,17 @@ export default function UserProfilePage() {
           <div className="relative bg-[var(--color-bg-secondary)] rounded-2xl shadow-xl w-full max-w-md p-6 border border-[var(--color-border)]/50">
             <h3 className="text-lg font-semibold text-[var(--color-text)] mb-4">Edit Profile</h3>
             <form onSubmit={handleUpdateProfile}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">Username</label>
+                <input
+                  type="text"
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  placeholder="e.g. johndoe"
+                  className="w-full px-3.5 py-2.5 text-sm border border-[var(--color-border)] rounded-xl bg-[var(--color-bg)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
+                  required
+                />
+              </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">Display Name</label>
                 <input

@@ -20,6 +20,9 @@ const emailQueueSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  html: {
+    type: String,
+  },
   status: {
     type: String,
     enum: ['pending', 'sent', 'failed', 'bounced'],

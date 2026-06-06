@@ -10,5 +10,6 @@ router.post('/login', authLimiter, loginValidation, ctrl.login);
 router.post('/google', authLimiter, ctrl.googleLogin);
 router.get('/me', auth, ctrl.getMe);
 router.put('/profile', auth, upload.single('avatar'), ctrl.updateProfile);
+router.post('/accept-terms', auth, ctrl.acceptTerms);
 
 module.exports = router;

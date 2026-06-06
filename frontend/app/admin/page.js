@@ -7,7 +7,7 @@ import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { useSocket } from '@/context/SocketContext';
 export default function AdminPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState('dashboard');
   const [stats, setStats] = useState(null);
@@ -38,7 +38,30 @@ export default function AdminPage() {
   const [emailPagination, setEmailPagination] = useState({ page: 1, pages: 1 });
   const [bounces, setBounces] = useState([]);
 
+  // Broadcast Alert States
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcasting, setBroadcasting] = useState(false);
+
+  const handleSendBroadcastAlert = async (e) => {
+    e.preventDefault();
+    if (!broadcastMessage.trim()) {
+      toast.error('Please enter a message');
+      return;
+    }
+    setBroadcasting(true);
+    try {
+      await api.post('/admin/alert', { message: broadcastMessage });
+      toast.success('Admin alert broadcasted successfully!');
+      setBroadcastMessage('');
+    } catch (err) {
+      toast.error(err.message || 'Failed to send broadcast alert');
+    } finally {
+      setBroadcasting(false);
+    }
+  };
+
   useEffect(() => {
+    if (authLoading) return;
     if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
       router.push('/');
       return;
@@ -76,7 +99,7 @@ export default function AdminPage() {
     };
 
     loadData();
-  }, [user, tab]);
+  }, [user, tab, authLoading]);
 
   useEffect(() => {
     if (!socket) return;
@@ -242,6 +265,15 @@ export default function AdminPage() {
       toast.error(err.message || 'Failed to resolve anomaly');
     }
   };
+  const handleResolveSuspicious = async (id) => {
+    try {
+      await api.post(`/admin/moderation/suspicious/${id}/resolve`);
+      toast.success('Suspicious activity marked as resolved');
+      fetchSuspiciousActivities();
+    } catch (err) {
+      toast.error(err.message || 'Failed to resolve suspicious activity');
+    }
+  };
   const fetchSiteReports = async () => {
     try {
       const data = await api.get('/admin/reports');
@@ -379,11 +411,20 @@ export default function AdminPage() {
     tabs.push('moderationQueue', 'reportedPosts', 'suspiciousActivities', 'auditLogs');
   }
   if (user?.role === 'admin') {
-    tabs.push('siteReports', 'emails');
+    tabs.push('siteReports', 'emails', 'broadcast');
   }
   if (user?.role !== 'admin') {
     const uIdx = tabs.indexOf('users');
     if (uIdx > -1) tabs.splice(uIdx, 1);
+  }
+  if (authLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse space-y-6">
+        <div className="h-8 bg-[var(--color-border)] rounded w-1/4" />
+        <div className="h-4 bg-[var(--color-border)] rounded w-1/2" />
+        <div className="h-64 bg-[var(--color-border)] rounded-md w-full" />
+      </div>
+    );
   }
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -408,6 +449,7 @@ export default function AdminPage() {
              t === 'auditLogs' ? 'Audit Logs' :
              t === 'siteReports' ? 'Site Reports' :
              t === 'emails' ? 'Email Queue' :
+             t === 'broadcast' ? 'Broadcast Alerts' :
              t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
@@ -492,23 +534,34 @@ export default function AdminPage() {
               <tbody className="divide-y divide-[var(--color-border)]">
                 {users.map(u => (
                   <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                    <td className="px-4 py-3">
+                     <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium text-[var(--color-text)]">{u.displayName || u.username}</p>
+                        <p className="font-medium text-[var(--color-text)] flex items-center gap-1.5">
+                          {u.displayName || u.username}
+                          {u.email === 'faqportal.in@gmail.com' && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                              Owner
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-[var(--color-text-secondary)]">@{u.username}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)]">{u.email}</td>
                     <td className="px-4 py-3">
-                      <select
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u._id, e.target.value)}
-                        className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-[var(--color-bg)] text-[var(--color-text)]"
-                      >
-                        <option value="user">User</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                      {u.email === 'faqportal.in@gmail.com' ? (
+                        <span className="text-xs font-mono text-[var(--color-text-secondary)] uppercase">Admin (Owner)</span>
+                      ) : (
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u._id, e.target.value)}
+                          className="text-xs border border-[var(--color-border)] rounded px-2 py-1 bg-[var(--color-bg)] text-[var(--color-text)]"
+                        >
+                          <option value="user">User</option>
+                          <option value="moderator">Moderator</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {u.isBanned || u.status === 'blocked' ? (
@@ -534,24 +587,29 @@ export default function AdminPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-[var(--color-text-secondary)] text-xs">{formatDate(u.createdAt)}</td>
-                    <td className="px-4 py-3 flex items-center gap-2">
-                      {u.isBanned || u.status === 'blocked' || u.status === 'shadow_banned' || u.status === 'suspended' || u.status === 'warned' ? (
-                        <button
-                          onClick={() => handleUserAction(u._id, 'activate')}
-                          className="px-2.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors"
-                        >
-                          Activate / Unblock
-                        </button>
+                     <td className="px-4 py-3 flex items-center gap-2">
+                      {u._id === user?.id || u._id === user?._id || u.email === 'faqportal.in@gmail.com' ? (
+                        <span className="text-xs text-[var(--color-text-muted)] italic">System Account</span>
                       ) : (
-                        <div className="flex gap-1">
-                          <button onClick={() => handleBan(u._id)} className="btn-danger btn-sm">Ban</button>
-                          <button onClick={() => handleUserAction(u._id, 'suspend')} className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-[10px] font-bold">Suspend</button>
-                          <button onClick={() => handleUserAction(u._id, 'shadow_ban')} className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-[10px] font-bold">Shadow Ban</button>
-                        </div>
+                        <>
+                          {u.isBanned || u.status === 'blocked' || u.status === 'suspended' || u.status === 'warned' ? (
+                            <button
+                              onClick={() => handleUserAction(u._id, 'activate')}
+                              className="px-2.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md transition-colors"
+                            >
+                              Activate / Unblock
+                            </button>
+                          ) : (
+                            <div className="flex gap-1">
+                              <button onClick={() => handleBan(u._id)} className="btn-danger btn-sm">Ban</button>
+                              <button onClick={() => handleUserAction(u._id, 'suspend')} className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-[10px] font-bold">Suspend</button>
+                            </div>
+                          )}
+                          <button onClick={() => handleDeleteUser(u._id, u.username)} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors">
+                            Delete
+                          </button>
+                        </>
                       )}
-                      <button onClick={() => handleDeleteUser(u._id, u.username)} className="px-2.5 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors">
-                        Delete
-                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1068,32 +1126,30 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">{formatDate(rep.createdAt)}</td>
                         <td className="px-4 py-3 text-right">
                           {postAuthor && (
-                            <div className="inline-flex gap-1.5">
-                              <button
-                                onClick={() => handleUserAction(postAuthor._id, 'warn')}
-                                className="px-2 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white rounded"
-                              >
-                                Warn
-                              </button>
-                              <button
-                                onClick={() => handleUserAction(postAuthor._id, 'suspend')}
-                                className="px-2 py-1 text-[10px] font-bold bg-orange-500 hover:bg-orange-600 text-white rounded"
-                              >
-                                Suspend
-                              </button>
-                              <button
-                                onClick={() => handleUserAction(postAuthor._id, 'block')}
-                                className="px-2 py-1 text-[10px] font-bold bg-red-600 hover:bg-red-700 text-white rounded"
-                              >
-                                Block
-                              </button>
-                              <button
-                                onClick={() => handleUserAction(postAuthor._id, 'shadow_ban')}
-                                className="px-2 py-1 text-[10px] font-bold bg-purple-600 hover:bg-purple-700 text-white rounded"
-                              >
-                                Shadow Ban
-                              </button>
-                            </div>
+                            postAuthor._id === user?.id || postAuthor._id === user?._id || postAuthor.email === 'faqportal.in@gmail.com' ? (
+                              <span className="text-[10px] text-[var(--color-text-muted)] italic">System Account</span>
+                            ) : (
+                              <div className="inline-flex gap-1.5">
+                                <button
+                                  onClick={() => handleUserAction(postAuthor._id, 'warn')}
+                                  className="px-2 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white rounded"
+                                >
+                                  Warn
+                                </button>
+                                <button
+                                  onClick={() => handleUserAction(postAuthor._id, 'suspend')}
+                                  className="px-2 py-1 text-[10px] font-bold bg-orange-500 hover:bg-orange-600 text-white rounded"
+                                >
+                                  Suspend
+                                </button>
+                                <button
+                                  onClick={() => handleUserAction(postAuthor._id, 'block')}
+                                  className="px-2 py-1 text-[10px] font-bold bg-red-600 hover:bg-red-700 text-white rounded"
+                                >
+                                  Block
+                                </button>
+                              </div>
+                            )
                           )}
                         </td>
                       </tr>
@@ -1122,12 +1178,13 @@ export default function AdminPage() {
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Confidence</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Status</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Date</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border)]">
                 {suspiciousActivities.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center p-8 text-[var(--color-text-secondary)]">
+                    <td colSpan="7" className="text-center p-8 text-[var(--color-text-secondary)]">
                       No suspicious activity flags detected.
                     </td>
                   </tr>
@@ -1152,12 +1209,27 @@ export default function AdminPage() {
                       <td className="px-4 py-3 font-medium text-[var(--color-text)]">{act.confidenceScore}%</td>
                       <td className="px-4 py-3">
                         {act.isResolved ? (
-                          <span className="badge-green">Resolved</span>
+                          <div className="text-xs">
+                            <span className="badge-green">Resolved</span>
+                            {act.resolvedBy && (
+                              <p className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">by @{act.resolvedBy.username}</p>
+                            )}
+                          </div>
                         ) : (
                           <span className="badge-red">Unresolved</span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">{formatDate(act.flagDate)}</td>
+                      <td className="px-4 py-3">
+                        {!act.isResolved && (
+                          <button
+                            onClick={() => handleResolveSuspicious(act._id)}
+                            className="btn-primary btn-sm px-3 py-1 text-xs"
+                          >
+                            Mark Resolved
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -1177,7 +1249,7 @@ export default function AdminPage() {
             <table className="w-full text-sm text-left">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Moderator</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">User/Admin</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Action</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Target Type</th>
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Reason / Note</th>
@@ -1195,7 +1267,7 @@ export default function AdminPage() {
                   auditLogs.map(log => (
                     <tr key={log._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                       <td className="px-4 py-3 font-medium text-[var(--color-text)]">
-                        {log.adminId ? `@${log.adminId.username}` : 'System'}
+                        {log.adminId ? `@${log.adminId.username}` : (log.userId ? `@${log.userId.username}` : 'System')}
                       </td>
                       <td className="px-4 py-3 font-semibold text-xs capitalize text-[var(--color-text-secondary)]">{log.action.replace('_', ' ')}</td>
                       <td className="px-4 py-3 font-mono text-xs">{log.targetType}</td>
@@ -1384,6 +1456,37 @@ export default function AdminPage() {
               </div>
             </div>
           </div>
+        </div>
+      ) : tab === 'broadcast' && user?.role === 'admin' ? (
+        <div className="card p-6 max-w-2xl mx-auto border border-[var(--color-border)] rounded-2xl shadow-xl bg-[var(--color-bg-secondary)]">
+          <h2 className="text-xl font-bold text-[var(--color-text)] mb-4 flex items-center gap-2">
+            <span>🚨</span> Broadcast Real-time Alert
+          </h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-6 leading-relaxed">
+            Send an instant notification alert to all active users on the platform. The alert will pop up on their screen immediately if they are online, and will also be saved in their notification inbox.
+          </p>
+          <form onSubmit={handleSendBroadcastAlert} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-[var(--color-text)] mb-2">
+                Alert Message
+              </label>
+              <textarea
+                value={broadcastMessage}
+                onChange={(e) => setBroadcastMessage(e.target.value)}
+                placeholder="Type the message to broadcast..."
+                rows={4}
+                required
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={broadcasting || !broadcastMessage.trim()}
+              className="w-full btn-primary py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-50 transition-all duration-200"
+            >
+              {broadcasting ? 'Broadcasting...' : 'Broadcast Alert Now'}
+            </button>
+          </form>
         </div>
       ) : null}
     </div>

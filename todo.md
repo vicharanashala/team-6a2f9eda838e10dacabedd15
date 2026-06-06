@@ -318,9 +318,76 @@ Medium-Impact Quality of Life
 
 ### Recent Fixes
 
+#### Latest Fixes (June 5, 2026)
+
+1. **Mandatory Rules & Regulations Acceptance Flow**
+   * *Problem*: Users could bypass platform rules and access features immediately upon login without reviewing terms or community expectations.
+   * *Resolution*:
+     * Added `hasAcceptedTerms` attribute to the `User` schema.
+     * Implemented `acceptTerms` controller and `POST /api/auth/accept-terms` backend endpoint.
+     * Created a premium React component `TermsAndConditionsModal` on the frontend, rendering it globally in `layout.js` to block the UI and force user agreement before accessing features.
+     * Modified `OnboardingModal` to display only after the terms and conditions have been accepted.
+
+2. **Immediate Vercel-friendly Email Queue Processing**
+   * *Problem*: Cron jobs do not run reliably in Vercel's ephemeral serverless environment, causing email notifications to fail or delay indefinitely.
+   * *Resolution*:
+     * Updated SMTP settings to pull from sanitized configuration variables, stripping any problematic outer quotes.
+     * Modified `enqueueEmail.js` to trigger the `processEmailQueue()` handler asynchronously within the same request thread immediately, sending emails instantly.
+
+3. **Admin Alert Socket.IO & Inbox Broadcast**
+   * *Problem*: Administrators had no way to push urgent announcements or platform updates to all users instantly in real-time.
+   * *Resolution*:
+     * Created `sendAdminAlert` in `adminController.js` and registered `/api/admin/alert` POST route.
+     * Implemented Socket.IO `broadcastAlert` method to publish real-time alerts.
+     * Added a **"Broadcast Alerts"** composer tab in the admin panel.
+     * Integrated a global socket listener on the client (`NotificationContext.js`) that displays a persistent, custom-designed system alert toast when an admin broadcasts a message, updating the notification inbox count instantly.
+
+4. **AuditLog Schema Validation Error Fix**
+   * *Problem*: Sending an alert message crashed on the backend with an `AuditLog validation failed` error because the schema requires both `targetId` and `targetType` fields.
+   * *Resolution*: Updated the `sendAdminAlert` handler in `adminController.js` to explicitly provide `targetId: req.user._id` and `targetType: 'User'`, fulfilling the model validation constraints.
+
+5. **24-Hour Date & Time Formatting Cutoff**
+   * *Problem*: Users wanted absolute dates to display on their profiles rather than relative statements like "Joined 2d ago", and across the site after 24 hours of any activity.
+   * *Resolution*:
+     * Updated `formatDate` in `frontend/lib/utils.js` to support an `absolute` parameter, and to automatically return the absolute localized date (e.g., "Jun 5, 2026") if the elapsed time is older than 24 hours.
+     * Modified the joined date display on the profile page (`frontend/app/users/[username]/page.js`) to call `formatDate(user.createdAt, true)` to always display absolute dates.
+
+6. **Tag Verification & Filtering**
+   * *Problem*: Unused, empty, or unverified tags (without any associated public/approved questions) were cluttered on the tags page.
+   * *Resolution*: Refactored `getTags` in `backend/controllers/tagController.js` to run a MongoDB aggregation pipeline on `Question`. It now aggregates question counts per tag and filters out any tags that do not have at least one public, approved, and non-deleted question.
+
+7. **Real-time Notifications Updates & Global Persistent Broadcast Modals**
+   * *Problem*: The notifications list on the `/notifications` page required manual page refreshes to display new notifications. Additionally, broadcast alerts sent when a user was offline were not shown on the main screen upon login, and the real-time popup could be dismissed without verifying if it was read. Senders of broadcasts were also incorrectly seeing their own alerts.
+   * *Resolution*:
+     * Refactored `NotificationContext.js` to manage a unified `notifications` and `unreadAdminAlerts` state globally.
+     * Updated the Socket.IO listener within the context to trigger a live database fetch whenever `notification:new` or `admin:alert` events are received, instantly synchronizing notification count and lists in real-time.
+     * Rewrote `frontend/app/notifications/page.js` to dynamically consume this shared global context, enabling instant visual updates without page refreshes.
+     * Developed `AdminAlertModal.js`, a premium overlay displayed on the main screen of any active page when there are unread system admin alerts. This ensures that offline users are immediately presented with broadcast alerts upon logging in, and online users receive the modal instantly on their screens. Clicking the acknowledgment button updates the database to mark the alerts as read.
+     * Excluded the admin sender from receiving their own broadcast notification in both database insertions (via `$ne: req.user._id` in query filter) and Socket.IO broadcasts (via client-side checking of `senderId`).
+
 #### Latest Fixes (June 4, 2026)
 
-1. **Admin Panel - Unban, Unsuspend, Unblock, and Un-Shadowban Controls**
+1. **Moderation Platform Anomalies, Suspicious Activities, and Auditing Optimization**
+   * *Problem*: Rejected posts were still displaying in the admin anomalies list. The Suspicious Activities tracking logs were missing several fields (type, shared identifier, confidence score, resolution status) and had no option/buttons for administrators to resolve flagged issues. The Audit Log was only tracking actions by administrators/moderators, not regular users' posting and edit history.
+   * *Resolution*:
+     1. Excluded deleted/rejected posts from the anomalies moderation queue, aggregate trend stats, resolvedStats, and open anomaly counts by adding the `isDeleted: { $ne: true }` filter.
+     2. Updated the `SuspiciousActivity` model schema to support `isResolved`, `resolvedBy`, and `resolvedAt`. Mapped database fields in `getSuspiciousActivity` to frontend keys (`activityType`, `sharedValue`, and dynamically calculated `confidenceScore` based on flag user density).
+     3. Added backend resolution route (`POST /admin/moderation/suspicious/:id/resolve`) and handler to resolve suspicious activities, recording them to the audit log.
+     4. Updated the frontend `Suspicious Activity Logs` tab to display an Actions column, status badges showing who resolved the activity, and a "Mark Resolved" button.
+     5. Modified `AuditLog` schema to make `adminId` optional and add `userId`. Instrumented `createQuestion`, `updateQuestion`, `deleteQuestion`, `createAnswer`, `updateAnswer`, and `deleteAnswer` to log every creation, edit, and deletion event to `AuditLog`.
+     6. Updated the frontend `Audit Logs` view to display performer `@username` dynamically based on either `adminId` or `userId`.
+
+2. **Optimized SpamGuard Rate Limiting & User Trust Levels**
+   * *Bug*: Question/answer posting rate limits were too restrictive (e.g. 3 posts/day for new users), and the `retryAfter` calculation used a naive `findOne` query that failed to account for full post history. Deleted posts were also counted, and the 60s cooldown delayed E2E tests.
+   * *Resolution*:
+     1. Replaced the `findOne` queries in `spamGuard.js` with `find` (projecting `createdAt`) to query the full post history within the last 24h and 10m.
+     2. Refined `retryAfter` calculations to target the precise index (`posts.length - dailyLimit`) where the limit will drop, ensuring mathematical correctness.
+     3. Scaled up rate limits for trust levels: `new` (10/day, 5/10min), `regular` (30/day, 15/10min), `trusted` (100/day, 50/10min), and applied the 10-minute limit dynamically.
+     4. Filtered out deleted posts (`isDeleted: false`) from the rate limit counts.
+     5. Bypassed cooldown requirements in development mode to unblock E2E tests, and imported `User` in `questionController.js` to fix a reference error.
+     6. Lowered AI noise classification threshold to `0.50` in FastAPI `main.py` to prevent false positive spam rejections on short, legitimate questions.
+
+2. **Admin Panel - Unban, Unsuspend, Unblock, and Un-Shadowban Controls**
    * *Bug*: When an admin suspended, blocked, or shadow banned a user, their posts remained visible or stayed hidden with no option/buttons on the admin page to lift restrictions and restore user status or content visibility.
    * *Resolution*:
      1. Updated `moderationService.js` so that banning a user updates their status to `blocked` and automatically hides all their questions and answers (`visibility: 'hidden'`).
@@ -437,6 +504,70 @@ Medium-Impact Quality of Life
 
 10. **Question Answer Count Synchronization**
     * *Resolution*: Introduced the helper `recalculateAnswerCount()` and integrated it into all moderation pipelines (such as blocking users, shadow banning users, deleting users, or rejecting/deleting answers) to prevent the "answers count mismatch" bug where question statistics display more answers than actually exist.
+
+#### Latest Fixes (June 5, 2026)
+
+1. **Linear/GitHub-inspired FAQ Homepage Redesign**
+   * *Resolution*: Refactored the core FAQ portal homepage to use the standardized 'Linear/GitHub-inspired' design tokens. Built a sticky category sidebar, integrated Ctrl+K keyboard shortcut search discoverability, and converted the FAQ display list into dynamic, CSS grid-based accordions with Expand/Collapse All controls.
+2. **Absolute Profile Dates & 24-Hour Time Thresholds**
+   * *Resolution*: Updated the User Profile questions, answers, and saved list views to display absolute calendar dates instead of relative intervals (e.g. "Joined Jan 15, 2026" and "Answered Feb 10, 2026"). Ensured all relative time displays across the platform transition to absolute dates after 24 hours.
+3. **Public Verified Tag Indexing**
+   * *Resolution*: Updated the MongoDB aggregation pipeline in `getTags` to filter tags so they are only displayed if they belong to at least one question with public visibility and an active admin/moderator verification timestamp (`lastVerifiedAt`).
+4. **Suggested Search Tag Removal & Mobile Layout Adaptability**
+   * *Resolution*: Removed the "Suggested" category chips under the main search input to simplify the interface. Redesigned the category navigation sidebar to display as a horizontal swiping strip (`overflow-x-auto`) on mobile devices, ensuring it takes up negligible vertical height, while maintaining the sticky vertical sidebar layout on desktop resolutions.
+5. **Page Refresh Redirection Fix on Authenticated Routes**
+   * *Resolution*: Fixed the issue where refreshing pages (like `/admin`, `/questions/ask`, or `/saved`) redirected the logged-in user to the homepage or login screen. Added verification of the `authLoading` state before applying any redirect checks, ensuring the current path is preserved during page reloads.
+6. **Moderation Status Change Email Notifications**
+   * *Resolution*: Added automated email notifications for when users are warned, suspended, shadow-banned, banned, or re-activated. Integrated the email trigger hooks into both `exports.banUser` and `exports.moderateUser` in `backend/controllers/adminController.js`, utilizing Nodemailer and the database queue.
+7. **Official Logo Integration & Premium HTML Email Templates**
+   * *Resolution*: Replaced the temporary inline SVG logo on the navbar with the official illustration logo (`logo.png`). Built a premium HTML email notification template wrapper in `backend/utils/emailTemplate.js` and updated the email queue worker to attach the logo as an inline CID resource (`cid:logo`), ensuring proper display in email clients.
+8. **Homepage Tech Hero Central Alignment**
+   * *Resolution*: Centered the homepage's tech hero section (`Vicharanashala Q&A Portal`) and search input bar, ensuring it is visually aligned, balanced, and responsive.
+9. **Platform Hardening, Account Safety, and Username Management**
+   * *Resolution*:
+     * Excluded banned/blocked accounts from public views, profiles, question/answer endpoints, and the leaderboard to prevent public visibility.
+     * Enforced owner account (`faqportal.in@gmail.com`) immunity so that no administrator can ban, suspend, delete, or demote the owner.
+     * Restrained admins/moderators from banning or suspending themselves and hid the options from their UI rows.
+     * Deprecated and removed the shadow ban options from both backend APIs and the admin dashboard.
+     * Allowed users to update their usernames via settings, validating uniqueness case-insensitively and preventing collisions.
+     * Updated the Google authentication registration flow to check and create unique usernames case-insensitively.
+     * Allowed suspended accounts to view public content but restricted them from write/mutation operations (POST/PUT/PATCH/DELETE).
+     * Added a visual "Owner" badge beside the owner account in both profile and admin pages.
+     * Formatted the sent time in both HTML and plain-text email notifications to explicitly use India Standard Time (`Asia/Kolkata` with `hour12: true`) and append the `IST` timezone identifier, preventing timezone discrepancies on the hosting servers.
+
+10. **PWA Conversion, Offline Stabilization & Performance**
+    * *Resolution*:
+      * Structured a new `frontend/pwa` directory to isolate PWA states, hooks, and providers.
+      * Built a custom React hook `usePWA` to track installation availability (`beforeinstallprompt`), app-installed state, and connectivity status.
+      * Integrated the PWA installation option directly inside the responsive `Navbar` (in both the main header for desktop users and the hamburger menu for mobile users), removing the floating prompt banner for a cleaner interface.
+      * Formatted and generated standard PWA icon files (72x72 through 512x512) and native iOS/iPadOS splash screen files.
+      * Integrated beautiful, system-wide connection status pop-up toasts (`react-hot-toast`) inside the robust, active-pinging `NetworkStatus` component to notify users instantly when going online, offline, or experiencing slow connections.
+      * Added a Node.js build compilation script (`scripts/build-sw.js`) that automatically parses Next.js manifests, extracts all dynamic JavaScript/CSS chunks, and injects them into the Service Worker's `STATIC_ASSETS` array to guarantee 100% of resources are pre-cached offline.
+      * Pre-cached the core backend API endpoints (`/api/faqs`, `/api/questions`, etc.) directly on Service Worker install to ensure the application loads dynamic questions and FAQs instantly offline.
+      * Restored native Next.js client-side routing by removing the hard navigation click interceptor. This makes tab transitions between Questions, FAQs, and Profiles instantaneous and completely lag-free offline.
+      * Replaced the standard browser navigation load with `fetchWithTimeout(request, 1500)`. If offline or on flaky connections, it aborts the network load after 1.5 seconds and immediately serves the cached page shell, removing startup screen delays.
+
+11. **Capacitor Mobile Applications (Android & iOS Wrappers)**
+    * *Resolution*:
+      * Created a dedicated `capacitor-app/` folder for native app configurations.
+      * Generated `capacitor.config.ts` specifying package name `com.prashnasarathi.app`, app name `PrashnaSārathi`, and linking to the live website host `https://prashnasarathi.vercel.app` to retain dynamic SSR/OAuth features.
+      * Configured essential Capacitor plugins including `SplashScreen`, `PushNotifications`, `Camera` (for profile pictures), `App` (for deep linking), and file uploads for both platforms.
+      * Documented native integration setup instructions, required npm packages, build commands, and configurations in a detailed walkthrough.
+      * Created public downloads folder configurations and placeholders for `.apk` (Android) and `.ipa` (iOS) files.
+
+12. **Multi-Platform Download Center, Update Checker, and Tauri Windows Desktop App**
+    * *Resolution*:
+      * Created a dedicated `tauri-app/` directory containing Tauri v1 configs, a Cargo.toml Rust dependencies definition, and a build script to package the web shell into a native Windows executable (`.exe`).
+      * Configured Tauri window attributes, file access permissions, and auto-updater endpoints.
+      * Created a dynamic `GET /api/app-version` backend API endpoint returning version metadata, changelog, and APK/installer links.
+      * Built an `AppUpdateChecker` client component mounted in `PwaProvider` that checks the backend version from the Capacitor wrapper, comparing versionCode to trigger update modals or lockouts (`forceUpdate: true`).
+      * Built a beautiful `/downloads` Download Center containing installation cards for PWA, Android (APK), iOS (IPA), Windows (.exe), and macOS (.dmg), linking it in the Footer.
+      * Populated public asset placeholders for the installer packages and documented MSVC compilation processes to replace placeholders with production builds.
+
+
+
+
+
 
 #### Latest Fixes (June 2, 2026)
 

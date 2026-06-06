@@ -32,12 +32,19 @@ export function SocketProvider({ children }) {
       reconnectionDelay: 2000,
     });
 
+    let errorCount = 0;
     newSocket.on('connect', () => {
       console.log('Socket connected:', newSocket.id);
+      errorCount = 0;
     });
 
     newSocket.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
+      errorCount++;
+      if (errorCount >= 3) {
+        console.warn('[Socket] Socket server not available on this host. Disabling socket client to prevent console spam.');
+        newSocket.disconnect();
+      }
     });
 
     setSocket(newSocket);

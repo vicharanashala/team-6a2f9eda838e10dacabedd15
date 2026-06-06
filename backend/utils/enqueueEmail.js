@@ -47,18 +47,40 @@ async function enqueueEmail({ to, userName, subject, body, contentTitle }) {
     
     // Inject personalization into body
     const timestamp = new Date().toISOString();
+    const formattedSentTime = new Date(timestamp).toLocaleString('en-US', {
+      timeZone: 'Asia/Kolkata',
+      hour12: true
+    }) + ' IST';
     const titleText = contentTitle || finalSubject;
-    const finalBody = `Hi ${userName},\n\n${body}\n\n---\nTopic: ${titleText}\nSent: ${timestamp}`;
+    const finalBody = `Hi ${userName},\n\n${body}\n\n---\nTopic: ${titleText}\nSent: ${formattedSentTime}`;
     
+    let finalHtml = '';
+    try {
+      const { getHtmlTemplate } = require('./emailTemplate');
+      finalHtml = getHtmlTemplate(userName, finalSubject, body, titleText, timestamp);
+    } catch (templateErr) {
+      console.error('[Enqueue] Error generating HTML template:', templateErr.message);
+    }
+
     const emailJob = await EmailQueue.create({
       to: targetEmail,
       userName,
       subject: finalSubject,
       body: finalBody,
+      html: finalHtml,
       status: 'pending',
     });
     
     console.log(`[Enqueue] Email to ${targetEmail} enqueued successfully.`);
+
+    // Process queue immediately so emails are sent without waiting for cron (essential for Vercel/serverless)
+    try {
+      const { processEmailQueue } = require('../services/emailWorker');
+      processEmailQueue().catch(err => console.error('[Enqueue] Email worker run failed:', err.message));
+    } catch (workerErr) {
+      console.error('[Enqueue] Could not start email worker:', workerErr.message);
+    }
+    
     return emailJob;
   } catch (err) {
     console.error('[Enqueue] Error enqueuing email:', err.message);

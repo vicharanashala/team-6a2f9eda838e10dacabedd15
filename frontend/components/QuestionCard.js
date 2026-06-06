@@ -7,7 +7,7 @@ import { formatDate, truncate } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import DownvoteReasonModal from './DownvoteReasonModal';
 
-export default function QuestionCard({ question }) {
+export default function QuestionCard({ question, absoluteDate = false }) {
   const { user } = useAuth();
   const [upvotes, setUpvotes] = useState(question.upvotes || 0);
   const [downvotes, setDownvotes] = useState(question.downvotes || 0);
@@ -185,7 +185,7 @@ export default function QuestionCard({ question }) {
                 <span>{question.author?.displayName || question.author?.username}</span>
               </Link>
             )}
-            <span>asked {formatDate(question.createdAt)}</span>
+            <span>asked {formatDate(question.createdAt, absoluteDate)}</span>
             <span className="text-[var(--color-text-muted)]">{question.viewCount || 0} views</span>
           </div>
         </div>

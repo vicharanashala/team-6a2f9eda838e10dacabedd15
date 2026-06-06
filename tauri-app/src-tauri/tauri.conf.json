@@ -1,0 +1,59 @@
+{
+  "build": {
+    "distDir": "../out",
+    "devPath": "https://prashnasarathi.vercel.app",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "package": {
+    "productName": "PrashnaSārathi",
+    "version": "1.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    },
+    "bundle": {
+      "active": true,
+      "targets": ["nsis"],
+      "identifier": "com.prashnasarathi.app",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "resources": [],
+      "externalBin": [],
+      "copyright": "Copyright © 2026 PrashnaSārathi",
+      "category": "Education",
+      "shortDescription": "Community Q&A and FAQ Platform",
+      "longDescription": "A community-driven Q&A and FAQ platform for knowledge sharing",
+      "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "pubkey": "content_of_public_key_here",
+      "endpoints": [
+        "https://prashnasarathi.vercel.app/api/tauri-update"
+      ]
+    },
+    "windows": [
+      {
+        "title": "PrashnaSārathi",
+        "width": 1020,
+        "height": 768,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  }
+}

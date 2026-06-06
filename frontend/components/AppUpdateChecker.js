@@ -1,0 +1,111 @@
+'use client';
+import { useState, useEffect } from 'react';
+
+export default function AppUpdateChecker() {
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState('');
+
+  useEffect(() => {
+    // Only run if we are inside the Capacitor webview wrapper
+    if (typeof window === 'undefined' || !window.Capacitor) {
+      return;
+    }
+
+    const checkUpdates = async () => {
+      try {
+        // Dynamically require @capacitor/app so it doesn't break standard browser compilation
+        const { App } = require('@capacitor/app');
+        const info = await App.getInfo();
+        
+        const installedVersionName = info.version || '1.0.0';
+        const installedVersionCode = parseInt(info.build, 10) || 1;
+        setCurrentVersion(installedVersionName);
+
+        // Fetch version info from backend
+        const response = await fetch('/api/app-version');
+        if (!response.ok) return;
+        const data = await response.json();
+
+        // Compare versionCode (preferred) or versionName
+        const isNewer = data.latestVersionCode > installedVersionCode || 
+                        (data.latestVersion !== installedVersionName && installedVersionCode === 1);
+
+        if (isNewer) {
+          setUpdateInfo(data);
+          setShowModal(true);
+        }
+      } catch (err) {
+        console.error('[Update Checker] Failed to check for updates:', err);
+      }
+    };
+
+    // Delay the check slightly after app load to ensure smooth startup animation
+    const timer = setTimeout(checkUpdates, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleUpdate = () => {
+    if (!updateInfo) return;
+    
+    // Redirect user to the direct APK file in native browser system
+    window.open(updateInfo.apkUrl, '_system');
+    
+    // If not a forced update, close the dialog after initiating download
+    if (!updateInfo.forceUpdate) {
+      setShowModal(false);
+    }
+  };
+
+  if (!showModal || !updateInfo) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md px-4 py-6">
+      <div className="w-full max-w-md bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-6 shadow-2xl flex flex-col gap-4 animate-scale-in relative overflow-hidden">
+        {/* Glow effect decorative element */}
+        <div className="absolute -top-12 -right-12 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl" />
+        
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-[var(--color-text)]">Update Available!</h2>
+            <p className="text-[10px] text-[var(--color-text-muted)] font-medium uppercase tracking-wider">
+              Installed: v{currentVersion} &bull; Latest: v{updateInfo.latestVersion}
+            </p>
+          </div>
+        </div>
+
+        <div className="border-t border-b border-[var(--color-border)] py-3 my-1">
+          <p className="text-xs font-semibold text-[var(--color-text)] mb-1.5">What's New:</p>
+          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+            {updateInfo.changelog}
+          </p>
+        </div>
+
+        <div className="flex gap-2.5 w-full mt-2">
+          {!updateInfo.forceUpdate && (
+            <button
+              onClick={() => setShowModal(false)}
+              className="flex-1 py-2 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text)] border border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] rounded-xl transition-all cursor-pointer"
+            >
+              Later
+            </button>
+          )}
+          <button
+            onClick={handleUpdate}
+            className="flex-1 py-2 text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all shadow-md shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <span>Update Now</span>
+            <svg className="w-3.5 h-3.5 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 13l-7 7-7-7m14-6l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

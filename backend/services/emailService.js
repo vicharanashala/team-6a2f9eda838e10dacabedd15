@@ -124,9 +124,109 @@ async function sendUserUnblockedNotification(user) {
   }
 }
 
+/**
+ * Send email when a user is warned.
+ */
+async function sendUserWarnedNotification(user, reason) {
+  try {
+    if (!user.email) {
+      console.log(`[EmailService] User has no email. Skipping warn notification.`);
+      return;
+    }
+
+    const body = `This is a formal warning regarding your account activity on PrashnaSārathi.\n\nReason: ${reason || 'Violation of community guidelines.'}\n\nPlease review our rules and ensure future behavior aligns with community standards.`;
+    
+    await enqueueEmail({
+      to: user.email,
+      userName: user.displayName || user.username,
+      subject: 'Account Status Notice: Warning Issued',
+      body,
+      contentTitle: 'Account Warning'
+    });
+  } catch (err) {
+    console.error('[EmailService] Error in sendUserWarnedNotification:', err.message);
+  }
+}
+
+/**
+ * Send email when a user is suspended.
+ */
+async function sendUserSuspendedNotification(user, durationHours, reason) {
+  try {
+    if (!user.email) {
+      console.log(`[EmailService] User has no email. Skipping suspension notification.`);
+      return;
+    }
+
+    const body = `This is to notify you that your account has been temporarily suspended.\n\nDuration: ${durationHours} hours\nReason: ${reason || 'Violation of community guidelines.'}\n\nYou will be unable to log in or post content until this suspension period ends.`;
+    
+    await enqueueEmail({
+      to: user.email,
+      userName: user.displayName || user.username,
+      subject: `Account Status Notice: Suspended for ${durationHours}h`,
+      body,
+      contentTitle: 'Account Suspended'
+    });
+  } catch (err) {
+    console.error('[EmailService] Error in sendUserSuspendedNotification:', err.message);
+  }
+}
+
+/**
+ * Send email when a user is shadow banned.
+ */
+async function sendUserShadowBannedNotification(user, reason) {
+  try {
+    if (!user.email) {
+      console.log(`[EmailService] User has no email. Skipping shadow ban notification.`);
+      return;
+    }
+
+    const body = `This is to notify you that your account has been restricted by the administration.\n\nReason: ${reason || 'Violation of community guidelines.'}\n\nIf you believe this restriction is an error, please contact support.`;
+    
+    await enqueueEmail({
+      to: user.email,
+      userName: user.displayName || user.username,
+      subject: 'Account Status Notice: Restricted',
+      body,
+      contentTitle: 'Account Restricted'
+    });
+  } catch (err) {
+    console.error('[EmailService] Error in sendUserShadowBannedNotification:', err.message);
+  }
+}
+
+/**
+ * Send email when a user is re-activated (unsuspended/unbanned/etc).
+ */
+async function sendUserActivatedNotification(user) {
+  try {
+    if (!user.email) {
+      console.log(`[EmailService] User has no email. Skipping activation notification.`);
+      return;
+    }
+
+    const body = `We are pleased to inform you that your account has been fully re-activated. You can now log back in and participate in the community.`;
+    
+    await enqueueEmail({
+      to: user.email,
+      userName: user.displayName || user.username,
+      subject: 'Account Status Notice: Active',
+      body,
+      contentTitle: 'Account Re-activated'
+    });
+  } catch (err) {
+    console.error('[EmailService] Error in sendUserActivatedNotification:', err.message);
+  }
+}
+
 module.exports = {
   sendNewQuestionApprovedNotification,
   sendAnswerPostedNotification,
   sendUserBlockedNotification,
-  sendUserUnblockedNotification
+  sendUserUnblockedNotification,
+  sendUserWarnedNotification,
+  sendUserSuspendedNotification,
+  sendUserShadowBannedNotification,
+  sendUserActivatedNotification
 };

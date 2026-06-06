@@ -147,6 +147,12 @@ export default function FAQDetailPage() {
     }
   };
 
+  const [openItems, setOpenItems] = useState({ 0: true });
+
+  const toggleItem = (index) => {
+    setOpenItems(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
   if (loading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -175,21 +181,21 @@ export default function FAQDetailPage() {
           <div className="mb-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <Link href="/faqs" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">&larr; Back to FAQs</Link>
+                <Link href="/faqs" className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">&larr; Back to FAQs</Link>
                 <div className="flex items-center gap-2 mt-2 mb-2">
-                  {faq.isOfficial && <span className="badge-green">Official</span>}
-                  {faq.category && <span className="badge-gray capitalize">{faq.category}</span>}
+                  {faq.isOfficial && <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">Official</span>}
+                  {faq.category && <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-[var(--color-primary-subtle)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 capitalize font-mono">{faq.category}</span>}
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text)]">{faq.title}</h1>
-                {faq.description && <p className="text-[var(--color-text-secondary)] mt-2">{faq.description}</p>}
+                <h1 className="text-xl sm:text-2xl font-bold text-[var(--color-text)] tracking-tight">{faq.title}</h1>
+                {faq.description && <p className="text-xs text-[var(--color-text-secondary)] mt-2 leading-relaxed">{faq.description}</p>}
               </div>
               <div className="flex gap-2">
                 {isAdminOrMod && (
-                  <button onClick={() => setShowAddQuestion(true)} className="btn-secondary btn-sm shrink-0">
+                  <button onClick={() => setShowAddQuestion(true)} className="btn-secondary btn-sm h-7 !px-2.5 !py-1 text-xs shrink-0">
                     + Add Question
                   </button>
                 )}
-                <button onClick={handleSave} className="btn-secondary btn-sm shrink-0">
+                <button onClick={handleSave} className="btn-secondary btn-sm h-7 !px-2.5 !py-1 text-xs shrink-0">
                   {isSaved ? 'Saved' : 'Save'}
                 </button>
               </div>
@@ -198,18 +204,19 @@ export default function FAQDetailPage() {
 
           {/* Sidebar navigation */}
           {faq.items?.length > 1 && (
-            <div className="card p-4 mb-6">
-              <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2">On this page</h3>
+            <div className="bg-[var(--color-bg-secondary)] rounded-md border border-[var(--color-border)] p-4 mb-6">
+              <h3 className="text-xs font-semibold text-[var(--color-text)] mb-2 font-mono uppercase tracking-wider">On this page</h3>
               <nav className="space-y-1">
                 {faq.items.filter(i => i.isPublished).map((item, index) => (
                   <button
                     key={item._id}
                     onClick={() => {
                       setActiveItem(index);
+                      setOpenItems(prev => ({ ...prev, [index]: true }));
                       document.getElementById(item._id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
-                    className={`block w-full text-left px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      activeItem === index ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium' : 'text-[var(--color-text-secondary)] hover:bg-gray-50 dark:hover:bg-gray-700'
+                    className={`block w-full text-left px-3 py-1.5 text-xs rounded-md transition-colors ${
+                      activeItem === index ? 'bg-[var(--color-primary-subtle)] text-[var(--color-primary)] border border-[var(--color-primary)]/20 font-medium' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'
                     }`}
                   >
                     {item.question}
@@ -219,43 +226,83 @@ export default function FAQDetailPage() {
             </div>
           )}
 
-          {/* FAQ items */}
-          <div className="space-y-6">
-            {(faq.items || []).filter(i => i.isPublished).map((item, index) => (
-              <div
-                key={item._id}
-                id={item._id}
-                style={{ scrollMarginTop: '100px' }}
-                className={`card p-6 transition-all ${activeItem === index ? 'ring-2 ring-[var(--color-primary)]' : ''}`}
-              >
-                <h2 className="text-lg font-semibold text-[var(--color-text)] mb-3">{item.question}</h2>
-                <MarkdownRenderer content={item.answer} />
-                {item.tags?.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-3">
-                    {item.tags.map(tag => (
-                      <span key={tag} className="badge-gray text-xs">{tag}</span>
-                    ))}
+          {/* FAQ items Accordion */}
+          <div className="flex flex-col gap-3">
+            {(faq.items || []).filter(i => i.isPublished).map((item, index) => {
+              const isOpen = !!openItems[index];
+              const displayIndex = String(index + 1).padStart(2, '0');
+              return (
+                <div
+                  key={item._id}
+                  id={item._id}
+                  style={{ scrollMarginTop: '100px' }}
+                  className={`bg-[var(--color-bg-secondary)] border rounded-md overflow-hidden transition-all duration-200 ${
+                    isOpen ? 'border-[var(--color-primary)]/50' : 'border-[var(--color-border)] hover:border-[var(--color-border-subtle)]'
+                  }`}
+                >
+                  {/* Trigger Header */}
+                  <div
+                    onClick={() => toggleItem(index)}
+                    className="flex items-start justify-between gap-4 p-4 cursor-pointer select-none"
+                  >
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <span className="font-mono text-[10px] text-[var(--color-text-muted)] mt-1">{displayIndex}</span>
+                      <span className="text-xs font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors leading-relaxed">{item.question}</span>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {item.tags?.length > 0 && (
+                        <span className="text-[10px] font-mono text-[var(--color-primary)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20 px-2 py-0.5 rounded-md hidden sm:inline capitalize">
+                          {item.tags[0]}
+                        </span>
+                      )}
+                      <svg
+                        className={`w-3.5 h-3.5 text-[var(--color-text-muted)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--color-border)] text-xs text-[var(--color-text-secondary)]">
-                  <span>Was this helpful?</span>
-                  <button
-                    onClick={() => handleFeedback(item._id, true)}
-                    className={`flex items-center gap-1 ${localVotes[item._id] === 'helpful' ? 'text-green-600 font-semibold' : 'hover:text-green-600'}`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" /></svg>
-                    Yes ({item.helpfulCount || 0})
-                  </button>
-                  <button
-                    onClick={() => handleFeedback(item._id, false)}
-                    className={`flex items-center gap-1 ${localVotes[item._id] === 'notHelpful' ? 'text-red-600 font-semibold' : 'hover:text-red-600'}`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" /></svg>
-                    No ({item.notHelpfulCount || 0})
-                  </button>
+
+                  {/* Body Content with smooth height transition */}
+                  <div className={`faq-body-wrap ${isOpen ? 'faq-body-wrap-open' : ''}`}>
+                    <div className="faq-body-inner">
+                      <div className="p-4 border-t border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] leading-relaxed bg-[var(--color-bg)]/30">
+                        <MarkdownRenderer content={item.answer} />
+                        
+                        {item.tags?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-3">
+                            {item.tags.map(tag => (
+                              <span key={tag} className="font-mono text-[10px] text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">{tag}</span>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)] font-mono">
+                          <span>Was this helpful?</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleFeedback(item._id, true); }}
+                            className={`flex items-center gap-1 ${localVotes[item._id] === 'helpful' ? 'text-green-500 font-semibold' : 'hover:text-green-500'}`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" /></svg>
+                            Yes ({item.helpfulCount || 0})
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleFeedback(item._id, false); }}
+                            className={`flex items-center gap-1 ${localVotes[item._id] === 'notHelpful' ? 'text-red-500 font-semibold' : 'hover:text-red-500'}`}
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" /></svg>
+                            No ({item.notHelpfulCount || 0})
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {faq.tags?.length > 0 && (

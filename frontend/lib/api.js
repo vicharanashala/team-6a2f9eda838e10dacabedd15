@@ -1,6 +1,10 @@
 const API_URL = typeof window !== 'undefined'
   ? '/api'
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api');
+  : (process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL || 'prashnasarathi.vercel.app'}/_/backend/api`
+      : (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')
+          ? process.env.NEXT_PUBLIC_API_URL
+          : 'http://localhost:5000/api'));
 
 class ApiClient {
   constructor() {

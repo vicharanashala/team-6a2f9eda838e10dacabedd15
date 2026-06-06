@@ -37,6 +37,8 @@ router.post('/moderation/reject', auth, moderatorOrAdmin, ctrl.rejectPost);
 router.get('/moderation/reported', auth, moderatorOrAdmin, ctrl.getReportedPosts);
 router.post('/moderation/action', auth, moderatorOrAdmin, ctrl.moderateUser);
 router.get('/moderation/suspicious', auth, moderatorOrAdmin, ctrl.getSuspiciousActivity);
+router.post('/moderation/suspicious/:id/resolve', auth, moderatorOrAdmin, ctrl.resolveSuspiciousActivity);
 router.get('/moderation/audit-logs', auth, moderatorOrAdmin, ctrl.getAuditLogs);
+router.post('/alert', auth, adminOnly, ctrl.sendAdminAlert);
 
 module.exports = router;

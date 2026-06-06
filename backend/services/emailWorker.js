@@ -87,12 +87,30 @@ async function processEmailQueue() {
       try {
         console.log(`[EmailWorker] Sending email to ${job.to} for user ${job.userName}...`);
         
-        await transporter.sendMail({
+        const mailOptions = {
           from: `"PrashnaSārathi" <${transporter.options.auth.user}>`,
           to: job.to,
           subject: job.subject,
           text: job.body,
-        });
+        };
+
+        if (job.html) {
+          mailOptions.html = job.html;
+          
+          const fs = require('fs');
+          const path = require('path');
+          const logoPath = path.join(__dirname, '../assets/logo.png');
+          
+          if (fs.existsSync(logoPath)) {
+            mailOptions.attachments = [{
+              filename: 'logo.png',
+              path: logoPath,
+              cid: 'logo'
+            }];
+          }
+        }
+
+        await transporter.sendMail(mailOptions);
         
         // On success:
         job.status = 'sent';

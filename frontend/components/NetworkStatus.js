@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 
 export default function NetworkStatus() {
-  const [status, setStatus] = useState('good'); // 'good' | 'slow' | 'offline'
+  const [status, setStatus] = useState('good');
 
   useEffect(() => {
     const checkNetwork = () => {
@@ -55,13 +56,13 @@ export default function NetworkStatus() {
           }
         }
       } catch (err) {
-        if (!navigator.onLine) {
+        if (!navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError') {
           setStatus('offline');
         } else if (err.name === 'AbortError') {
           setStatus('slow');
         }
       }
-    }, 30000);
+    }, 5000);
 
     return () => {
       window.removeEventListener('online', checkNetwork);
@@ -72,6 +73,47 @@ export default function NetworkStatus() {
       clearInterval(interval);
     };
   }, []);
+
+  const [isReady, setIsReady] = useState(false);
+  const prevStatusRef = useRef(status);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsReady(true), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!isReady) {
+      prevStatusRef.current = status;
+      return;
+    }
+
+    const statusChanged = prevStatusRef.current !== status;
+    prevStatusRef.current = status;
+
+    if (status === 'offline') {
+      toast.error('You are offline. Serving cached FAQ and Questions data.', {
+        id: 'network-status-toast',
+        duration: 4000,
+        position: 'top-right',
+        icon: '🔌'
+      });
+    } else if (status === 'slow') {
+      toast.error('Network connection is slow. Performance may be degraded.', {
+        id: 'network-status-toast',
+        duration: 4000,
+        position: 'top-right',
+        icon: '⚠️'
+      });
+    } else if (status === 'good' && statusChanged) {
+      toast.success('Back online! Live synchronization restored.', {
+        id: 'network-status-toast',
+        duration: 3500,
+        position: 'top-right',
+        icon: '⚡'
+      });
+    }
+  }, [status, isReady]);
 
   if (status === 'good') return null;
 
