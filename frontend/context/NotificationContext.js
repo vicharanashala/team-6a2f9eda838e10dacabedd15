@@ -253,6 +253,7 @@ export function NotificationProvider({ children }) {
   };
 
   const showBrowserNotification = (data) => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     
     const title = data.title || 'New notification';
@@ -268,20 +269,24 @@ export function NotificationProvider({ children }) {
     };
 
     try {
-      // Use service worker to show notification (supported on mobile browsers/PWA and desktop)
+      // Try standard HTML5 Notification first (most direct & reliable for active browser pages and Windows apps)
+      const notification = new window.Notification(title, options);
+      notification.onclick = (e) => {
+        e.preventDefault();
+        window.focus();
+        const targetLink = data.link || '/notifications';
+        window.location.href = targetLink;
+      };
+    } catch (err) {
+      console.log('Standard Notification failed, falling back to service worker:', err);
+      // Fallback to service worker (necessary for Chrome on Android / PWAs)
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(reg => {
           reg.showNotification(title, options);
-        }).catch(() => {
-          new Notification(title, options);
+        }).catch(swErr => {
+          console.error('Service Worker showNotification failed:', swErr);
         });
-      } else {
-        new Notification(title, options);
       }
-    } catch (_) {
-      try {
-        new Notification(title, options);
-      } catch (_) {}
     }
   };
 
