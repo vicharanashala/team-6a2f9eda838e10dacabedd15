@@ -113,11 +113,11 @@ If you prefer running services directly on the host machine:
 ## Project Structure
 
 ```
-faq-site/
+prashnasarathi/
 ├── backend/              # Express API server (port 5000)
 │   ├── config/           # DB, Redis, ES, Firebase, Kafka connections
 │   ├── controllers/      # Route handlers (auth, questions, answers, push notifications, etc.)
-│   ├── middleware/        # JWT auth, error handling, rate limiting, uploads
+│   ├── middleware/       # JWT auth, error handling, rate limiting, uploads
 │   ├── models/           # Mongoose schemas (User, Question, Answer, FAQ, AppVersion, etc.)
 │   ├── routes/           # Express route definitions (12 route files)
 │   ├── seeds/            # Database seed script + test users
@@ -131,13 +131,18 @@ faq-site/
 │   ├── hooks/            # Custom hooks (list keyboard navigation, PWA installer)
 │   ├── lib/              # API client & utilities
 │   ├── services/         # Frontend services (admin analytics, etc.)
-│   └── styles/           # Global CSS with Tailwind
+│   └── styles/           # Global CSS
 ├── capacitor-app/        # Capacitor Native App (Android & iOS wrappers)
 │   ├── android/          # Native Android Gradle project
 │   ├── resources/        # Launcher icons, splash screen assets
 │   ├── package.json      # Dependencies and synchronization tasks
 │   └── capacitor.config.ts # Core configuration mapping to live website host
-├── tauri-app/            # Tauri Windows Desktop App (.exe)
+├── desktop-app/          # Electron Windows Desktop App (.exe wrapper)
+│   ├── Installer.cs      # C# custom installer package script
+│   ├── build-installer.ps1 # PowerShell build execution script
+│   ├── main.js           # Electron main process script
+│   └── package.json      # Electron app packaging configuration
+├── tauri-app/            # Tauri Desktop App (.exe alternative)
 │   ├── src-tauri/        # Rust backend configurations, Cargo manifest, build scripts
 │   ├── out/              # Static HTML build artifact output folder
 │   ├── package.json      # Desktop app build tasks
@@ -146,6 +151,9 @@ faq-site/
 │   ├── main.py           # FastAPI server entry point
 │   ├── Dockerfile        # Container setup for Python dependencies
 │   └── requirements.txt  # Python packages list
+├── faq-service/          # Python FAQ classification microservice helper
+│   ├── main.py           # Python script entry point
+│   └── requirements.txt  # Python dependencies list
 ├── nginx/                # Nginx reverse proxy config
 ├── podman/               # Podman/Docker deployment files
 ├── kafka/                # Optional Kafka docker-compose

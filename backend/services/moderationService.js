@@ -19,12 +19,16 @@ const flagContent = async ({ targetType, targetId, reason, flaggedBy }) => {
 
   // Notify admins
   const admins = await User.find({ role: 'admin' });
+  const linkUrl = targetType === 'Question'
+    ? `/questions/${targetId}`
+    : `/questions/${target.question}#answer-${targetId}`;
+
   const notifications = admins.map(admin => ({
     recipient: admin._id,
     type: 'moderation',
     title: 'Content flagged',
     message: `${targetType} flagged: ${reason}`,
-    link: `/${targetType === 'Question' ? 'questions' : 'answers'}/${targetId}`,
+    link: linkUrl,
     referenceType: targetType,
     reference: targetId,
   }));

@@ -59,7 +59,11 @@ export function NotificationProvider({ children }) {
     if (typeof window !== 'undefined' && window.Capacitor) {
       registerCapacitorPush();
     } else {
-      checkPushSubscription();
+      checkPushSubscription().then(() => {
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+          requestBrowserPermission();
+        }
+      });
     }
 
     if (!socket) return;
@@ -141,6 +145,10 @@ export function NotificationProvider({ children }) {
 
       PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
         console.log('Push notification action performed: ', notification);
+        const link = notification.notification?.data?.link;
+        if (link) {
+          window.location.href = link;
+        }
       });
 
     } catch (err) {

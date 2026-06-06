@@ -342,6 +342,30 @@ Medium-Impact Quality of Life
      * Redesigned the mobile dropdown inside `Navbar.js` to render as a solid, absolute-positioned container with full-width overlays and high z-index.
      * Added custom responsive max-height scrolling boundaries (`max-h-[calc(100vh-3rem)] overflow-y-auto`) so that landscape viewport heights remain fully functional and scrollable.
 
+4. **Service Worker & Notification Click Optimization**
+   * *Problem*: Clicking on a browser/PWA push notification opened a new window or tab every time, leading to excessive duplicates instead of focusing the user's existing open tab.
+   * *Resolution*:
+     * Refactored `frontend/public/sw.js` `notificationclick` handler to search client windows via `clients.matchAll()`.
+     * If an existing client window is found on the same origin, the Service Worker focuses it and navigates to the target deep-link (`client.navigate(targetUrl)`), opening a new window only as a fallback.
+
+5. **Android Native Permission Integration & Push Registration**
+   * *Problem*: Devices running Android 13+ failed to show push notification registration prompts because the native manifest lacked the explicit permission declaration.
+   * *Resolution*:
+     * Added `android.permission.POST_NOTIFICATIONS` to the `AndroidManifest.xml` of the Capacitor app.
+     * Integrated automated browser permission checks in `NotificationContext.js` to prompt users automatically for notifications.
+     * Recompiled the Android project build successfully and updated the distribution file (`prashnasarathi-app.apk`) in the downloads page.
+
+6. **Notification Action Click Deep-Link Redirection**
+   * *Problem*: Tapping on a push notification inside Android/iOS wrapper environments did not navigate or redirect the user to the target question/answer content.
+   * *Resolution*:
+     * Added a Capacitor action listener (`pushNotificationActionPerformed`) inside `NotificationContext.js`.
+     * Tapping a native notification now extracts the deep-link metadata and performs an immediate client redirection via `window.location.href`.
+
+7. **Navbar Notification Toggle & Close Behavior**
+   * *Problem*: The notifications icon did not act as a toggle to close the notifications view on subsequent clicks across all platforms.
+   * *Resolution*:
+     * Updated the bell icon in `Navbar.js` to check the current pathname. If already on `/notifications`, a subsequent click triggers a backward navigation (`router.back()`), falling back to `/` if no history is present, acting as a toggle close.
+
 #### Latest Fixes (June 5, 2026)
 
 1. **Mandatory Rules & Regulations Acceptance Flow**

@@ -58,34 +58,34 @@ const STATIC_ASSETS = [
   "/_next/static/chunks/app/_not-found/page-7ea4ef5f72bbb012.js",
   "/_next/static/css/6fbba5492ef16f90.css",
   "/_next/static/chunks/648-699c09fb2d2c7e31.js",
-  "/_next/static/chunks/859-0e34696b8f4645e4.js",
+  "/_next/static/chunks/859-53653f498c829bbc.js",
   "/_next/static/chunks/680-2921ecdb664d2cf7.js",
   "/_next/static/chunks/105-e87b28454e2f0fe4.js",
   "/_next/static/chunks/517-279a89b1ff8dc244.js",
-  "/_next/static/chunks/750-19f8004959bd7067.js",
-  "/_next/static/chunks/app/layout-c5508a3c22ce18e2.js",
-  "/_next/static/chunks/2bfc466f-65fbf4f623bc5d0f.js",
-  "/_next/static/chunks/147-0926783a5937b1da.js",
-  "/_next/static/chunks/app/auth/page-a96833937a9b03d7.js",
-  "/_next/static/chunks/app/admin/page-976efb14a8730d7f.js",
+  "/_next/static/chunks/750-d2034d52a36dd0b3.js",
+  "/_next/static/chunks/app/layout-b7154e7e5e16f714.js",
+  "/_next/static/chunks/app/admin/page-5c1dc86dc1407be3.js",
   "/_next/static/chunks/app/downloads/page-02728a1e91a865e1.js",
   "/_next/static/chunks/17-415c15461d1f32b5.js",
   "/_next/static/chunks/668-5335dfa152ed9336.js",
-  "/_next/static/chunks/app/faqs/[slug]/page-9ce10beefbe18746.js",
+  "/_next/static/chunks/app/faqs/[slug]/page-33b5d19e83c703a7.js",
+  "/_next/static/chunks/app/faqs/page-55b928c3c6c09e97.js",
+  "/_next/static/chunks/2bfc466f-65fbf4f623bc5d0f.js",
+  "/_next/static/chunks/147-0926783a5937b1da.js",
+  "/_next/static/chunks/app/auth/page-bb7870319bd9f3f3.js",
   "/_next/static/chunks/app/guidelines/page-6ce6118f1a2d3170.js",
-  "/_next/static/chunks/app/notifications/page-03d7c50e9eef6809.js",
-  "/_next/static/chunks/app/faqs/page-1500bbf0979a27ff.js",
-  "/_next/static/chunks/app/questions/[id]/page-db12726140a6dcf1.js",
-  "/_next/static/chunks/app/questions/ask/page-b1346b9c800a7660.js",
-  "/_next/static/chunks/app/page-634db4584333fa3b.js",
-  "/_next/static/chunks/app/saved/page-f7947693b3d9fc16.js",
+  "/_next/static/chunks/app/notifications/page-4965801e90deee80.js",
+  "/_next/static/chunks/app/questions/[id]/page-be99ea00bd0aeaa7.js",
+  "/_next/static/chunks/app/page-8081f9d2a9eb13cc.js",
   "/_next/static/chunks/413-b1f6270b2b1a22f6.js",
-  "/_next/static/chunks/app/tags/[name]/page-5dd8218d740092cb.js",
+  "/_next/static/chunks/app/questions/page-799ad849fbb9827f.js",
+  "/_next/static/chunks/app/saved/page-2f705b1a08dc82e8.js",
+  "/_next/static/chunks/app/questions/ask/page-5fe4257ef8559020.js",
+  "/_next/static/chunks/app/users/[username]/page-0b98949c93a98008.js",
   "/_next/static/chunks/app/tags/page-68f59bc9f4ace876.js",
-  "/_next/static/chunks/app/questions/page-85a700f4d7f89287.js",
-  "/_next/static/chunks/app/search/page-c24df1c188e2d2a8.js",
-  "/_next/static/chunks/app/users/page-e4504e195d4511b6.js",
-  "/_next/static/chunks/app/users/[username]/page-b8817c641e2b80ea.js",
+  "/_next/static/chunks/app/search/page-11af031a54079628.js",
+  "/_next/static/chunks/app/tags/[name]/page-7dd4ba9af9fe402f.js",
+  "/_next/static/chunks/app/users/page-786e9096d98b8aff.js",
   "/_next/static/chunks/framework-f66176bb897dc684.js",
   "/_next/static/chunks/main-a895a058bfcf6af5.js",
   "/_next/static/chunks/pages/_app-72b849fbd24ac258.js",
@@ -245,14 +245,26 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const link = event.notification.data?.link;
-  if (link) {
-    event.waitUntil(
-      clients.openWindow(link)
-    );
-  } else {
-    event.waitUntil(
-      clients.openWindow('/notifications')
-    );
-  }
+  const targetUrl = event.notification.data?.link 
+    ? new URL(event.notification.data.link, self.location.origin).href
+    : new URL('/notifications', self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          if ('navigate' in client) {
+            try {
+              client.navigate(targetUrl);
+            } catch (_) {}
+          }
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
 });

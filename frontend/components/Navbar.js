@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useTypewriter } from '@/hooks/useTypewriter';
@@ -17,6 +18,8 @@ export default function Navbar({ onSearch }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const navbarInputRef = useRef(null);
   const { text: placeholderText, pause, resume } = useTypewriter();
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -31,6 +34,19 @@ export default function Navbar({ onSearch }) {
     if (onSearch) onSearch(searchQuery);
     if (searchQuery.trim()) {
       window.location.href = `/search?q=${encodeURIComponent(searchQuery)}`;
+    }
+  };
+
+  const handleNotificationIconClick = (e) => {
+    e.preventDefault();
+    if (pathname === '/notifications') {
+      if (typeof window !== 'undefined' && window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/');
+      }
+    } else {
+      router.push('/notifications');
     }
   };
 
@@ -109,7 +125,7 @@ export default function Navbar({ onSearch }) {
                   </Link>
 
                   {/* Notification Bell */}
-                  <Link href="/notifications" className="relative p-1.5 rounded-md hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors" aria-label="Notifications">
+                  <Link href="/notifications" onClick={handleNotificationIconClick} className="relative p-1.5 rounded-md hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-text)] transition-colors" aria-label="Notifications">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
