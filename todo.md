@@ -628,6 +628,11 @@ Medium-Impact Quality of Life
    * *Resolution*: Refactored the notification reception logic in `frontend/context/NotificationContext.js`. When a foreground socket event (`notification:new` or `admin:alert`) is received, the client displays a premium in-app toast notification via `react-hot-toast` (with custom layouts/icons) and triggers `showBrowserNotification` using direct, real-time checks on the native `Notification.permission` API (bypassing asynchronous React state latency). This forces direct web browsers and Windows apps (Tauri/Electron desktop wrappers) to pop up native operating system notification banners instantly while they are active, falling back to Service Worker notifications only on mobile browsers that restrict foreground alerts.
 4. **Native Mobile Google Sign-In with Sheet Overlay Integration**
    * *Resolution*: Installed `@codetrix-studio/capacitor-google-auth` on the Android wrapper and Next.js frontend, and configured the plugin in `capacitor-app/capacitor.config.ts`. Rewrote the sign-in routine in `frontend/app/auth/page.js` to invoke the native SDK's accounts chooser sheet dynamically, login to Firebase via credential generation, and fall back to the WebView redirect flow in case of configuration anomalies.
+5. **Static VAPID Keys Fallback for Serverless Environments**
+   * *Root Cause*: Since Vercel is a serverless environment, backend function containers spin up and tear down on demand. Without static VAPID credentials configured, every server start generated a new dynamic pair of keys. This mismatch caused the web push service provider to reject push payloads due to invalid signatures.
+   * *Resolution*: Hardcoded a static pair of generated VAPID keys as the default fallback in `backend/config/index.js` to ensure the cryptographic key pair remains identical across all API sessions.
+6. **OS Troubleshooting & Diagnostic Center**
+   * *Resolution*: Added an OS troubleshooting guide and an interactive "Test OS Notification" button to the `/notifications` page. This lets the user trigger a notification locally to verify browser and system configurations (e.g. Focus Assist/Do Not Disturb or notification permissions in Windows Settings).
 
 #### Latest Fixes (June 6, 2026)
 
