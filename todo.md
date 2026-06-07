@@ -390,7 +390,7 @@ Medium-Impact Quality of Life
      * Added a **"Broadcast Alerts"** composer tab in the admin panel.
      * Integrated a global socket listener on the client (`NotificationContext.js`) that displays a persistent, custom-designed system alert toast when an admin broadcasts a message, updating the notification inbox count instantly.
 
-4. **AuditLog Schema Validation Error Fix**
+4. **AuditLog Schema Validation Fix**
    * *Problem*: Sending an alert message crashed on the backend with an `AuditLog validation failed` error because the schema requires both `targetId` and `targetType` fields.
    * *Resolution*: Updated the `sendAdminAlert` handler in `adminController.js` to explicitly provide `targetId: req.user._id` and `targetType: 'User'`, fulfilling the model validation constraints.
 
