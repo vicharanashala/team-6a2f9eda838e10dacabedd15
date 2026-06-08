@@ -796,6 +796,16 @@ exports.resolveEscalation = async (req, res, next) => {
     }
     await question.save();
 
+    // Audit Log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'resolve_escalation',
+      targetId: question._id,
+      targetType: 'Question',
+      reason: `Resolved escalation for question: "${question.title}"` + (resolutionNote ? `. Note: ${resolutionNote}` : '')
+    });
+
     // Notify the student
     const Notification = require('../models/Notification');
     await Notification.create({
@@ -807,6 +817,13 @@ exports.resolveEscalation = async (req, res, next) => {
       referenceType: 'Question',
       reference: question._id,
     });
+
+    try {
+      const { emitToAdmin } = require('../socket');
+      emitToAdmin('moderation:updated', { action: 'resolve_escalation', questionId: question._id });
+    } catch (socketErr) {
+      console.error('Socket notification error in resolveEscalation:', socketErr.message);
+    }
 
     res.json({ message: 'Escalation resolved', question });
   } catch (err) {

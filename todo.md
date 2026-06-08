@@ -55,6 +55,7 @@
 - [x] Accept answer on any question
 - [x] Bulk email broadcasting to all active users
 - [x] Live application version management and socket-driven in-app updates
+- [x] Unified escalated student query queue, resolution workflow, real-time socket sync, and audit logging.
 
 ### UI/UX
 - [x] Dark mode toggle (localStorage, system preference)
@@ -319,6 +320,18 @@ Medium-Impact Quality of Life
 
 
 ### Recent Fixes
+
+#### Latest Fixes (June 8, 2026)
+
+1. **Unification of Escalated Student Queries into Moderator & Admin Workflows**
+   * *Problem*: Users were able to escalate unanswered queries (no-response after 24h) which sent notifications, but these escalated queries were not visible in a central administration list or logs, making it difficult for moderators/admins to review, track, and resolve them systematically.
+   * *Resolution*:
+     * Updated the backend `resolveEscalation` controller in `backend/controllers/questionController.js` to create an `AuditLog` entry detailing the resolution reason and note upon resolving.
+     * Instrumented the backend to broadcast a real-time `moderation:updated` Socket.IO event when an escalation is resolved.
+     * Added an **"Escalations"** tab inside the `AdminPage` frontend dashboard visible to admins and moderators.
+     * Configured frontend state management to fetch escalated queries with pagination from `/api/questions/escalated`.
+     * Added the **"Resolve Escalation"** action in the UI table (with optional prompt notes), which patch-updates the question status.
+     * Integrated Socket.IO listeners so that any escalation resolved by one moderator is instantly synced across all other active moderation panels.
 
 #### Latest Fixes (June 6, 2026)
 

@@ -24,6 +24,9 @@ export default function AdminPage() {
   const [anomalyPage, setAnomalyPage] = useState(1);
   const [anomalyPagination, setAnomalyPagination] = useState({ page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
+  const [escalatedQs, setEscalatedQs] = useState([]);
+  const [escalatedPage, setEscalatedPage] = useState(1);
+  const [escalatedPagination, setEscalatedPagination] = useState({ page: 1, pages: 1 });
   const socket = useSocket();
 
   const [moderationQueue, setModerationQueue] = useState({ questions: [], answers: [] });
@@ -165,6 +168,8 @@ export default function AdminPage() {
           await fetchSuspiciousActivities();
         } else if (tab === 'auditLogs') {
           await fetchAuditLogs();
+        } else if (tab === 'escalations') {
+          await fetchEscalatedQs();
         } else if (tab === 'siteReports' && user.role === 'admin') {
           await fetchSiteReports();
         } else if (tab === 'emails' && user.role === 'admin') {
@@ -203,6 +208,8 @@ export default function AdminPage() {
         fetchSuspiciousActivities();
       } else if (tab === 'auditLogs') {
         fetchAuditLogs();
+      } else if (tab === 'escalations') {
+        fetchEscalatedQs();
       } else if (tab === 'emails' && user?.role === 'admin') {
         fetchEmails();
         fetchBounces();
@@ -219,6 +226,34 @@ export default function AdminPage() {
       fetchEmails();
     }
   }, [emailPage]);
+
+  useEffect(() => {
+    if (tab === 'escalations') {
+      fetchEscalatedQs();
+    }
+  }, [escalatedPage]);
+
+  const fetchEscalatedQs = async () => {
+    try {
+      const data = await api.get('/questions/escalated', { params: { page: escalatedPage, limit: 15 } });
+      setEscalatedQs(data.questions || []);
+      setEscalatedPagination(data.pagination || { page: 1, pages: 1 });
+    } catch (err) {
+      console.error('Failed to fetch escalated questions:', err);
+    }
+  };
+
+  const handleResolveEscalation = async (questionId) => {
+    const resolutionNote = prompt('Enter a resolution note/action taken (optional):');
+    if (resolutionNote === null) return;
+    try {
+      await api.patch(`/questions/${questionId}/escalate/resolve`, { resolutionNote });
+      toast.success('Escalation resolved successfully');
+      fetchEscalatedQs();
+    } catch (err) {
+      toast.error(err.message || 'Failed to resolve escalation');
+    }
+  };
 
   const fetchEmails = async () => {
     try {
@@ -489,7 +524,7 @@ export default function AdminPage() {
 
   const tabs = ['dashboard', 'users', 'flagged', 'anomalies'];
   if (user?.role === 'admin' || user?.role === 'moderator') {
-    tabs.push('moderationQueue', 'reportedPosts', 'suspiciousActivities', 'auditLogs');
+    tabs.push('moderationQueue', 'reportedPosts', 'suspiciousActivities', 'auditLogs', 'escalations');
   }
   if (user?.role === 'admin') {
     tabs.push('siteReports', 'emails', 'broadcast', 'broadcastEmail', 'appUpdates');
@@ -533,6 +568,7 @@ export default function AdminPage() {
              t === 'broadcast' ? 'Broadcast Alerts' :
              t === 'broadcastEmail' ? 'Broadcast Email' :
              t === 'appUpdates' ? 'App Updates' :
+             t === 'escalations' ? 'Escalations' :
              t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
@@ -1362,6 +1398,94 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      ) : tab === 'escalations' ? (
+        <div className="card overflow-hidden border border-[var(--color-border)] rounded-2xl shadow-xl bg-[var(--color-bg-secondary)] relative">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 via-red-500 to-pink-500" />
+          <div className="p-5 border-b border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/20">
+            <h3 className="font-bold text-lg text-[var(--color-text)] flex items-center gap-2">
+              <span>⚠️</span> Escalated Queries ({escalatedQs.length})
+            </h3>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+              Persistent list of escalated queries that require administrative or moderator review and resolution.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Question Details</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Author</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Escalation Reason</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Date Escalated</th>
+                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]">
+                {escalatedQs.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="text-center p-8 text-[var(--color-text-secondary)]">
+                      No escalated queries found.
+                    </td>
+                  </tr>
+                ) : (
+                  escalatedQs.map(q => (
+                    <tr key={q._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                      <td className="px-4 py-3">
+                        <a href={`/questions/${q._id}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-600 hover:text-primary-700 hover:underline">
+                          {q.title}
+                        </a>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <span className="badge-gray text-[10px]">{q.answerCount || 0} answers</span>
+                          {q.tagNames?.map(tag => (
+                            <span key={tag} className="badge-primary text-[10px]">{tag}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-medium text-[var(--color-text)] text-xs">
+                        {q.author ? `@${q.author.username || q.author.displayName}` : 'Anonymous'}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)] italic max-w-xs truncate" title={q.escalationReason}>
+                        {q.escalationReason || 'No response within 24 hours'}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">
+                        {formatDate(q.escalatedAt)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleResolveEscalation(q._id)}
+                          className="btn-warning btn-sm px-3 py-1 text-xs font-semibold rounded-lg shadow-sm"
+                        >
+                          Resolve Escalation
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {escalatedPagination.pages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]">
+              <button
+                onClick={() => setEscalatedPage(p => Math.max(1, p - 1))}
+                disabled={escalatedPage === 1}
+                className="btn-secondary btn-sm disabled:opacity-50 text-xs px-2.5 py-1"
+              >
+                Previous
+              </button>
+              <span className="text-xs text-[var(--color-text-secondary)]">
+                Page {escalatedPage} of {escalatedPagination.pages}
+              </span>
+              <button
+                onClick={() => setEscalatedPage(p => Math.min(escalatedPagination.pages, p + 1))}
+                disabled={escalatedPage === escalatedPagination.pages}
+                className="btn-secondary btn-sm disabled:opacity-50 text-xs px-2.5 py-1"
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       ) : tab === 'emails' ? (
         <div className="space-y-6">
