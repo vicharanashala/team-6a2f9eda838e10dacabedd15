@@ -54,13 +54,14 @@ export default function SearchModal({ isOpen, onClose }) {
 
   useEffect(() => {
     const search = async () => {
-      if (!query.trim()) {
+      const sanitized = query.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "");
+      if (!sanitized) {
         setResults([]);
         return;
       }
       setLoading(true);
       try {
-        const data = await api.get('/search', { q: query, type });
+        const data = await api.get('/search', { q: sanitized, type });
         setResults(data.results || []);
         setSelectedIndex(-1);
       } catch (err) {
@@ -88,8 +89,11 @@ export default function SearchModal({ isOpen, onClose }) {
         const link = getSearchResultLink(result);
         router.push(link);
         onClose();
-      } else if (query.trim()) {
-        router.push(`/search?q=${encodeURIComponent(query)}${type ? `&type=${type}` : ''}`);
+      } else {
+        const sanitized = query.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "");
+        if (sanitized) {
+          router.push(`/search?q=${encodeURIComponent(sanitized)}${type ? `&type=${type}` : ''}`);
+        }
         onClose();
       }
     } else if (e.key === 'Escape') {

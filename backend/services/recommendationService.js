@@ -6,19 +6,17 @@ const Question = require('../models/Question');
 // Uses partial/substring matching so it works regardless of exact category name variations
 const PHASE_CATEGORY_KEYWORDS = {
   pre: [
-    'internship', 'timing', 'dates', 'noc', 'objection', 'selection',
-    'offer letter', 'certificate', 'work', 'mentorship', 'projects',
-    'code of conduct', 'communication', 'spurti', 'vibe platform', 'getting started',
-    'about the internship',
+    'noc', 'objection', 'selection', 'offer letter', 'getting started',
+    'about the internship', 'timing and dates', 'code of conduct'
   ],
   phase1_coursework: [
-    'phase 1', 'vibe lms', 'lms', 'live sessions', 'coursework', 'sessions',
+    'phase 1', 'vibe lms', 'lms', 'live sessions', 'coursework', 'spurti points', 'vibe platform'
   ],
   phase1_completed: [
-    'team formation', 'yaksha', 'chat', 'team',
+    'team formation', 'yaksha', 'chat'
   ],
   phase2_project: [
-    'interview', 'certificate', 'project', 'placement', 'phase 2',
+    'work, mentorship', 'projects', 'rosetta', 'journal', 'interviews related'
   ],
   completed: ['certificate', 'alumni', 'completed'],
 };

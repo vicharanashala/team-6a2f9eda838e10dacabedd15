@@ -1,5 +1,5 @@
-const CACHE_NAME = 'prashnasarathi-pwa-cache-v12';
-const DATA_CACHE_NAME = 'prashnasarathi-data-cache-v12';
+const CACHE_NAME = 'prashnasarathi-pwa-cache-v13';
+const DATA_CACHE_NAME = 'prashnasarathi-data-cache-v13';
 
 // Helper to fetch with a timeout fallback
 function fetchWithTimeout(request, timeout = 1000) {
@@ -63,29 +63,29 @@ const STATIC_ASSETS = [
   "/_next/static/chunks/689-dae23ab7fcb269ae.js",
   "/_next/static/chunks/180-ae226dde440fde50.js",
   "/_next/static/chunks/750-1e66c7ea68ef83aa.js",
-  "/_next/static/chunks/app/layout-7a4335eb15982842.js",
+  "/_next/static/chunks/app/layout-185faba7850c9f58.js",
   "/_next/static/chunks/2bfc466f-47019a40064a549f.js",
   "/_next/static/chunks/147-f45f1800405fce62.js",
   "/_next/static/chunks/app/auth/page-45252ac1840cdf08.js",
-  "/_next/static/chunks/app/admin/page-a2df2210821d09d7.js",
-  "/_next/static/chunks/app/downloads/page-11ea97d7f03ab3f0.js",
   "/_next/static/chunks/17-415c15461d1f32b5.js",
-  "/_next/static/chunks/668-d9c59ae1200accad.js",
-  "/_next/static/chunks/app/faqs/[slug]/page-5b37c6572607b91f.js",
-  "/_next/static/chunks/app/guidelines/page-d57936132754e5f7.js",
-  "/_next/static/chunks/app/notifications/page-9ecf69722ff34ce9.js",
   "/_next/static/chunks/app/faqs/page-55b928c3c6c09e97.js",
+  "/_next/static/chunks/668-a1aad2d89a5c5ffd.js",
+  "/_next/static/chunks/app/faqs/[slug]/page-5b37c6572607b91f.js",
+  "/_next/static/chunks/app/downloads/page-11ea97d7f03ab3f0.js",
+  "/_next/static/chunks/app/admin/page-a2df2210821d09d7.js",
   "/_next/static/chunks/app/page-b864ce4a1da744d5.js",
+  "/_next/static/chunks/app/notifications/page-9ecf69722ff34ce9.js",
+  "/_next/static/chunks/app/questions/ask/page-5fe4257ef8559020.js",
   "/_next/static/chunks/app/questions/[id]/page-f4186f2529774641.js",
+  "/_next/static/chunks/app/guidelines/page-d57936132754e5f7.js",
   "/_next/static/chunks/413-a32d7ada44ebfdcc.js",
   "/_next/static/chunks/app/questions/page-799ad849fbb9827f.js",
   "/_next/static/chunks/app/saved/page-670361047c82b0f1.js",
-  "/_next/static/chunks/app/tags/page-68f59bc9f4ace876.js",
-  "/_next/static/chunks/app/search/page-11af031a54079628.js",
-  "/_next/static/chunks/app/questions/ask/page-5fe4257ef8559020.js",
   "/_next/static/chunks/app/tags/[name]/page-7dd4ba9af9fe402f.js",
-  "/_next/static/chunks/app/users/page-c5e98069b5e23167.js",
+  "/_next/static/chunks/app/search/page-79c0743a1f504000.js",
   "/_next/static/chunks/app/users/[username]/page-ef624d5838e9da87.js",
+  "/_next/static/chunks/app/tags/page-68f59bc9f4ace876.js",
+  "/_next/static/chunks/app/users/page-c5e98069b5e23167.js",
   "/_next/static/chunks/framework-f66176bb897dc684.js",
   "/_next/static/chunks/main-a895a058bfcf6af5.js",
   "/_next/static/chunks/pages/_app-72b849fbd24ac258.js",
@@ -139,7 +139,7 @@ self.addEventListener('fetch', (event) => {
   // Handle API Requests (FAQs, search, categories, user details, etc.)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetchWithTimeout(request, 1000)
+      fetchWithTimeout(request, 3000)
         .then((response) => {
           if (response.status === 200) {
             const responseClone = response.clone();
@@ -150,11 +150,8 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Offline fallback: try to match exactly, then try with ignoreSearch
-          return caches.match(request).then((res) => {
-            if (res) return res;
-            return caches.match(request, { ignoreSearch: true, cacheName: DATA_CACHE_NAME });
-          });
+          // Offline fallback: try to match exactly. DO NOT use ignoreSearch: true here to avoid serving stale, incorrect data for search queries or paginated lists.
+          return caches.match(request);
         })
     );
     return;

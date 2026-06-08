@@ -32,25 +32,30 @@ function SearchPageContent() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const q = searchParams.get('q');
+    const rawQ = searchParams.get('q') || '';
     const t = searchParams.get('type') || '';
-    if (q) {
-      setQuery(q);
-      setType(t);
-      performSearch(q, t);
+    const sanitized = rawQ.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "");
+    setQuery(sanitized);
+    setType(t);
+    if (sanitized) {
+      performSearch(sanitized, t);
+    } else {
+      setResults([]);
+      setTotal(0);
     }
     api.get('/search/suggestions').then(d => setSuggestions(d.suggestions || [])).catch(() => {});
   }, [searchParams]);
 
   const performSearch = async (q, t) => {
-    if (!q || !q.trim()) {
+    const sanitized = q.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "");
+    if (!sanitized) {
       setResults([]);
       setTotal(0);
       return;
     }
     setLoading(true);
     try {
-      const data = await api.get('/search', { q: q.trim(), type: t });
+      const data = await api.get('/search', { q: sanitized, type: t });
       setResults(data.results || []);
       setTotal(data.total || 0);
     } catch (err) {
@@ -64,8 +69,12 @@ function SearchPageContent() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query)}${type ? `&type=${type}` : ''}`);
+    const sanitized = query.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "");
+    setQuery(sanitized);
+    if (sanitized) {
+      router.push(`/search?q=${encodeURIComponent(sanitized)}${type ? `&type=${type}` : ''}`);
+    } else {
+      router.push('/search');
     }
   };
 
@@ -99,7 +108,15 @@ function SearchPageContent() {
         {['', 'questions', 'faqs', 'users'].map(t => (
           <button
             key={t}
-            onClick={() => { setType(t); if (query) router.push(`/search?q=${encodeURIComponent(query)}&type=${t}`); }}
+            onClick={() => {
+              setType(t);
+              const sanitized = query.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "");
+              if (sanitized) {
+                router.push(`/search?q=${encodeURIComponent(sanitized)}&type=${t}`);
+              } else {
+                router.push(t ? `/search?type=${t}` : '/search');
+              }
+            }}
             className={`px-3 py-1.5 text-sm rounded-lg font-medium capitalize transition-colors ${
               type === t
                 ? 'bg-[var(--color-primary)] text-white shadow-sm'
@@ -112,7 +129,7 @@ function SearchPageContent() {
       </div>
 
       {/* Suggestions */}
-      {!searchParams.get('q') && suggestions.length > 0 && (
+      {!query && suggestions.length > 0 && (
         <div className="card p-4 mb-6">
           <h3 className="text-sm font-semibold text-[var(--color-text)] mb-2">Trending searches</h3>
           <div className="flex flex-wrap gap-2">
@@ -129,7 +146,7 @@ function SearchPageContent() {
         </div>
       )}
 
-      {!searchParams.get('q') && (
+      {!query && (
         <div className="mt-8">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-lg">💡</span>
@@ -149,7 +166,7 @@ function SearchPageContent() {
             </div>
           ))}
         </div>
-      ) : results.length === 0 && searchParams.get('q') ? (
+      ) : results.length === 0 && query ? (
         <div className="space-y-8">
           <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]/60 rounded-2xl p-12 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-bg-tertiary)] flex items-center justify-center">
@@ -157,12 +174,12 @@ function SearchPageContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">No results found for "{searchParams.get('q')}"</h3>
+            <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">No results found for "{query}"</h3>
             <p className="text-sm text-[var(--color-text-secondary)] mb-8">It seems this question or topic is new to the platform.</p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
-                href={`/questions/ask?title=${encodeURIComponent(searchParams.get('q') || '')}`}
+                href={`/questions/ask?title=${encodeURIComponent(query)}`}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold bg-[var(--color-primary)] text-white rounded-xl hover:opacity-90 shadow-md shadow-[var(--color-primary)]/10 hover:shadow-lg transition-all"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

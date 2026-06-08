@@ -106,9 +106,12 @@ export default function RecommendedFAQs({ limit = 6, layout = 'grid', category =
     ? faqs
     : faqs.filter(faq => faq.category === category);
 
-  const recommendedOnly = (user && user.currentPhase)
-    ? filtered.filter(faq => faq.phaseMatch || (faq.matchingTagsCount && faq.matchingTagsCount > 0))
-    : filtered;
+  const recommendedOnly = user
+    ? (user.currentPhase
+        ? filtered.filter(faq => faq.phaseMatch || (faq.matchingTagsCount && faq.matchingTagsCount > 0))
+        : filtered.filter(faq => faq.isOfficial || (faq.matchingTagsCount && faq.matchingTagsCount > 0))
+      )
+    : filtered.filter(faq => faq.isOfficial);
 
   const slicedFaqs = recommendedOnly.slice(0, limit);
 

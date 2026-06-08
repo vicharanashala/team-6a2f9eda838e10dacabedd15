@@ -31,9 +31,11 @@ export default function Navbar({ onSearch }) {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (onSearch) onSearch(searchQuery);
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+    const sanitized = searchQuery.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "");
+    setSearchQuery(sanitized);
+    if (onSearch) onSearch(sanitized);
+    if (sanitized) {
+      router.push(`/search?q=${encodeURIComponent(sanitized)}`);
     }
   };
 
