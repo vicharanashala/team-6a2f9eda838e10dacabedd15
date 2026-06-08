@@ -53,7 +53,11 @@ function SearchPageContent() {
     setAiResponse(null);
     setAiLoading(true);
     try {
-      const data = await api.get('/search/ai', { q });
+      const data = await api.get('/search/ai', { 
+        q,
+        currentUrl: typeof window !== 'undefined' ? window.location.href : '',
+        pageTitle: typeof document !== 'undefined' ? document.title : ''
+      });
       setAiResponse(data);
     } catch (err) {
       console.error(err);
@@ -71,6 +75,8 @@ function SearchPageContent() {
       setAiResponse(null);
       return;
     }
+    setResults([]);
+    setTotal(0);
     setLoading(true);
     fetchAiAnswer(sanitized);
     try {
@@ -91,7 +97,9 @@ function SearchPageContent() {
     const sanitized = query.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "");
     setQuery(sanitized);
     if (sanitized) {
-      router.push(`/search?q=${encodeURIComponent(sanitized)}${type ? `&type=${type}` : ''}`);
+      // Submit new search without setting type, thus defaulting to 'All'
+      setType('');
+      router.push(`/search?q=${encodeURIComponent(sanitized)}`);
     } else {
       router.push('/search');
     }

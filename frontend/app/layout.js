@@ -10,6 +10,7 @@ import OnboardingModal from '@/components/OnboardingModal';
 import TermsAndConditionsModal from '@/components/TermsAndConditionsModal';
 import ReportIssueButton from '@/components/ReportIssueButton';
 import NetworkStatus from '@/components/NetworkStatus';
+import PrashnaSarathiWidget from '@/components/PrashnaSarathiWidget';
 import { Toaster } from 'react-hot-toast';
 import PwaProvider from '@/pwa/PwaProvider';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -66,6 +67,7 @@ export default function RootLayout({ children }) {
                     <OnboardingModal />
                     <ReportIssueButton />
                     <NetworkStatus />
+                    <PrashnaSarathiWidget />
                     <main className="flex-1">
                       <ErrorBoundary>
                         {children}

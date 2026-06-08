@@ -163,7 +163,7 @@ Return ONLY the following JSON object:
 
 exports.searchAI = async (req, res, next) => {
   try {
-    const { q } = req.query;
+    const { q, currentUrl, pageTitle } = req.query;
     const sanitizedQ = q ? q.trim().substring(0, 100).replace(/[\u0000-\u001F\u007F-\u009F]/g, "").replace(/[<>]/g, "") : '';
     
     if (!sanitizedQ) {
@@ -202,11 +202,16 @@ exports.searchAI = async (req, res, next) => {
       ? documents.map((doc, idx) => `Document [${idx + 1}]:\n${doc}`).join('\n\n')
       : "No documents found.";
 
+    let pageContextStr = "";
+    if (currentUrl || pageTitle) {
+      pageContextStr = `CURRENT SITE VIEWING CONTEXT:\n- Active URL: ${currentUrl || 'Unknown'}\n- Page Title: ${pageTitle || 'Unknown'}\n\n`;
+    }
+
     const userPrompt = `
 ${systemInstructions}
 
 ---
-APPROVED PLATFORM KNOWLEDGE SOURCES FOR QUERY "${sanitizedQ}":
+${pageContextStr}APPROVED PLATFORM KNOWLEDGE SOURCES FOR QUERY "${sanitizedQ}":
 ${knowledgeContext}
 ---
 
