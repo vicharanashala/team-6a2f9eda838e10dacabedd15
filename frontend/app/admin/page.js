@@ -235,7 +235,7 @@ export default function AdminPage() {
 
   const fetchEscalatedQs = async () => {
     try {
-      const data = await api.get('/questions/escalated', { params: { page: escalatedPage, limit: 15 } });
+      const data = await api.get('/questions/escalated', { page: escalatedPage, limit: 15 });
       setEscalatedQs(data.questions || []);
       setEscalatedPagination(data.pagination || { page: 1, pages: 1 });
     } catch (err) {
@@ -357,13 +357,11 @@ export default function AdminPage() {
   const fetchAnomalies = async () => {
     try {
       const data = await api.get('/admin/anomalies', {
-        params: {
-          severity: anomalySeverityFilter,
-          status: anomalyStatusFilter,
-          sortBy: anomalySortBy,
-          page: anomalyPage,
-          limit: 10
-        }
+        severity: anomalySeverityFilter,
+        status: anomalyStatusFilter,
+        sortBy: anomalySortBy,
+        page: anomalyPage,
+        limit: 10
       });
       setAnomalies(data.anomalies || []);
       setAnomalyStats(data.stats);
