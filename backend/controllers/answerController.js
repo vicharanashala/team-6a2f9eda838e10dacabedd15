@@ -276,7 +276,18 @@ exports.acceptAnswer = async (req, res, next) => {
     if (authorUser) {
       authorUser.reputation += 15;
       authorUser.trustScore += 5;
+      authorUser.spurtiPoints = (authorUser.spurtiPoints || 0) + 10;
       await authorUser.save();
+
+      const SpurtiPointLog = require('../models/SpurtiPointLog');
+      await SpurtiPointLog.create({
+        user: authorUser._id,
+        amount: 10,
+        action: 'reward',
+        reason: `Answer accepted on question: "${question.title}"`,
+        referenceType: 'Answer',
+        referenceId: answer._id
+      });
     }
 
     await Notification.create({
@@ -345,7 +356,18 @@ exports.unacceptAnswer = async (req, res, next) => {
     if (authorUser) {
       authorUser.reputation = Math.max(0, authorUser.reputation - 15);
       authorUser.trustScore = Math.max(0, authorUser.trustScore - 5);
+      authorUser.spurtiPoints = Math.max(0, (authorUser.spurtiPoints || 0) - 10);
       await authorUser.save();
+
+      const SpurtiPointLog = require('../models/SpurtiPointLog');
+      await SpurtiPointLog.create({
+        user: authorUser._id,
+        amount: -10,
+        action: 'deduction',
+        reason: `Answer unaccepted on question: "${question.title}"`,
+        referenceType: 'Answer',
+        referenceId: answer._id
+      });
     }
 
     await broadcastLeaderboard();

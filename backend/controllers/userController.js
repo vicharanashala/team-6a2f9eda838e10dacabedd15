@@ -341,3 +341,32 @@ exports.getModerators = async (req, res, next) => {
   }
 };
 
+exports.getSpurtiLogs = async (req, res, next) => {
+  try {
+    const { page, limit } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 15;
+    const skip = (pageNum - 1) * limitNum;
+
+    const SpurtiPointLog = require('../models/SpurtiPointLog');
+    const logs = await SpurtiPointLog.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await SpurtiPointLog.countDocuments({ user: req.user._id });
+
+    res.json({
+      logs,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        total
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

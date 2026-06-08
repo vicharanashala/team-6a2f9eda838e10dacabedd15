@@ -18,6 +18,7 @@
 - [x] Question escalation (no-response after 24h)
 - [x] Anonymous question asking
 - [x] Real-time updates via Socket.IO (new answers, me-too, solved counts)
+- [x] Spurti Points (Sp) rewards (+10 Sp) on accepted answers and deductions (-10 Sp) on unaccepted answers.
 
 ### FAQ System
 - [x] Browse FAQ pages by category
@@ -45,6 +46,7 @@
 - [x] Notification system (new answer, answer accepted, upvotes, etc.)
 - [x] Role system (user, moderator, admin)
 - [x] Ban/unban users (admin)
+- [x] User-facing Spurti Points (Sp) balance card and transaction history logs.
 
 ### Admin / Moderation
 - [x] Admin dashboard with stats
@@ -56,6 +58,8 @@
 - [x] Bulk email broadcasting to all active users
 - [x] Live application version management and socket-driven in-app updates
 - [x] Unified escalated student query queue, resolution workflow, real-time socket sync, and audit logging.
+- [x] Spurti Points (Sp) tracking dashboard and transaction logs for administrators.
+- [x] Strict rolling hourly limit (max 5) on student escalations and duplicate topic escalation checks.
 
 ### UI/UX
 - [x] Dark mode toggle (localStorage, system preference)
@@ -682,6 +686,15 @@ Medium-Impact Quality of Life
    * *Resolution*: Updated `backend/services/pushService.js` to dynamically generate a valid VAPID public/private key pair on startup if VAPID keys are missing from the environment variables. This prevents client subscription network errors and allows push notifications to function automatically.
 4. **Capacitor Browser Native Update Launcher**
    * *Resolution*: Refactored `AppUpdateChecker.js` to utilize the `@capacitor/browser` native plugin to launch update URLs (such as direct APK downloads). This fixes the issue where clicking "Update Now" failed to open download links.
+#### Recent Fixes & Feature Enhancements (June 8, 2026)
+
+1. **Spurti Points (Sp) Incentive System**
+   * *Root Cause*: Need for a points-based rewards program to incentivize verified contributions and drive community Q&A engagement.
+   * *Resolution*: Established an immutable transaction logging system via `SpurtiPointLog.js` schema and exposed endpoints (`GET /api/users/me/spurti-logs`, `GET /api/admin/spurti-logs`). Integrated auto-rewards in `answerController.js` (+10 Sp on accepted, -10 Sp on unaccepted). Re-weighted real-time leaderboard ranking to combine resolution count, solved upvotes, reputation, and Sp. Developed user-facing balance cards & logs in the saved dashboard and admin tracking panels.
+2. **Escalation Control & Conflict Resolution**
+   * *Root Cause*: Support queue instability due to rolling duplicate escalations and rapid escalation spam.
+   * *Resolution*: Enforced a strict rate limit of **5 escalations per hour** per user within `escalateQuestion`. Restricted escalation access solely to the user who raised the question. Blocked duplicate escalations on similar topics to stabilize moderator/admin workflows.
+
 5. **TypeError Protection in App Updates Admin Panel**
    * *Resolution*: Enforced explicit `String` coercion on version names and APK download URLs within `frontend/app/admin/page.js` before executing string `.trim()` methods, eliminating white-screen rendering crashes.
 6. **Cross-Platform Push Notification Engine (FCM & VAPID)**

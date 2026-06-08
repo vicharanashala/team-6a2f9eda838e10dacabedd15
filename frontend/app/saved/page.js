@@ -22,6 +22,8 @@ export default function SavedPage() {
   const [faqPagination, setFaqPagination] = useState(null);
   const [meTooPagination, setMeTooPagination] = useState(null);
   const [escalatedPagination, setEscalatedPagination] = useState(null);
+  const [spurtiLogs, setSpurtiLogs] = useState([]);
+  const [spurtiPagination, setSpurtiPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editNotes, setEditNotes] = useState('');
@@ -94,6 +96,19 @@ export default function SavedPage() {
     }
   }, []);
 
+  const fetchSpurtiLogs = useCallback(async (page = 1) => {
+    setLoading(true);
+    try {
+      const data = await api.get('/users/me/spurti-logs', { page });
+      setSpurtiLogs(data.logs || []);
+      setSpurtiPagination(data.pagination);
+    } catch (err) {
+      toast.error('Failed to load Spurti Points transaction logs');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -108,9 +123,11 @@ export default function SavedPage() {
       fetchMeTooQuestions();
     } else if (tab === 'escalations') {
       fetchEscalatedQuestions();
+    } else if (tab === 'spurti') {
+      fetchSpurtiLogs();
     }
     fetchTags();
-  }, [user, authLoading, router, tab, selectedTag, fetchSavedQuestions, fetchSavedFaqs, fetchTags, fetchMeTooQuestions, fetchEscalatedQuestions]);
+  }, [user, authLoading, router, tab, selectedTag, fetchSavedQuestions, fetchSavedFaqs, fetchTags, fetchMeTooQuestions, fetchEscalatedQuestions, fetchSpurtiLogs]);
 
   const handleUnsaveQuestion = async (questionId, e) => {
     e.preventDefault();
@@ -192,9 +209,9 @@ export default function SavedPage() {
     }
   };
 
-  const currentTags = tab === 'me-too' || tab === 'escalations' ? [] : (tab === 'questions' ? questionTags : faqTags);
-  const currentSaved = tab === 'me-too' ? meTooQuestions : tab === 'escalations' ? escalatedQuestions : (tab === 'questions' ? savedQuestions : savedFaqs);
-  const currentPagination = tab === 'me-too' ? meTooPagination : tab === 'escalations' ? escalatedPagination : (tab === 'questions' ? questionPagination : faqPagination);
+  const currentTags = tab === 'me-too' || tab === 'escalations' || tab === 'spurti' ? [] : (tab === 'questions' ? questionTags : faqTags);
+  const currentSaved = tab === 'me-too' ? meTooQuestions : tab === 'escalations' ? escalatedQuestions : tab === 'spurti' ? spurtiLogs : (tab === 'questions' ? savedQuestions : savedFaqs);
+  const currentPagination = tab === 'me-too' ? meTooPagination : tab === 'escalations' ? escalatedPagination : tab === 'spurti' ? spurtiPagination : (tab === 'questions' ? questionPagination : faqPagination);
 
   const renderEscalatedItem = (question) => {
     const link = `/questions/${question._id}`;
@@ -403,7 +420,7 @@ export default function SavedPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[var(--color-text)]">
-          {tab === 'me-too' ? 'Me Too List' : tab === 'escalations' ? 'My Escalations' : 'Saved Items'}
+          {tab === 'me-too' ? 'Me Too List' : tab === 'escalations' ? 'My Escalations' : tab === 'spurti' ? 'My Spurti Points (Sp)' : 'Saved Items'}
         </h1>
         <Link href="/questions" className="btn-secondary btn-sm">Browse Questions</Link>
       </div>
@@ -441,6 +458,14 @@ export default function SavedPage() {
           }`}
         >
           My Escalations
+        </button>
+        <button
+          onClick={() => { setTab('spurti'); setSelectedTag(''); }}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'spurti' ? 'border-primary-600 text-primary-600' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+          }`}
+        >
+          ⚡ Spurti Points
         </button>
       </div>
 
@@ -481,17 +506,19 @@ export default function SavedPage() {
       ) : currentSaved.length === 0 ? (
         <div className="card p-12 text-center">
           <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">
-            {tab === 'me-too' ? 'No Me Too questions' : tab === 'escalations' ? 'No escalated doubts' : `No saved ${tab}`}
+            {tab === 'me-too' ? 'No Me Too questions' : tab === 'escalations' ? 'No escalated doubts' : tab === 'spurti' ? 'No Spurti Points earned yet' : `No saved ${tab}`}
           </h3>
           <p className="text-[var(--color-text-secondary)]">
             {tab === 'me-too' 
               ? 'Mark questions as "Me Too" to show interest' 
               : tab === 'escalations' 
                 ? 'Your escalated questions will show up here.' 
-                : `Save ${tab} to reference them later`}
+                : tab === 'spurti'
+                  ? 'Contribute verified genuine answers to start earning Spurti Points!'
+                  : `Save ${tab} to reference them later`}
           </p>
-          <Link href={tab === 'questions' || tab === 'escalations' ? '/questions' : '/faqs'} className="btn-primary mt-4">
-            Browse {tab === 'escalations' ? 'questions' : tab}
+          <Link href={tab === 'questions' || tab === 'escalations' || tab === 'spurti' ? '/questions' : '/faqs'} className="btn-primary mt-4">
+            Browse {tab === 'escalations' || tab === 'spurti' ? 'questions' : tab}
           </Link>
         </div>
       ) : tab === 'escalations' ? (
@@ -501,6 +528,40 @@ export default function SavedPage() {
       ) : tab === 'me-too' ? (
         <div className="space-y-4">
           {meTooQuestions.map(q => renderMeTooItem(q))}
+        </div>
+      ) : tab === 'spurti' ? (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-2xl p-6 text-white shadow-lg flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-wider opacity-90">Spurti Points (Sp) Balance</p>
+              <h2 className="text-4xl font-extrabold mt-1">⚡ {user.spurtiPoints || 0} Sp</h2>
+            </div>
+            <div className="bg-white/10 p-3 rounded-full backdrop-blur-md">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="bg-[var(--color-bg-secondary)]/80 border border-[var(--color-border)]/50 rounded-2xl shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-[var(--color-border)]/40 bg-[var(--color-bg-tertiary)]/30 flex items-center justify-between">
+              <h3 className="font-bold text-[var(--color-text)]">Transaction History</h3>
+              <span className="text-xs text-[var(--color-text-muted)] font-mono">{spurtiLogs.length} transaction(s)</span>
+            </div>
+            <div className="divide-y divide-[var(--color-border)]/30">
+              {spurtiLogs.map(log => (
+                <div key={log._id} className="px-6 py-4 flex items-center justify-between hover:bg-[var(--color-bg-tertiary)]/10 transition-colors">
+                  <div className="flex-1 min-w-0 pr-4">
+                    <p className="text-sm font-semibold text-[var(--color-text)] truncate">{log.reason}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{formatDate(log.createdAt)}</p>
+                  </div>
+                  <div className={`text-base font-extrabold shrink-0 ${log.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {log.amount > 0 ? `+${log.amount}` : log.amount} Sp
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -516,6 +577,7 @@ export default function SavedPage() {
               onClick={() => {
                 if (tab === 'me-too') fetchMeTooQuestions(i + 1);
                 else if (tab === 'escalations') fetchEscalatedQuestions(i + 1);
+                else if (tab === 'spurti') fetchSpurtiLogs(i + 1);
                 else if (tab === 'questions') fetchSavedQuestions(selectedTag, i + 1);
                 else fetchSavedFaqs(selectedTag, i + 1);
               }}

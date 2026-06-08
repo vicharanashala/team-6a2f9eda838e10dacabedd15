@@ -42,5 +42,6 @@ router.get('/moderation/audit-logs', auth, moderatorOrAdmin, ctrl.getAuditLogs);
 router.post('/alert', auth, adminOnly, ctrl.sendAdminAlert);
 router.post('/emails/broadcast', auth, adminOnly, ctrl.sendEmailBroadcast);
 router.post('/app-version', auth, adminOnly, ctrl.updateAppVersion);
+router.get('/spurti-logs', auth, adminOnly, ctrl.getSpurtiLogs);
 
 module.exports = router;

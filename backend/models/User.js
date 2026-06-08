@@ -47,6 +47,7 @@ const userSchema = new mongoose.Schema({
     default: 'user',
   },
   reputation: { type: Number, default: 1 },
+  spurtiPoints: { type: Number, default: 0 },
   badges: [{ type: String }],
 
   // Stats
@@ -136,6 +137,7 @@ userSchema.methods.toPublicJSON = function () {
     location: this.location,
     role: this.role,
     reputation: this.reputation,
+    spurtiPoints: this.spurtiPoints || 0,
     badges: this.badges,
     questionCount: this.questionCount,
     answerCount: this.answerCount,

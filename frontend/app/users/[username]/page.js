@@ -134,6 +134,9 @@ export default function UserProfilePage() {
                 <span className="flex items-center gap-1">
                   <span className="font-bold text-[var(--color-primary)] text-sm">{user.reputation}</span> reputation
                 </span>
+                <span className="flex items-center gap-1">
+                  <span className="font-bold text-amber-500 text-sm">⚡ {user.spurtiPoints || 0}</span> Sp
+                </span>
                 {user.currentPhase && (
                   <span className="inline-flex items-center px-2 py-0.5 rounded bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold uppercase tracking-wider text-[9px]">
                     🚀 {user.currentPhase.replace('_', ' ')}
@@ -156,6 +159,10 @@ export default function UserProfilePage() {
                 <div className="text-center">
                   <p className="text-lg font-extrabold text-[var(--color-text)]">{user.answerCount || 0}</p>
                   <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-text-muted)]">Answers</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-extrabold text-amber-500">{user.spurtiPoints || 0}</p>
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--color-text-muted)]">Spurti Points</p>
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-extrabold text-[var(--color-text)]">{user.totalLikes || 0}</p>

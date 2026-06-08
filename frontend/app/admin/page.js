@@ -27,6 +27,10 @@ export default function AdminPage() {
   const [escalatedQs, setEscalatedQs] = useState([]);
   const [escalatedPage, setEscalatedPage] = useState(1);
   const [escalatedPagination, setEscalatedPagination] = useState({ page: 1, pages: 1 });
+  const [spurtiLogs, setSpurtiLogs] = useState([]);
+  const [spurtiPage, setSpurtiPage] = useState(1);
+  const [spurtiPagination, setSpurtiPagination] = useState({ page: 1, pages: 1 });
+  const [spurtiSearch, setSpurtiSearch] = useState('');
   const socket = useSocket();
 
   const [moderationQueue, setModerationQueue] = useState({ questions: [], answers: [] });
@@ -142,6 +146,16 @@ export default function AdminPage() {
     }
   };
 
+  const fetchSpurtiLogs = async (page = 1, search = '') => {
+    try {
+      const data = await api.get('/admin/spurti-logs', { page, search });
+      setSpurtiLogs(data.logs || []);
+      setSpurtiPagination({ page: data.pagination.page, pages: data.pagination.totalPages });
+    } catch (err) {
+      toast.error('Failed to load Spurti Point logs');
+    }
+  };
+
   useEffect(() => {
     if (authLoading) return;
     if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
@@ -176,6 +190,8 @@ export default function AdminPage() {
           await Promise.all([fetchEmails(), fetchBounces()]);
         } else if (tab === 'appUpdates' && user.role === 'admin') {
           await fetchCurrentAppVersion();
+        } else if (tab === 'spurti' && user.role === 'admin') {
+          await fetchSpurtiLogs(spurtiPage, spurtiSearch);
         }
       } catch (err) {
         console.error("Error loading admin data:", err);
@@ -525,7 +541,7 @@ export default function AdminPage() {
     tabs.push('moderationQueue', 'reportedPosts', 'suspiciousActivities', 'auditLogs', 'escalations');
   }
   if (user?.role === 'admin') {
-    tabs.push('siteReports', 'emails', 'broadcast', 'broadcastEmail', 'appUpdates');
+    tabs.push('siteReports', 'emails', 'broadcast', 'broadcastEmail', 'appUpdates', 'spurti');
   }
   if (user?.role !== 'admin') {
     const uIdx = tabs.indexOf('users');
@@ -567,6 +583,7 @@ export default function AdminPage() {
              t === 'broadcastEmail' ? 'Broadcast Email' :
              t === 'appUpdates' ? 'App Updates' :
              t === 'escalations' ? 'Escalations' :
+             t === 'spurti' ? 'Spurti Points Tracker' :
              t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
@@ -1838,6 +1855,107 @@ export default function AdminPage() {
               {updatingApp ? 'Publishing Updates...' : 'Publish Update & Broadcast Now'}
             </button>
           </form>
+        </div>
+      ) : tab === 'spurti' && user.role === 'admin' ? (
+        <div className="card p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-[var(--color-text)]">Spurti Points Tracker</h2>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                Monitor all Spurti Point (Sp) transactions and incentive logs across the entire platform.
+              </p>
+            </div>
+            
+            {/* Search Input */}
+            <div className="flex gap-2 shrink-0">
+              <input
+                type="text"
+                value={spurtiSearch}
+                onChange={(e) => {
+                  setSpurtiSearch(e.target.value);
+                  fetchSpurtiLogs(1, e.target.value);
+                }}
+                placeholder="Search user..."
+                className="input py-2 text-sm max-w-xs"
+              />
+              <button
+                onClick={() => fetchSpurtiLogs(1, spurtiSearch)}
+                className="btn-primary btn-sm py-2"
+              >
+                Search
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto border border-[var(--color-border)]/50 rounded-xl shadow-sm">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[var(--color-bg-tertiary)]/50 border-b border-[var(--color-border)]">
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">User</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Email</th>
+                  <th className="text-center px-4 py-3 font-medium text-[var(--color-text)]">Transaction</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Reason</th>
+                  <th className="text-center px-4 py-3 font-medium text-[var(--color-text)]">Sp Balance</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]/30 text-[var(--color-text-secondary)]">
+                {spurtiLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-8 text-xs text-[var(--color-text-muted)]">
+                      No Spurti Point transactions logged yet.
+                    </td>
+                  </tr>
+                ) : (
+                  spurtiLogs.map((log) => (
+                    <tr key={log._id} className="hover:bg-[var(--color-bg-tertiary)]/10">
+                      <td className="px-4 py-3">
+                        <span className="font-semibold text-[var(--color-text)]">
+                          {log.user?.displayName || log.user?.username || 'Unknown User'}
+                        </span>
+                        <span className="text-xs text-[var(--color-text-muted)] block">
+                          @{log.user?.username || 'unknown'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs">{log.user?.email || 'N/A'}</td>
+                      <td className={`px-4 py-3 text-center font-bold ${log.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {log.amount > 0 ? `+${log.amount}` : log.amount} Sp
+                      </td>
+                      <td className="px-4 py-3 text-xs italic">
+                        {log.reason}
+                      </td>
+                      <td className="px-4 py-3 text-center font-semibold text-[var(--color-text)]">
+                        {log.user?.spurtiPoints || 0} Sp
+                      </td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        {formatDate(log.createdAt)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {spurtiPagination && spurtiPagination.pages > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              {Array.from({ length: spurtiPagination.pages }, (_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => {
+                    setSpurtiPage(i + 1);
+                    fetchSpurtiLogs(i + 1, spurtiSearch);
+                  }}
+                  className={`px-3 py-1 text-xs rounded ${
+                    spurtiPagination.page === i + 1 ? 'bg-primary-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
     </div>

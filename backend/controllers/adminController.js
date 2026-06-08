@@ -1168,5 +1168,48 @@ exports.updateAppVersion = async (req, res, next) => {
   }
 };
 
+exports.getSpurtiLogs = async (req, res, next) => {
+  try {
+    const { page, limit, search } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 15;
+    const skip = (pageNum - 1) * limitNum;
+
+    let query = {};
+    if (search) {
+      const User = require('../models/User');
+      const users = await User.find({
+        $or: [
+          { username: { $regex: search, $options: 'i' } },
+          { displayName: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      const userIds = users.map(u => u._id);
+      query.user = { $in: userIds };
+    }
+
+    const SpurtiPointLog = require('../models/SpurtiPointLog');
+    const logs = await SpurtiPointLog.find(query)
+      .populate('user', 'username displayName avatar email spurtiPoints')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await SpurtiPointLog.countDocuments(query);
+
+    res.json({
+      logs,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        total
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 

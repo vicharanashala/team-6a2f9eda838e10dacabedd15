@@ -12,46 +12,61 @@ const getLeaderboardData = async () => {
         totalSolvedVotes: { $sum: '$solvedMyDoubtCount' } 
       } 
     },
-    { $sort: { resolvedCount: -1, totalSolvedVotes: -1 } },
-    { $limit: 20 },
     { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
     { $unwind: '$user' },
     { $match: { 'user.isBanned': { $ne: true } } },
+    { $addFields: {
+        score: {
+          $add: [
+            { $multiply: ['$resolvedCount', 15] },
+            { $multiply: ['$totalSolvedVotes', 5] },
+            { $ifNull: ['$user.spurtiPoints', 0] },
+            { $ifNull: ['$user.reputation', 0] }
+          ]
+        }
+      }
+    },
+    { $sort: { score: -1, resolvedCount: -1 } },
+    { $limit: 20 },
     { $project: {
         _id: 0,
         resolvedCount: 1,
         totalSolvedVotes: 1,
+        score: 1,
         'user.username': 1,
         'user.displayName': 1,
         'user.avatar': 1,
         'user.reputation': 1,
+        'user.spurtiPoints': 1,
     }}
   ]);
 
-  // If we have fewer than 20 users with resolved counts, fill up the remaining spots with top reputation users
+  // If we have fewer than 20 users with resolved counts, fill up the remaining spots with top reputation/spurtiPoints users
   if (leaderboard.length < 20) {
-    const remainingCount = 20 - leaderboard.length;
     const excludedUsernames = leaderboard
       .filter(row => row.user && row.user.username)
       .map(row => row.user.username);
 
+    const remainingCount = 20 - leaderboard.length;
     const topUsers = await User.find({ 
       isBanned: { $ne: true },
       username: { $nin: excludedUsernames }
     })
-      .sort({ reputation: -1 })
+      .sort({ spurtiPoints: -1, reputation: -1 })
       .limit(remainingCount)
-      .select('username displayName avatar reputation')
+      .select('username displayName avatar reputation spurtiPoints')
       .lean();
 
     const fallbackRows = topUsers.map(u => ({
       resolvedCount: 0,
       totalSolvedVotes: 0,
+      score: (u.spurtiPoints || 0) + (u.reputation || 0),
       user: {
         username: u.username,
         displayName: u.displayName,
         avatar: u.avatar,
         reputation: u.reputation || 0,
+        spurtiPoints: u.spurtiPoints || 0,
       }
     }));
 

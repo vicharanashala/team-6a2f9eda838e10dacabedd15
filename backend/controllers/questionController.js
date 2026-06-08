@@ -724,6 +724,17 @@ exports.escalateQuestion = async (req, res, next) => {
       throw new AppError('Question has answers from other users, cannot escalate', 400);
     }
 
+    // Check if the user has escalated more than 5 questions in the last hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const hourlyEscalationCount = await Question.countDocuments({
+      author: req.user._id,
+      isEscalated: true,
+      escalatedAt: { $gte: oneHourAgo }
+    });
+    if (hourlyEscalationCount >= 5) {
+      throw new AppError('You have reached the maximum limit of 5 escalations per hour', 429);
+    }
+
     // Check if another question on the same topic/tags is already escalated and unresolved
     const words = question.title.toLowerCase().split(' ').filter(w => w.length > 3 && !['what', 'how', 'why', 'with', 'from', 'this', 'that', 'here', 'there'].includes(w));
     if (words.length > 0) {
