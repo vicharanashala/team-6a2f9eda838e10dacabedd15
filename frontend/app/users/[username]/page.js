@@ -18,6 +18,7 @@ export default function UserProfilePage() {
   const [answers, setAnswers] = useState([]);
   const [savedQuestions, setSavedQuestions] = useState([]);
   const [savedFaqs, setSavedFaqs] = useState([]);
+  const [escalatedQuestions, setEscalatedQuestions] = useState([]);
   const [tab, setTab] = useState('questions');
   const [savedSubTab, setSavedSubTab] = useState('questions');
   const [loading, setLoading] = useState(true);
@@ -48,6 +49,7 @@ export default function UserProfilePage() {
     } else if (tab === 'saved' && isOwnProfile) {
       api.get('/users/me/saved').then(d => setSavedQuestions(d?.saved || [])).catch(() => {});
       api.get('/users/me/saved/faqs').then(d => setSavedFaqs(d?.saved || [])).catch(() => {});
+      api.get('/questions/escalated').then(d => setEscalatedQuestions(d?.questions || [])).catch(() => {});
     }
   }, [username, tab, isOwnProfile]);
 
@@ -325,6 +327,16 @@ export default function UserProfilePage() {
               >
                 FAQs
               </button>
+              <button
+                onClick={() => setSavedSubTab('escalations')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  savedSubTab === 'escalations' 
+                    ? 'bg-[var(--color-primary)] text-white' 
+                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+                }`}
+              >
+                Escalations
+              </button>
             </div>
           )}
           {savedSubTab === 'questions' ? (
@@ -337,7 +349,7 @@ export default function UserProfilePage() {
                 ))}
               </div>
             )
-          ) : (
+          ) : savedSubTab === 'faqs' ? (
             savedFaqs.length === 0 ? (
               <div className="bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/40 rounded-2xl p-12 text-center text-[var(--color-text-secondary)]">No saved FAQs yet</div>
             ) : (
@@ -345,6 +357,34 @@ export default function UserProfilePage() {
                 {savedFaqs.filter(item => item && item.faq).map(item => (
                   <FAQCard key={item._id} faq={item.faq} />
                 ))}
+              </div>
+            )
+          ) : (
+            escalatedQuestions.length === 0 ? (
+              <div className="bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/40 rounded-2xl p-12 text-center text-[var(--color-text-secondary)]">No escalated doubts yet</div>
+            ) : (
+              <div className="space-y-4">
+                {escalatedQuestions.map(question => {
+                  const isResolved = question.resolutionStatus === 'resolved';
+                  return (
+                    <Link key={question._id} href={`/questions/${question._id}`} className="bg-[var(--color-bg-secondary)]/80 border border-[var(--color-border)]/60 rounded-2xl p-5 block transition-all duration-300 hover:shadow-lg hover:border-[var(--color-primary)]/30 hover:-translate-y-0.5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                          isResolved ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                        }`}>
+                          {isResolved ? '✓ Resolved' : '⚠ Escalated'}
+                        </span>
+                        <span className="text-xs text-[var(--color-text-muted)]">Escalated {formatDate(question.escalatedAt || question.createdAt, true)}</span>
+                      </div>
+                      <h3 className="text-base font-semibold text-[var(--color-text)] mb-1">{question.title}</h3>
+                      {question.escalationReason && (
+                        <p className="text-xs text-[var(--color-text-secondary)] italic mt-2 bg-[var(--color-bg)] p-2 rounded-lg border border-[var(--color-border)]/40">
+                          Reason: {question.escalationReason}
+                        </p>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             )
           )}

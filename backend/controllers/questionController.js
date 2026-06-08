@@ -699,10 +699,8 @@ exports.escalateQuestion = async (req, res, next) => {
     if (!question) throw new AppError('Question not found', 404);
 
     const isAuthor = question.author.toString() === req.user._id.toString();
-    const isModOrAdmin = req.user.role === 'admin' || req.user.role === 'moderator';
-
-    if (!isAuthor && !isModOrAdmin) {
-      throw new AppError('Only the author or moderators can escalate', 403);
+    if (!isAuthor) {
+      throw new AppError('Only the author of the question can escalate it', 403);
     }
     if (question.isEscalated) {
       throw new AppError('Question already escalated', 400);
@@ -724,6 +722,27 @@ exports.escalateQuestion = async (req, res, next) => {
     });
     if (otherAnswersCount > 0) {
       throw new AppError('Question has answers from other users, cannot escalate', 400);
+    }
+
+    // Check if another question on the same topic/tags is already escalated and unresolved
+    const words = question.title.toLowerCase().split(' ').filter(w => w.length > 3 && !['what', 'how', 'why', 'with', 'from', 'this', 'that', 'here', 'there'].includes(w));
+    if (words.length > 0) {
+      const titleRegex = new RegExp(words.join('|'), 'i');
+      
+      const topicQuery = {
+        _id: { $ne: question._id },
+        resolutionStatus: 'escalated',
+        title: { $regex: titleRegex }
+      };
+
+      if (question.tagNames && question.tagNames.length > 0) {
+        topicQuery.tagNames = { $in: question.tagNames };
+      }
+
+      const duplicateEscalation = await Question.findOne(topicQuery);
+      if (duplicateEscalation) {
+        throw new AppError(`An escalation is already open for a query on the same topic: "${duplicateEscalation.title}"`, 400);
+      }
     }
 
     question.resolutionStatus = 'escalated';
@@ -833,21 +852,36 @@ exports.resolveEscalation = async (req, res, next) => {
 
 exports.getEscalatedQuestions = async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
-      throw new AppError('Not authorized', 403);
-    }
-
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, status } = req.query;
     const skip = (page - 1) * limit;
 
+    const isModOrAdmin = req.user.role === 'admin' || req.user.role === 'moderator';
+    const filter = {};
+
+    if (!isModOrAdmin) {
+      // Normal users can only see their own escalated questions (both active and resolved)
+      filter.author = req.user._id;
+      filter.isEscalated = true;
+    } else {
+      // Admins/mods see active escalated queries by default, or filtered by status
+      if (status === 'resolved') {
+        filter.resolutionStatus = 'resolved';
+        filter.isEscalated = true;
+      } else if (status === 'all') {
+        filter.isEscalated = true;
+      } else {
+        filter.resolutionStatus = 'escalated';
+      }
+    }
+
     const [questions, total] = await Promise.all([
-      Question.find({ resolutionStatus: 'escalated' })
+      Question.find(filter)
         .sort({ escalatedAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('title escalationReason escalatedAt answerCount tagNames')
+        .select('title escalationReason escalatedAt resolutionStatus isEscalated answerCount tagNames')
         .populate('author', 'username displayName'),
-      Question.countDocuments({ resolutionStatus: 'escalated' }),
+      Question.countDocuments(filter),
     ]);
 
     res.json({

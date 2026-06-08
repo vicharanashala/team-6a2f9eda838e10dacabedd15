@@ -14,12 +14,14 @@ export default function SavedPage() {
   const [savedQuestions, setSavedQuestions] = useState([]);
   const [savedFaqs, setSavedFaqs] = useState([]);
   const [meTooQuestions, setMeTooQuestions] = useState([]);
+  const [escalatedQuestions, setEscalatedQuestions] = useState([]);
   const [questionTags, setQuestionTags] = useState([]);
   const [faqTags, setFaqTags] = useState([]);
   const [selectedTag, setSelectedTag] = useState('');
   const [questionPagination, setQuestionPagination] = useState(null);
   const [faqPagination, setFaqPagination] = useState(null);
   const [meTooPagination, setMeTooPagination] = useState(null);
+  const [escalatedPagination, setEscalatedPagination] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
   const [editNotes, setEditNotes] = useState('');
@@ -79,6 +81,19 @@ export default function SavedPage() {
     }
   }, []);
 
+  const fetchEscalatedQuestions = useCallback(async (page = 1) => {
+    setLoading(true);
+    try {
+      const data = await api.get('/questions/escalated', { page });
+      setEscalatedQuestions(data.questions || []);
+      setEscalatedPagination(data.pagination);
+    } catch (err) {
+      toast.error('Failed to load escalated questions');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -91,9 +106,11 @@ export default function SavedPage() {
       fetchSavedFaqs(selectedTag);
     } else if (tab === 'me-too') {
       fetchMeTooQuestions();
+    } else if (tab === 'escalations') {
+      fetchEscalatedQuestions();
     }
     fetchTags();
-  }, [user, authLoading, router, tab, selectedTag, fetchSavedQuestions, fetchSavedFaqs, fetchTags, fetchMeTooQuestions]);
+  }, [user, authLoading, router, tab, selectedTag, fetchSavedQuestions, fetchSavedFaqs, fetchTags, fetchMeTooQuestions, fetchEscalatedQuestions]);
 
   const handleUnsaveQuestion = async (questionId, e) => {
     e.preventDefault();
@@ -175,9 +192,56 @@ export default function SavedPage() {
     }
   };
 
-  const currentTags = tab === 'me-too' ? [] : (tab === 'questions' ? questionTags : faqTags);
-  const currentSaved = tab === 'me-too' ? meTooQuestions : (tab === 'questions' ? savedQuestions : savedFaqs);
-  const currentPagination = tab === 'me-too' ? meTooPagination : (tab === 'questions' ? questionPagination : faqPagination);
+  const currentTags = tab === 'me-too' || tab === 'escalations' ? [] : (tab === 'questions' ? questionTags : faqTags);
+  const currentSaved = tab === 'me-too' ? meTooQuestions : tab === 'escalations' ? escalatedQuestions : (tab === 'questions' ? savedQuestions : savedFaqs);
+  const currentPagination = tab === 'me-too' ? meTooPagination : tab === 'escalations' ? escalatedPagination : (tab === 'questions' ? questionPagination : faqPagination);
+
+  const renderEscalatedItem = (question) => {
+    const link = `/questions/${question._id}`;
+    const isResolved = question.resolutionStatus === 'resolved';
+
+    return (
+      <div key={question._id} className="card-hover p-4 sm:p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex-1 min-w-0">
+            <Link href={link} className="block">
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                  isResolved 
+                    ? 'bg-green-500/10 text-green-600 dark:text-green-400' 
+                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                }`}>
+                  {isResolved ? 'Resolved' : 'Escalated'}
+                </span>
+                <span className="text-xs text-[var(--color-text-muted)]">
+                  Escalated {formatDate(question.escalatedAt || question.createdAt)}
+                </span>
+              </div>
+              <h3 className="text-base font-semibold text-[var(--color-text)] hover:text-primary-600 mb-1">
+                {question.title}
+              </h3>
+              {question.escalationReason && (
+                <div className="text-xs text-[var(--color-text-secondary)] italic mt-2 bg-[var(--color-bg-tertiary)]/60 p-2.5 rounded-lg border border-[var(--color-border)]/40">
+                  <span className="font-semibold text-[10px] uppercase tracking-wider block text-[var(--color-text-muted)] mb-1">Reason for Escalation:</span>
+                  {question.escalationReason}
+                </div>
+              )}
+              <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)] mt-2">
+                <span>{question.answerCount || 0} answers</span>
+                {question.tagNames?.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {question.tagNames.map(tag => (
+                      <span key={tag} className="badge-gray text-[9px]">{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderSavedItem = (item, isFAQ) => {
     const target = isFAQ ? item.faq : item.question;
@@ -339,7 +403,7 @@ export default function SavedPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[var(--color-text)]">
-          {tab === 'me-too' ? 'Me Too List' : 'Saved Items'}
+          {tab === 'me-too' ? 'Me Too List' : tab === 'escalations' ? 'My Escalations' : 'Saved Items'}
         </h1>
         <Link href="/questions" className="btn-secondary btn-sm">Browse Questions</Link>
       </div>
@@ -369,6 +433,14 @@ export default function SavedPage() {
           }`}
         >
           Me Too
+        </button>
+        <button
+          onClick={() => { setTab('escalations'); setSelectedTag(''); }}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            tab === 'escalations' ? 'border-primary-600 text-primary-600' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+          }`}
+        >
+          My Escalations
         </button>
       </div>
 
@@ -408,11 +480,23 @@ export default function SavedPage() {
         </div>
       ) : currentSaved.length === 0 ? (
         <div className="card p-12 text-center">
-          <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">No {tab === 'me-too' ? 'Me Too questions' : `saved ${tab}`}</h3>
+          <h3 className="text-lg font-medium text-[var(--color-text)] mb-2">
+            {tab === 'me-too' ? 'No Me Too questions' : tab === 'escalations' ? 'No escalated doubts' : `No saved ${tab}`}
+          </h3>
           <p className="text-[var(--color-text-secondary)]">
-            {tab === 'me-too' ? 'Mark questions as "Me Too" to show interest' : `Save ${tab} to reference them later`}
+            {tab === 'me-too' 
+              ? 'Mark questions as "Me Too" to show interest' 
+              : tab === 'escalations' 
+                ? 'Your escalated questions will show up here.' 
+                : `Save ${tab} to reference them later`}
           </p>
-          <Link href={tab === 'questions' ? '/questions' : '/faqs'} className="btn-primary mt-4">Browse {tab}</Link>
+          <Link href={tab === 'questions' || tab === 'escalations' ? '/questions' : '/faqs'} className="btn-primary mt-4">
+            Browse {tab === 'escalations' ? 'questions' : tab}
+          </Link>
+        </div>
+      ) : tab === 'escalations' ? (
+        <div className="space-y-4">
+          {escalatedQuestions.map(q => renderEscalatedItem(q))}
         </div>
       ) : tab === 'me-too' ? (
         <div className="space-y-4">
@@ -431,6 +515,7 @@ export default function SavedPage() {
               key={i + 1}
               onClick={() => {
                 if (tab === 'me-too') fetchMeTooQuestions(i + 1);
+                else if (tab === 'escalations') fetchEscalatedQuestions(i + 1);
                 else if (tab === 'questions') fetchSavedQuestions(selectedTag, i + 1);
                 else fetchSavedFaqs(selectedTag, i + 1);
               }}

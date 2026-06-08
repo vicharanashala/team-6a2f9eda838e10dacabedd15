@@ -295,14 +295,17 @@ export default function QuestionDetailPage() {
 
   const canEscalate = () => {
     if (!user) return false;
-    const isModOrAdmin = user.role === 'admin' || user.role === 'moderator';
+    // Escalate must show to users who raised the question only
+    const isOwner = question.author && (question.author._id === user._id || question.author === user._id);
+    if (!isOwner) return false;
     if (question.isEscalated || question.resolutionStatus === 'escalated') return false;
-    if (isModOrAdmin) return true;
-    if (question.isOwner) {
-      const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
-      return new Date(question.createdAt).getTime() < twentyFourHoursAgo;
-    }
-    return false;
+
+    // Check if there are answers from other users
+    const hasOtherAnswers = answers.some(a => a.author && a.author._id !== user._id && !a.isDeleted);
+    if (hasOtherAnswers) return false;
+
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+    return new Date(question.createdAt).getTime() < twentyFourHoursAgo;
   };
 
   const handleDelete = async () => {
@@ -507,6 +510,39 @@ export default function QuestionDetailPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span>Verified on {formatDate(question.lastVerifiedAt)}</span>
+        </div>
+      )}
+
+      {/* Escalation Status Banner */}
+      {question.isEscalated && (
+        <div className={`mb-4 p-4 border rounded-lg shadow-sm ${
+          question.resolutionStatus === 'escalated'
+            ? 'bg-amber-50/90 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-400'
+            : 'bg-emerald-50/90 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-green-400'
+        }`}>
+          <div className="flex items-start gap-3">
+            {question.resolutionStatus === 'escalated' ? (
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">
+                {question.resolutionStatus === 'escalated' 
+                  ? 'This doubt has been escalated' 
+                  : 'Escalation resolved'}
+              </p>
+              <p className="text-xs mt-1 leading-relaxed opacity-90">
+                {question.resolutionStatus === 'escalated'
+                  ? `Your query is escalated to the moderator queue. Escalation Reason: "${question.escalationReason || 'No response received within 24 hours'}"`
+                  : 'A moderator has reviewed and addressed this escalation.'}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

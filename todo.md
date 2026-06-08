@@ -647,6 +647,17 @@ Medium-Impact Quality of Life
 6. **OS Troubleshooting & Diagnostic Center**
    * *Resolution*: Added an OS troubleshooting guide and an interactive "Test OS Notification" button to the `/notifications` page. This lets the user trigger a notification locally to verify browser and system configurations (e.g. Focus Assist/Do Not Disturb or notification permissions in Windows Settings).
 
+#### Latest Fixes (June 8, 2026)
+
+1. **Escalation Workflow and Owner Controls**
+   * *Resolution*: Updated the frontend and backend authorization logic. Restressed escalation controls so that only the question's author can trigger an escalation request. Added a check to hide or block escalation if another user has already answered the query.
+2. **Duplicate Escalation Prevention**
+   * *Resolution*: Enhanced the backend `escalateQuestion` controller to automatically search for any existing, unresolved escalations on the same topic/tags before permitting a new one, preventing duplicate escalations on overlapping queries.
+3. **Student/User-Facing Escalation Dashboard**
+   * *Resolution*: Introduced a new "My Escalations" tab in both `/saved` dashboard and the profile "Saved" subtabs, allowing students to view and track their escalated queries (both active/escalated and resolved states) securely.
+4. **Escalation Status Page Indicator**
+   * *Resolution*: Added a clear, color-coded escalation banner component directly on the question details page, indicating if the question is currently escalated or if the escalation was resolved by moderation.
+
 #### Latest Fixes (June 6, 2026)
 
 1. **Default-Enabled Push Notifications for All Users**
