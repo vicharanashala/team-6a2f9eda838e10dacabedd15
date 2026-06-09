@@ -11,6 +11,7 @@ const Notification = require('../models/Notification');
 const { flagContent, clearFlag } = require('../services/moderationService');
 const FAQ = require('../models/FAQ');
 const User = require('../models/User');
+const { triggerAutoAnswer } = require('../services/autoAnswerService');
 
 exports.createQuestion = async (req, res, next) => {
   try {
@@ -100,7 +101,9 @@ exports.createQuestion = async (req, res, next) => {
       triggeredRule: isAiFlaggedNoise ? 'AI Noise Filter' : (req.body.triggeredRule || undefined),
       phase: phase || mapUserPhase(req.user.currentPhase) || 'onboarding',
       anomalySeverity: isAiFlaggedNoise ? 'high' : 'none',
-      anomalyScore: isAiFlaggedNoise ? 0.95 : 0
+      anomalyScore: isAiFlaggedNoise ? 0.95 : 0,
+      attachments: req.body.attachments || [],
+      links: req.body.links || [],
     };
 
     if (existingQuestion) {
@@ -148,6 +151,13 @@ exports.createQuestion = async (req, res, next) => {
       } catch (emailErr) {
         console.error('Email notification error:', emailErr.message);
       }
+
+      // Trigger AI auto-answer (fire-and-forget — never blocks the user response)
+      setImmediate(() => {
+        triggerAutoAnswer(populated).catch(err =>
+          console.error('[AutoAnswer] Background trigger error:', err.message)
+        );
+      });
     } else if (visibility === 'pending') {
       try {
         const { emitToAdmin } = require('../socket');
@@ -157,8 +167,20 @@ exports.createQuestion = async (req, res, next) => {
       }
     }
 
+    const isModOrAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'moderator');
+    const responseObj = populated.toObject();
+    if (responseObj.isAnonymous && !isModOrAdmin) {
+      responseObj.author = {
+        _id: 'anonymous',
+        username: 'Anonymous Student',
+        displayName: 'Anonymous Student',
+        avatar: null,
+        reputation: 0,
+      };
+    }
+
     res.status(201).json({
-      question: populated,
+      question: responseObj,
       alreadyAsked: existingQuestion ? {
         isAlreadyAsked: true,
         scopeMatch: existingQuestion.scopeMatch,
@@ -296,7 +318,7 @@ exports.getQuestions = async (req, res, next) => {
     const withOwner = questions.map(q => {
       const authorId = q.author && q.author._id ? q.author._id.toString() : null;
       const isAuthor = currentUserId && authorId && currentUserId === authorId;
-      const anonymized = q.isAnonymous && !isAuthor && !isModOrAdmin ? {
+      const anonymized = q.isAnonymous ? {
         ...q.toObject(),
         author: {
           _id: 'anonymous',
@@ -360,7 +382,7 @@ exports.getQuestion = async (req, res, next) => {
       }
     }
 
-    if (question.isAnonymous && !isModOrAdmin && !isAuthor) {
+    if (question.isAnonymous) {
       question.author = {
         _id: 'anonymous',
         username: 'Anonymous Student',
@@ -434,7 +456,18 @@ exports.updateQuestion = async (req, res, next) => {
       .populate('author', 'username displayName avatar reputation')
       .populate('tags', 'name color');
     await indexQuestion(updated);
-    res.json({ question: updated });
+
+    const responseObj = updated.toObject();
+    if (responseObj.isAnonymous) {
+      responseObj.author = {
+        _id: 'anonymous',
+        username: 'Anonymous Student',
+        displayName: 'Anonymous Student',
+        avatar: null,
+        reputation: 0,
+      };
+    }
+    res.json({ question: responseObj });
   } catch (err) {
     next(err);
   }
@@ -461,7 +494,29 @@ exports.deleteQuestion = async (req, res, next) => {
       reason: `Deleted question: "${question.title}"`
     });
 
+    const Answer = require('../models/Answer');
+    const User = require('../models/User');
+    // Gather authors of non-deleted answers before cascading deletion
+    const cascadedAnswers = await Answer.find({ question: question._id, isDeleted: false }).select('author');
+    await Answer.updateMany({ question: question._id }, { isDeleted: true });
+    // Decrement each author's answerCount
+    for (const a of cascadedAnswers) {
+      if (a.author) {
+        await User.findByIdAndUpdate(a.author, { $inc: { answerCount: -1 } });
+      }
+    }
+
     await deleteQuestionIndex(question._id);
+
+    try {
+      const { emitToAdmin } = require('../socket');
+      emitToAdmin('moderation:updated', { action: 'delete_question', questionId: question._id });
+      const { broadcastLeaderboard } = require('../services/leaderboardService');
+      await broadcastLeaderboard();
+    } catch (err) {
+      console.error('Socket notification error in deleteQuestion:', err.message);
+    }
+
     res.json({ message: 'Question deleted' });
   } catch (err) {
     next(err);
@@ -514,9 +569,8 @@ exports.getSimilarQuestions = async (req, res, next) => {
       .select('title upvotes answerCount viewCount tagNames isAnonymous')
       .populate('author', 'username displayName');
 
-    const isModOrAdmin = req.user && (req.user.role === 'admin' || req.user.role === 'moderator');
     const anonymized = similar.map(q => {
-      if (q.isAnonymous && !isModOrAdmin) {
+      if (q.isAnonymous) {
         return {
           ...q.toObject(),
           author: { _id: 'anonymous', username: 'Anonymous Student', displayName: 'Anonymous Student' },
@@ -699,10 +753,8 @@ exports.escalateQuestion = async (req, res, next) => {
     if (!question) throw new AppError('Question not found', 404);
 
     const isAuthor = question.author.toString() === req.user._id.toString();
-    const isModOrAdmin = req.user.role === 'admin' || req.user.role === 'moderator';
-
-    if (!isAuthor && !isModOrAdmin) {
-      throw new AppError('Only the author or moderators can escalate', 403);
+    if (!isAuthor) {
+      throw new AppError('Only the author of the question can escalate it', 403);
     }
     if (question.isEscalated) {
       throw new AppError('Question already escalated', 400);
@@ -711,10 +763,6 @@ exports.escalateQuestion = async (req, res, next) => {
       throw new AppError('Question already escalated', 400);
     }
 
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    if (question.createdAt > twentyFourHoursAgo) {
-      throw new AppError('Question cannot be escalated within 24 hours of creation', 400);
-    }
 
     const Answer = require('../models/Answer');
     const otherAnswersCount = await Answer.countDocuments({
@@ -724,6 +772,38 @@ exports.escalateQuestion = async (req, res, next) => {
     });
     if (otherAnswersCount > 0) {
       throw new AppError('Question has answers from other users, cannot escalate', 400);
+    }
+
+    // Check if the user has escalated more than 5 questions in the last hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const hourlyEscalationCount = await Question.countDocuments({
+      author: req.user._id,
+      isEscalated: true,
+      escalatedAt: { $gte: oneHourAgo }
+    });
+    if (hourlyEscalationCount >= 5) {
+      throw new AppError('You have reached the maximum limit of 5 escalations per hour', 429);
+    }
+
+    // Check if another question on the same topic/tags is already escalated and unresolved
+    const words = question.title.toLowerCase().split(' ').filter(w => w.length > 3 && !['what', 'how', 'why', 'with', 'from', 'this', 'that', 'here', 'there'].includes(w));
+    if (words.length > 0) {
+      const titleRegex = new RegExp(words.join('|'), 'i');
+      
+      const topicQuery = {
+        _id: { $ne: question._id },
+        resolutionStatus: 'escalated',
+        title: { $regex: titleRegex }
+      };
+
+      if (question.tagNames && question.tagNames.length > 0) {
+        topicQuery.tagNames = { $in: question.tagNames };
+      }
+
+      const duplicateEscalation = await Question.findOne(topicQuery);
+      if (duplicateEscalation) {
+        throw new AppError(`An escalation is already open for a query on the same topic: "${duplicateEscalation.title}"`, 400);
+      }
     }
 
     question.resolutionStatus = 'escalated';
@@ -739,13 +819,21 @@ exports.escalateQuestion = async (req, res, next) => {
       Notification.create({
         recipient: mod._id,
         type: 'escalation',
-        title: 'Question escalated - needs attention',
+        title: '⚠️ Question escalated - needs attention',
         message: `Question "${question.title}" was escalated by the author: ${reason || 'No response received within 24 hours'}`,
         link: `/questions/${question._id}`,
         referenceType: 'Question',
         reference: question._id,
       })
     ));
+
+    // Emit real-time update to admin panel
+    try {
+      const { emitToAdmin } = require('../socket');
+      emitToAdmin('moderation:updated', { action: 'question_escalated', questionId: question._id });
+    } catch (socketErr) {
+      console.error('Socket notification error in escalateQuestion:', socketErr.message);
+    }
 
     res.json({ message: 'Question escalated', question });
   } catch (err) {
@@ -796,6 +884,16 @@ exports.resolveEscalation = async (req, res, next) => {
     }
     await question.save();
 
+    // Audit Log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'resolve_escalation',
+      targetId: question._id,
+      targetType: 'Question',
+      reason: `Resolved escalation for question: "${question.title}"` + (resolutionNote ? `. Note: ${resolutionNote}` : '')
+    });
+
     // Notify the student
     const Notification = require('../models/Notification');
     await Notification.create({
@@ -808,6 +906,13 @@ exports.resolveEscalation = async (req, res, next) => {
       reference: question._id,
     });
 
+    try {
+      const { emitToAdmin } = require('../socket');
+      emitToAdmin('moderation:updated', { action: 'resolve_escalation', questionId: question._id });
+    } catch (socketErr) {
+      console.error('Socket notification error in resolveEscalation:', socketErr.message);
+    }
+
     res.json({ message: 'Escalation resolved', question });
   } catch (err) {
     next(err);
@@ -816,21 +921,36 @@ exports.resolveEscalation = async (req, res, next) => {
 
 exports.getEscalatedQuestions = async (req, res, next) => {
   try {
-    if (req.user.role !== 'admin' && req.user.role !== 'moderator') {
-      throw new AppError('Not authorized', 403);
-    }
-
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, status } = req.query;
     const skip = (page - 1) * limit;
 
+    const isModOrAdmin = req.user.role === 'admin' || req.user.role === 'moderator';
+    const filter = {};
+
+    if (!isModOrAdmin) {
+      // Normal users can only see their own escalated questions (both active and resolved)
+      filter.author = req.user._id;
+      filter.isEscalated = true;
+    } else {
+      // Admins/mods see active escalated queries by default, or filtered by status
+      if (status === 'resolved') {
+        filter.resolutionStatus = 'resolved';
+        filter.isEscalated = true;
+      } else if (status === 'all') {
+        filter.isEscalated = true;
+      } else {
+        filter.resolutionStatus = 'escalated';
+      }
+    }
+
     const [questions, total] = await Promise.all([
-      Question.find({ resolutionStatus: 'escalated' })
+      Question.find(filter)
         .sort({ escalatedAt: -1 })
         .skip(skip)
         .limit(limit)
-        .select('title escalationReason escalatedAt answerCount tagNames')
+        .select('title escalationReason escalatedAt resolutionStatus isEscalated answerCount tagNames')
         .populate('author', 'username displayName'),
-      Question.countDocuments({ resolutionStatus: 'escalated' }),
+      Question.countDocuments(filter),
     ]);
 
     res.json({

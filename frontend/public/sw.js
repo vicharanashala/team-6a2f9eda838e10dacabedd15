@@ -1,5 +1,5 @@
-const CACHE_NAME = 'prashnasarathi-pwa-cache-v12';
-const DATA_CACHE_NAME = 'prashnasarathi-data-cache-v12';
+const CACHE_NAME = 'prashnasarathi-pwa-cache-1781002837315';
+const DATA_CACHE_NAME = 'prashnasarathi-data-cache-1781002837315';
 
 // Helper to fetch with a timeout fallback
 function fetchWithTimeout(request, timeout = 1000) {
@@ -51,39 +51,42 @@ const STATIC_ASSETS = [
   "/api/questions?page=1&sort=liked",
   "/api/questions?page=1&sort=views",
   "/api/recommendations/recommended?page=1&limit=20",
-  "/_next/static/chunks/webpack-c105cf7135d99ba2.js",
-  "/_next/static/chunks/fd9d1056-5d3ffa4d5e6942ae.js",
-  "/_next/static/chunks/117-f5f2e51ba9a400df.js",
+  "/_next/static/chunks/webpack-8e941cbaca64cb4f.js",
+  "/_next/static/chunks/fd9d1056-9c032a99761d0a80.js",
+  "/_next/static/chunks/117-656b1ecbbc6b8fe3.js",
   "/_next/static/chunks/main-app-93478cfe1e7432fc.js",
-  "/_next/static/chunks/app/_not-found/page-7ea4ef5f72bbb012.js",
-  "/_next/static/css/672ecb34649a88f4.css",
-  "/_next/static/chunks/648-699c09fb2d2c7e31.js",
-  "/_next/static/chunks/859-0e34696b8f4645e4.js",
-  "/_next/static/chunks/680-2921ecdb664d2cf7.js",
-  "/_next/static/chunks/750-aa87a6b99cac7f1e.js",
-  "/_next/static/chunks/app/layout-54ba0a8d2b9ea527.js",
-  "/_next/static/chunks/2bfc466f-93d62d26a37025c3.js",
-  "/_next/static/chunks/147-9e895d8ad76f1a94.js",
-  "/_next/static/chunks/app/auth/page-b6fe877b0c9c4fb9.js",
-  "/_next/static/chunks/17-415c15461d1f32b5.js",
-  "/_next/static/chunks/668-076c07eb97f20bbf.js",
-  "/_next/static/chunks/app/faqs/[slug]/page-0c8fc82ba5cc6aea.js",
-  "/_next/static/chunks/app/downloads/page-ef7ad61625755861.js",
-  "/_next/static/chunks/app/faqs/page-64ec283ece07d84c.js",
-  "/_next/static/chunks/app/guidelines/page-6ce6118f1a2d3170.js",
-  "/_next/static/chunks/app/page-180c2ac9be295880.js",
-  "/_next/static/chunks/app/notifications/page-03d7c50e9eef6809.js",
-  "/_next/static/chunks/app/questions/[id]/page-a0feffaad8dfa3d4.js",
-  "/_next/static/chunks/app/questions/ask/page-1efffafaf42674b0.js",
-  "/_next/static/chunks/app/admin/page-781b9ea2f9d9320c.js",
-  "/_next/static/chunks/app/saved/page-9f8bd1089daae08c.js",
-  "/_next/static/chunks/413-f9337ab567df0720.js",
-  "/_next/static/chunks/app/questions/page-85a700f4d7f89287.js",
-  "/_next/static/chunks/app/search/page-c24df1c188e2d2a8.js",
-  "/_next/static/chunks/app/users/page-ab93edd34cadad2f.js",
-  "/_next/static/chunks/app/tags/page-b8943b171b60196c.js",
-  "/_next/static/chunks/app/tags/[name]/page-5dd8218d740092cb.js",
-  "/_next/static/chunks/app/users/[username]/page-9c8a033d0346cad3.js",
+  "/_next/static/chunks/app/_not-found/page-1058117207c51285.js",
+  "/_next/static/css/cb4471978a6a03b5.css",
+  "/_next/static/chunks/648-0fe88ef03a8e9843.js",
+  "/_next/static/chunks/859-e1bca3dc8b4a0525.js",
+  "/_next/static/chunks/324-26954518a83876c7.js",
+  "/_next/static/chunks/689-dae23ab7fcb269ae.js",
+  "/_next/static/chunks/180-ae226dde440fde50.js",
+  "/_next/static/chunks/750-ca62a9aa6d2ed07e.js",
+  "/_next/static/chunks/app/layout-1d61d8d25fe5ba3f.js",
+  "/_next/static/chunks/2bfc466f-47019a40064a549f.js",
+  "/_next/static/chunks/147-f45f1800405fce62.js",
+  "/_next/static/chunks/app/auth/page-cad4c585cdc71c82.js",
+  "/_next/static/chunks/app/downloads/page-c1dfa542d7436702.js",
+  "/_next/static/chunks/17-4f268eecf486ce8d.js",
+  "/_next/static/chunks/app/faqs/page-620c42501e04faaa.js",
+  "/_next/static/chunks/app/admin/page-12119c7b36a3a159.js",
+  "/_next/static/chunks/668-5acdeb7c3274ff95.js",
+  "/_next/static/chunks/app/faqs/[slug]/page-9e97131fa8f1186d.js",
+  "/_next/static/chunks/app/guidelines/page-d57936132754e5f7.js",
+  "/_next/static/chunks/793-593a48dea3ea6a9a.js",
+  "/_next/static/chunks/app/page-60e035bd1b0cf811.js",
+  "/_next/static/chunks/app/notifications/page-52e19cf206857a2a.js",
+  "/_next/static/chunks/app/questions/ask/page-27d6c22404c4a096.js",
+  "/_next/static/chunks/app/questions/[id]/page-c8bb66d83d9273af.js",
+  "/_next/static/chunks/413-45c508201d91cf36.js",
+  "/_next/static/chunks/app/questions/page-9dc4f714a5ab5299.js",
+  "/_next/static/chunks/app/search/page-bda47bc7d28f4be4.js",
+  "/_next/static/chunks/app/tags/[name]/page-95061f15406bd5b7.js",
+  "/_next/static/chunks/app/saved/page-3c1b2d9edd0562de.js",
+  "/_next/static/chunks/app/tags/page-45d63daa4360c6aa.js",
+  "/_next/static/chunks/app/users/[username]/page-fe5b48715ffd752b.js",
+  "/_next/static/chunks/app/users/page-12d5407eb652b662.js",
   "/_next/static/chunks/framework-f66176bb897dc684.js",
   "/_next/static/chunks/main-a895a058bfcf6af5.js",
   "/_next/static/chunks/pages/_app-72b849fbd24ac258.js",
@@ -129,15 +132,31 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests and skip binary app installer files from caching
-  if (request.method !== 'GET' || url.pathname.startsWith('/downloads/')) {
+  // Skip invalid schemes (like chrome-extension://, extension://, file://, data:)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Skip non-GET requests, socket.io connections, Next.js HMR, and binary app installer files
+  if (
+    request.method !== 'GET' || 
+    url.pathname.startsWith('/downloads/') || 
+    url.pathname.startsWith('/socket.io/') ||
+    url.pathname.includes('webpack-hmr') ||
+    url.pathname.includes('hot-update')
+  ) {
     return;
   }
 
   // Handle API Requests (FAQs, search, categories, user details, etc.)
   if (url.pathname.startsWith('/api/')) {
+    // Bypass service worker entirely for AI generation/synthesis requests to avoid timeout aborts or stale cache fallbacks
+    if (url.pathname.includes('/search/ai')) {
+      return;
+    }
+
     event.respondWith(
-      fetchWithTimeout(request, 1000)
+      fetchWithTimeout(request, 3000)
         .then((response) => {
           if (response.status === 200) {
             const responseClone = response.clone();
@@ -148,11 +167,8 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Offline fallback: try to match exactly, then try with ignoreSearch
-          return caches.match(request).then((res) => {
-            if (res) return res;
-            return caches.match(request, { ignoreSearch: true, cacheName: DATA_CACHE_NAME });
-          });
+          // Offline fallback: try to match exactly. DO NOT use ignoreSearch: true here to avoid serving stale, incorrect data for search queries or paginated lists.
+          return caches.match(request);
         })
     );
     return;
@@ -161,7 +177,7 @@ self.addEventListener('fetch', (event) => {
   // Handle HTML document requests (Navigation) - Network-First
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetchWithTimeout(request, 1500)
+      fetchWithTimeout(request, 5000) // 5 seconds is safer for slow connections/cold boots
         .then((response) => {
           if (response && response.status === 200) {
             const responseClone = response.clone();
@@ -172,13 +188,11 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Serve the actual cached site page, home shell, or offline fallback page
+          // Serve the actual cached site page, or fallback to offline.html directly
+          // Do NOT fallback to '/' which triggers Next.js client-side chunk loading and crashes when offline.
           return caches.match(request).then((res) => {
             if (res) return res;
-            return caches.match('/', { ignoreSearch: true }).then((homeRes) => {
-              if (homeRes) return homeRes;
-              return caches.match('/offline.html');
-            });
+            return caches.match('/offline.html');
           });
         })
     );
@@ -224,8 +238,8 @@ self.addEventListener('push', (event) => {
     const title = data.title || 'PrashnaSārathi';
     const options = {
       body: data.body || '',
-      icon: data.icon || '/icon.png',
-      badge: data.badge || '/badge.png',
+      icon: data.icon || '/logo.png',
+      badge: data.badge || '/pwa/icons/icon-72x72.png',
       tag: data.tag || 'notification',
       data: data.data || {},
       requireInteraction: false,
@@ -233,7 +247,20 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-      self.registration.showNotification(title, options)
+      Promise.all([
+        // Show the OS banner
+        self.registration.showNotification(title, options),
+        // Notify all open page clients so they can show an in-app toast instantly
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+          windowClients.forEach((client) => {
+            client.postMessage({
+              type: 'PUSH_RECEIVED',
+              title: title,
+              message: options.body,
+            });
+          });
+        }),
+      ])
     );
   } catch (err) {
     console.error('[Service Worker] Error displaying push notification:', err);
@@ -243,14 +270,26 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const link = event.notification.data?.link;
-  if (link) {
-    event.waitUntil(
-      clients.openWindow(link)
-    );
-  } else {
-    event.waitUntil(
-      clients.openWindow('/notifications')
-    );
-  }
+  const targetUrl = event.notification.data?.link 
+    ? new URL(event.notification.data.link, self.location.origin).href
+    : new URL('/notifications', self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          if ('navigate' in client) {
+            try {
+              client.navigate(targetUrl);
+            } catch (_) {}
+          }
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
 });

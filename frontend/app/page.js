@@ -7,7 +7,8 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import RecommendedFAQs from '@/components/RecommendedFAQs';
-
+import MascotCompanion from '@/components/MascotCompanion';
+import { useVoiceCommand } from '@/context/VoiceCommandContext';
 
 const CATEGORY_ICONS = {
   'About the internship': '💼',
@@ -29,6 +30,7 @@ const CATEGORY_ICONS = {
 
 export default function HomePage() {
   const { user } = useAuth();
+  const { openSearch } = useVoiceCommand();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [faqs, setFaqs] = useState([]);
@@ -41,6 +43,95 @@ export default function HomePage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📌');
   const [addingCategory, setAddingCategory] = useState(false);
+  const [dbCategories, setDbCategories] = useState([]);
+
+  const handleDeleteCategory = async (catName) => {
+    if (!confirm(`Are you sure you want to delete the category "${catName}"? This will unset this category on all questions and FAQs.`)) return;
+    const matchedCat = dbCategories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+    try {
+      if (matchedCat) {
+        await api.delete(`/categories/${matchedCat._id}`);
+      } else {
+        toast.error('Category configuration document not found.');
+        return;
+      }
+      toast.success('Category deleted successfully');
+      loadFAQs();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete category');
+    }
+  };
+
+  const handleReportCategory = async (catName) => {
+    if (!user) {
+      toast.error('Please login to report a category');
+      return;
+    }
+    const reason = prompt(`Please specify your reason for reporting the category "${catName}":`);
+    if (!reason || !reason.trim()) return;
+
+    try {
+      await api.post('/admin/reports', {
+        subject: `Report Category: ${catName}`,
+        description: reason.trim(),
+        pageUrl: `/faqs?category=${encodeURIComponent(catName)}`
+      });
+      toast.success('Category reported successfully. Our team will review it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit report');
+    }
+  };
+
+  const handleDeleteFAQ = async (faq) => {
+    if (!confirm(`Are you sure you want to delete the FAQ page "${faq.title}"? This will delete all items under it.`)) return;
+    try {
+      await api.delete(`/faqs/${faq._id}`);
+      toast.success('FAQ deleted successfully');
+      loadFAQs();
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete FAQ');
+    }
+  };
+
+  const handleReportFAQ = async (faq) => {
+    if (!user) {
+      toast.error('Please login to report an FAQ');
+      return;
+    }
+    const reason = prompt(`Please specify your reason for reporting the FAQ "${faq.title}":`);
+    if (!reason || !reason.trim()) return;
+
+    try {
+      await api.post('/admin/reports', {
+        subject: `Report FAQ Page: ${faq.title}`,
+        description: reason.trim(),
+        pageUrl: `/faqs/${faq.slug}`
+      });
+      toast.success('FAQ reported successfully. Our team will review it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit report');
+    }
+  };
+
+  const handleReportFAQItem = async (faq, item) => {
+    if (!user) {
+      toast.error('Please login to report a question');
+      return;
+    }
+    const reason = prompt(`Please specify your reason for reporting the question "${item.question}":`);
+    if (!reason || !reason.trim()) return;
+
+    try {
+      await api.post('/admin/reports', {
+        subject: `Report FAQ Item: ${item.question}`,
+        description: reason.trim(),
+        pageUrl: `/faqs/${faq.slug}#${item._id}`
+      });
+      toast.success('Question reported successfully. Our team will review it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit report');
+    }
+  };
 
   useEffect(() => {
     loadFAQs();
@@ -49,8 +140,13 @@ export default function HomePage() {
   const loadFAQs = async () => {
     try {
       setLoading(true);
-      const data = await api.get('/faqs', { limit: 100 });
-      const faqList = data.faqs || [];
+      const [faqData, catData] = await Promise.all([
+        api.get('/faqs', { limit: 100 }),
+        api.get('/categories').catch(() => ({ categories: [] }))
+      ]);
+      const faqList = faqData.faqs || [];
+      const dbCats = catData.categories || [];
+      setDbCategories(dbCats);
 
       const categoryMap = {};
       faqList.forEach(faq => {
@@ -155,32 +251,51 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         
         {/* Tech Hero Header */}
-        <section className="max-w-2xl mb-12 mt-4 text-center mx-auto flex flex-col items-center">
-          <div className="inline-flex items-center gap-1.5 font-mono text-[10px] text-[var(--color-primary)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20 px-2.5 py-0.5 rounded-full mb-4">
+        <section className="max-w-3xl mb-12 mt-6 text-center mx-auto flex flex-col items-center">
+          <div className="inline-flex items-center gap-1.5 font-mono text-[10px] text-[var(--color-primary)] bg-[var(--color-primary-subtle)] border border-[var(--color-primary)]/20 px-2.5 py-0.5 rounded-full mb-5">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse"></span>
             KNOWLEDGE BASE
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2 text-[var(--color-text)]">
-            Vicharanashala Q&A Portal
+          <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight mb-3 select-none bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary)] via-purple-500 to-indigo-500 hover:scale-[1.01] transition-transform duration-300">
+            PrashnaSārathi
           </h1>
-          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed mb-6">
-            Search our Elasticsearch knowledge base of questions, FAQs, and community answers.
+          <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-relaxed mb-8">
+            Your AI-Powered Community Q&A & Knowledge Base
           </p>
 
           {/* Hero Search */}
-          <form onSubmit={handleSearchSubmit} className="relative mb-4 w-full max-w-xl">
-            <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] focus-within:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-primary-subtle)] transition-all">
-              <svg className="w-4 h-4 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <form onSubmit={handleSearchSubmit} className="relative mb-6 w-full max-w-2xl">
+            <div className="flex items-center gap-3 px-4 py-3 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-secondary)] shadow-sm hover:shadow-md focus-within:shadow-md focus-within:border-[var(--color-primary)]/50 focus-within:ring-2 focus-within:ring-[var(--color-primary-subtle)] transition-all">
+              <svg className="w-5 h-5 text-[var(--color-text-muted)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={(e) => {
+                  e.target.blur();
+                  openSearch(false);
+                }}
                 placeholder="Search questions, categories, tags..."
-                className="flex-1 bg-transparent text-xs text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)]"
+                className="flex-1 bg-transparent text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-muted)] cursor-pointer"
               />
-              <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[9px] font-mono text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded">Ctrl K</kbd>
+              <div className="flex items-center gap-2.5 shrink-0">
+                {/* Microphone Button */}
+                <button
+                  type="button"
+                  title="Search with Voice"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openSearch(true);
+                  }}
+                  className="p-1.5 rounded-full hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] active:scale-95 transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </form>
         </section>
@@ -200,10 +315,18 @@ export default function HomePage() {
               {categories.map((cat) => {
                 const isSelected = selectedCategory === cat.name;
                 return (
-                  <button
+                  <div
                     key={cat.name}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setSelectedCategory(cat.name)}
-                    className={`shrink-0 w-auto lg:w-full text-left px-3 py-2 rounded-md text-xs transition-colors flex items-center justify-between gap-3 group ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedCategory(cat.name);
+                      }
+                    }}
+                    className={`shrink-0 w-auto lg:w-full text-left px-3 py-2 rounded-md text-xs cursor-pointer select-none transition-colors flex items-center justify-between gap-3 group ${
                       isSelected
                         ? 'bg-[var(--color-primary-subtle)] text-[var(--color-primary)] border border-[var(--color-primary)]/25'
                         : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-tertiary)] border border-transparent'
@@ -213,12 +336,47 @@ export default function HomePage() {
                       <span className="text-sm shrink-0">{getIcon(cat.name)}</span>
                       <span className="truncate leading-none">{cat.name}</span>
                     </span>
-                    <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition-colors ${
-                      isSelected ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
-                    }`}>
-                      {cat.count}
-                    </span>
-                  </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {cat.name !== 'All Categories' && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {/* Report Button */}
+                          <button
+                            title="Report Category"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReportCategory(cat.name);
+                            }}
+                            className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[var(--color-text-muted)] hover:text-amber-500"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                            </svg>
+                          </button>
+
+                          {/* Delete Button */}
+                          {isAdminOrMod && (
+                            <button
+                              title="Delete Category"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteCategory(cat.name);
+                              }}
+                              className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors text-[var(--color-text-muted)] hover:text-red-500"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded transition-colors ${
+                        isSelected ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] border border-[var(--color-border)]'
+                      }`}>
+                        {cat.count}
+                      </span>
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -236,23 +394,28 @@ export default function HomePage() {
           <main className="lg:col-span-3 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-[var(--color-border)]/50 mb-4">
               <h2 className="text-xs font-semibold text-[var(--color-text)]">
-                {selectedCategory === 'All Categories' ? 'All Frequently Asked Questions' : selectedCategory}
+                {user 
+                  ? (selectedCategory === 'All Categories' ? 'Recommended Frequently Asked Questions' : `Recommended: ${selectedCategory}`)
+                  : (selectedCategory === 'All Categories' ? 'All Frequently Asked Questions' : selectedCategory)
+                }
               </h2>
-              <div className="flex items-center gap-3 text-[10px] text-[var(--color-text-muted)] font-mono">
-                <button
-                  onClick={() => setExpandedFaq('all')}
-                  className="hover:text-[var(--color-text)] transition-colors"
-                >
-                  EXPAND ALL
-                </button>
-                <span>•</span>
-                <button
-                  onClick={() => setExpandedFaq(null)}
-                  className="hover:text-[var(--color-text)] transition-colors"
-                >
-                  COLLAPSE ALL
-                </button>
-              </div>
+              {!user && (
+                <div className="flex items-center gap-3 text-[10px] text-[var(--color-text-muted)] font-mono">
+                  <button
+                    onClick={() => setExpandedFaq('all')}
+                    className="hover:text-[var(--color-text)] transition-colors"
+                  >
+                    EXPAND ALL
+                  </button>
+                  <span>•</span>
+                  <button
+                    onClick={() => setExpandedFaq(null)}
+                    className="hover:text-[var(--color-text)] transition-colors"
+                  >
+                    COLLAPSE ALL
+                  </button>
+                </div>
+              )}
             </div>
 
             {loading ? (
@@ -265,30 +428,10 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
+            ) : user ? (
+              <RecommendedFAQs limit={20} layout="grid" category={selectedCategory} />
             ) : (
               <div className="flex flex-col gap-3">
-                {selectedCategory === 'All Categories' && user && (
-                  <div className="mb-4 p-4 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-md">
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">💡</span>
-                        <h3 className="text-xs font-bold text-[var(--color-text)] font-mono uppercase tracking-wider">
-                          {user.currentPhase ? 'Recommended For Your Phase' : 'Recommended For You'}
-                        </h3>
-                      </div>
-                      {!user.currentPhase && (
-                        <Link
-                          href="/auth?mode=login"
-                          className="text-[9px] font-mono font-semibold text-[var(--color-primary)] border border-[var(--color-primary)]/25 rounded px-2 py-0.5 hover:bg-[var(--color-primary)]/10 transition-colors shrink-0"
-                        >
-                          SET PHASE →
-                        </Link>
-                      )}
-                    </div>
-                    <RecommendedFAQs limit={4} layout="grid" />
-                  </div>
-                )}
-                
                 {filteredFAQs.map((faq, faqIdx) => {
                   const isExpanded = expandedFaq === faq._id || expandedFaq === 'all';
                   const displayFaqIdx = String(faqIdx + 1).padStart(2, '0');
@@ -323,14 +466,46 @@ export default function HomePage() {
                             {faq.title}
                           </h3>
                         </div>
-                        <svg
-                          className={`w-3.5 h-3.5 text-[var(--color-text-muted)] transition-transform duration-200 mt-1 shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        <div className="flex items-center gap-2 mt-1 shrink-0">
+                          {/* Report Button */}
+                          <button
+                            title="Report FAQ"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReportFAQ(faq);
+                            }}
+                            className="p-1 rounded text-[var(--color-text-muted)] hover:text-amber-500 hover:bg-[var(--color-bg-tertiary)] transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                            </svg>
+                          </button>
+                          
+                          {/* Delete Button */}
+                          {isAdminOrMod && (
+                            <button
+                              title="Delete FAQ"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteFAQ(faq);
+                              }}
+                              className="p-1 rounded text-[var(--color-text-muted)] hover:text-red-500 hover:bg-[var(--color-bg-tertiary)] transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+
+                          <svg
+                            className={`w-3.5 h-3.5 text-[var(--color-text-muted)] transition-transform duration-200 mt-1 shrink-0 ${isExpanded ? 'rotate-180' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </div>
                       </button>
 
                       {/* Expanded Accordion Content */}
@@ -374,6 +549,20 @@ export default function HomePage() {
                                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" /></svg>
                                         <span>No ({item.notHelpfulCount || 0})</span>
                                       </button>
+                                      
+                                      <span className="text-[var(--color-text-muted)]">|</span>
+                                      
+                                      {/* Report FAQ Item */}
+                                      <button
+                                        onClick={() => handleReportFAQItem(faq, item)}
+                                        className="flex items-center gap-1 hover:text-amber-500 transition-colors"
+                                        title="Report question or answer"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                                        </svg>
+                                        <span>Report</span>
+                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -387,7 +576,7 @@ export default function HomePage() {
               </div>
             )}
 
-            {!loading && filteredFAQs.length === 0 && (
+            {!loading && !user && filteredFAQs.length === 0 && (
               <div className="text-center py-12 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-md text-[var(--color-text-secondary)] text-xs">
                 No FAQs found in this category.
               </div>
@@ -470,6 +659,7 @@ export default function HomePage() {
           </div>
         </div>
       )}
+      {user && <MascotCompanion />}
     </div>
   );
 }

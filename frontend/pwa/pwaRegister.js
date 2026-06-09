@@ -1,6 +1,20 @@
 export function registerServiceWorker() {
   if (typeof window === 'undefined') return;
 
+  // Skip service worker registration in development mode to prevent HMR and hot-reloading cache glitches
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[PWA] Service Worker registration skipped in development mode.');
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (let registration of registrations) {
+          registration.unregister();
+          console.log('[PWA] Unregistered service worker found in development mode.');
+        }
+      });
+    }
+    return;
+  }
+
   if ('serviceWorker' in navigator) {
     const register = () => {
       const swUrl = '/sw.js';

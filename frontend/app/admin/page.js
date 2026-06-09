@@ -24,11 +24,17 @@ export default function AdminPage() {
   const [anomalyPage, setAnomalyPage] = useState(1);
   const [anomalyPagination, setAnomalyPagination] = useState({ page: 1, pages: 1 });
   const [loading, setLoading] = useState(true);
+  const [escalatedQs, setEscalatedQs] = useState([]);
+  const [escalatedPage, setEscalatedPage] = useState(1);
+  const [escalatedPagination, setEscalatedPagination] = useState({ page: 1, pages: 1 });
+  const [spurtiLogs, setSpurtiLogs] = useState([]);
+  const [spurtiPage, setSpurtiPage] = useState(1);
+  const [spurtiPagination, setSpurtiPagination] = useState({ page: 1, pages: 1 });
+  const [spurtiSearch, setSpurtiSearch] = useState('');
   const socket = useSocket();
 
   const [moderationQueue, setModerationQueue] = useState({ questions: [], answers: [] });
   const [reportedPosts, setReportedPosts] = useState([]);
-  const [suspiciousActivities, setSuspiciousActivities] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
 
   // Email System States
@@ -60,6 +66,47 @@ export default function AdminPage() {
     }
   };
 
+  // Broadcast Email States
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailContentTitle, setEmailContentTitle] = useState('Admin Broadcast Announcement');
+  const [sendingEmail, setSendingEmail] = useState(false);
+
+  const handleSendEmailBroadcast = async (e) => {
+    e.preventDefault();
+    if (!emailSubject.trim() || !emailBody.trim()) {
+      toast.error('Please enter a subject and body');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const res = await api.post('/admin/emails/broadcast', {
+        subject: emailSubject,
+        body: emailBody,
+        contentTitle: emailContentTitle
+      });
+      toast.success(res.message || 'Email broadcast enqueued successfully!');
+      setEmailSubject('');
+      setEmailBody('');
+      setEmailContentTitle('Admin Broadcast Announcement');
+      fetchEmails();
+    } catch (err) {
+      toast.error(err.message || 'Failed to enqueue email broadcast');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const fetchSpurtiLogs = async (page = 1, search = '') => {
+    try {
+      const data = await api.get('/admin/spurti-logs', { page, search });
+      setSpurtiLogs(data.logs || []);
+      setSpurtiPagination({ page: data.pagination.page, pages: data.pagination.totalPages });
+    } catch (err) {
+      toast.error('Failed to load Spurti Point logs');
+    }
+  };
+
   useEffect(() => {
     if (authLoading) return;
     if (!user || (user.role !== 'admin' && user.role !== 'moderator')) {
@@ -75,21 +122,19 @@ export default function AdminPage() {
         } else if (tab === 'users') {
           await fetchUsers();
         } else if (tab === 'flagged') {
-          await fetchFlagged();
-        } else if (tab === 'anomalies') {
-          await fetchAnomalies();
+          await Promise.all([fetchFlagged(), fetchReportedPosts()]);
         } else if (tab === 'moderationQueue') {
           await fetchModerationQueue();
-        } else if (tab === 'reportedPosts') {
-          await fetchReportedPosts();
-        } else if (tab === 'suspiciousActivities') {
-          await fetchSuspiciousActivities();
         } else if (tab === 'auditLogs') {
           await fetchAuditLogs();
+        } else if (tab === 'escalations') {
+          await Promise.all([fetchEscalatedQs(), fetchAnomalies()]);
         } else if (tab === 'siteReports' && user.role === 'admin') {
           await fetchSiteReports();
         } else if (tab === 'emails' && user.role === 'admin') {
           await Promise.all([fetchEmails(), fetchBounces()]);
+        } else if (tab === 'spurti' && user.role === 'admin') {
+          await fetchSpurtiLogs(spurtiPage, spurtiSearch);
         }
       } catch (err) {
         console.error("Error loading admin data:", err);
@@ -112,16 +157,14 @@ export default function AdminPage() {
         fetchUsers();
       } else if (tab === 'flagged') {
         fetchFlagged();
-      } else if (tab === 'anomalies') {
-        fetchAnomalies();
+        fetchReportedPosts();
       } else if (tab === 'moderationQueue') {
         fetchModerationQueue();
-      } else if (tab === 'reportedPosts') {
-        fetchReportedPosts();
-      } else if (tab === 'suspiciousActivities') {
-        fetchSuspiciousActivities();
       } else if (tab === 'auditLogs') {
         fetchAuditLogs();
+      } else if (tab === 'escalations') {
+        fetchEscalatedQs();
+        fetchAnomalies();
       } else if (tab === 'emails' && user?.role === 'admin') {
         fetchEmails();
         fetchBounces();
@@ -138,6 +181,34 @@ export default function AdminPage() {
       fetchEmails();
     }
   }, [emailPage]);
+
+  useEffect(() => {
+    if (tab === 'escalations') {
+      fetchEscalatedQs();
+    }
+  }, [escalatedPage]);
+
+  const fetchEscalatedQs = async () => {
+    try {
+      const data = await api.get('/questions/escalated', { page: escalatedPage, limit: 15 });
+      setEscalatedQs(data.questions || []);
+      setEscalatedPagination(data.pagination || { page: 1, pages: 1 });
+    } catch (err) {
+      console.error('Failed to fetch escalated questions:', err);
+    }
+  };
+
+  const handleResolveEscalation = async (questionId) => {
+    const resolutionNote = prompt('Enter a resolution note/action taken (optional):');
+    if (resolutionNote === null) return;
+    try {
+      await api.patch(`/questions/${questionId}/escalate/resolve`, { resolutionNote });
+      toast.success('Escalation resolved successfully');
+      fetchEscalatedQs();
+    } catch (err) {
+      toast.error(err.message || 'Failed to resolve escalation');
+    }
+  };
 
   const fetchEmails = async () => {
     try {
@@ -190,6 +261,8 @@ export default function AdminPage() {
     }
   };
 
+
+
   const handleRemoveBounce = async (id) => {
     try {
       await api.delete(`/admin/emails/bounces/${id}`);
@@ -241,13 +314,11 @@ export default function AdminPage() {
   const fetchAnomalies = async () => {
     try {
       const data = await api.get('/admin/anomalies', {
-        params: {
-          severity: anomalySeverityFilter,
-          status: anomalyStatusFilter,
-          sortBy: anomalySortBy,
-          page: anomalyPage,
-          limit: 10
-        }
+        severity: anomalySeverityFilter,
+        status: anomalyStatusFilter,
+        sortBy: anomalySortBy,
+        page: anomalyPage,
+        limit: 10
       });
       setAnomalies(data.anomalies || []);
       setAnomalyStats(data.stats);
@@ -265,15 +336,7 @@ export default function AdminPage() {
       toast.error(err.message || 'Failed to resolve anomaly');
     }
   };
-  const handleResolveSuspicious = async (id) => {
-    try {
-      await api.post(`/admin/moderation/suspicious/${id}/resolve`);
-      toast.success('Suspicious activity marked as resolved');
-      fetchSuspiciousActivities();
-    } catch (err) {
-      toast.error(err.message || 'Failed to resolve suspicious activity');
-    }
-  };
+
   const fetchSiteReports = async () => {
     try {
       const data = await api.get('/admin/reports');
@@ -345,12 +408,6 @@ export default function AdminPage() {
     } catch (_) {}
   };
 
-  const fetchSuspiciousActivities = async () => {
-    try {
-      const data = await api.get('/admin/moderation/suspicious');
-      setSuspiciousActivities(data.activities || []);
-    } catch (_) {}
-  };
 
   const fetchAuditLogs = async () => {
     try {
@@ -406,12 +463,12 @@ export default function AdminPage() {
     }
   };
 
-  const tabs = ['dashboard', 'users', 'flagged', 'anomalies'];
+  const tabs = ['dashboard', 'users', 'flagged'];
   if (user?.role === 'admin' || user?.role === 'moderator') {
-    tabs.push('moderationQueue', 'reportedPosts', 'suspiciousActivities', 'auditLogs');
+    tabs.push('moderationQueue', 'auditLogs', 'escalations');
   }
   if (user?.role === 'admin') {
-    tabs.push('siteReports', 'emails', 'broadcast');
+    tabs.push('siteReports', 'emails', 'broadcast', 'spurti');
   }
   if (user?.role !== 'admin') {
     const uIdx = tabs.indexOf('users');
@@ -434,22 +491,25 @@ export default function AdminPage() {
           <button onClick={clearCache} className="btn-secondary btn-sm">Clear Cache</button>
         )}
       </div>
-      <div className="flex gap-1 mb-6 border-b border-[var(--color-border)] overflow-x-auto">
+      <div className="flex flex-wrap gap-2 mb-8 pb-4 border-b border-[var(--color-border)]">
         {tabs.map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4 py-2 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-              tab === t ? 'border-primary-600 text-primary-600' : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
+            className={`px-4 py-2 text-sm font-semibold rounded-full transition-all duration-200 ${
+              tab === t
+                ? 'bg-primary-600 text-white shadow-md shadow-primary-500/20 scale-105'
+                : 'bg-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)] hover:text-[var(--color-text)]'
             }`}
           >
             {t === 'moderationQueue' ? 'Moderation Queue' :
-             t === 'reportedPosts' ? 'Reported Content' :
-             t === 'suspiciousActivities' ? 'Suspicious Activity' :
+             t === 'flagged' ? 'Flagged & Reported Content' :
              t === 'auditLogs' ? 'Audit Logs' :
              t === 'siteReports' ? 'Site Reports' :
-             t === 'emails' ? 'Email Queue' :
+             t === 'emails' ? 'Email Queue & Broadcast' :
              t === 'broadcast' ? 'Broadcast Alerts' :
+             t === 'escalations' ? 'Anomalies & Escalations' :
+             t === 'spurti' ? 'Spurti Points Tracker' :
              t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
@@ -477,6 +537,7 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
+
           {deepStats && (
             <div className="mt-8 border-t border-[var(--color-border)] pt-8">
               <h2 className="text-xl font-bold text-[var(--color-text)] mb-6">Platform Insights</h2>
@@ -520,7 +581,7 @@ export default function AdminPage() {
       ) : tab === 'users' ? (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[800px]">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
                   <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">User</th>
@@ -619,251 +680,142 @@ export default function AdminPage() {
         </div>
       ) : tab === 'flagged' ? (
         <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">Flagged Questions ({flaggedQs.length})</h3>
-            {flaggedQs.length === 0 ? (
-              <div className="card p-4 text-sm text-[var(--color-text-secondary)]">No flagged questions</div>
-            ) : (
-              <div className="space-y-2">
-                {flaggedQs.map(q => (
-                  <div key={q._id} className="card p-4">
-                    <p className="font-medium text-[var(--color-text)]">{q.title}</p>
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">Reason: {q.flagReason}</p>
-                    <p className="text-xs text-[var(--color-text-secondary)] mt-1">Flagged by: {q.flaggedBy?.username}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">Flagged Answers ({flaggedAs.length})</h3>
-            {flaggedAs.length === 0 ? (
-              <div className="card p-4 text-sm text-[var(--color-text-secondary)]">No flagged answers</div>
-            ) : (
-              <div className="space-y-2">
-                {flaggedAs.map(a => (
-                  <div key={a._id} className="card p-4">
-                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2">{a.body}</p>
-                    <p className="text-xs text-red-600 dark:text-red-400 mt-1">Reason: {a.flagReason}</p>
-                    <p className="text-xs text-[var(--color-text-secondary)] mt-1">Flagged by: {a.flaggedBy?.username}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : tab === 'anomalies' ? (
-        <div className="space-y-6">
-          {/* Live Alerts Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="card p-4 border-l-4 border-red-500 bg-red-500/5">
-              <p className="text-sm font-semibold text-[var(--color-text-secondary)]">Open HIGH Alerts</p>
-              <p className="text-3xl font-extrabold text-red-600 dark:text-red-400 mt-1">{anomalyStats?.openHighCount || 0}</p>
-            </div>
-            <div className="card p-4 border-l-4 border-amber-500 bg-amber-500/5">
-              <p className="text-sm font-semibold text-[var(--color-text-secondary)]">Open MEDIUM Alerts</p>
-              <p className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{anomalyStats?.openMediumCount || 0}</p>
-            </div>
-            <div className="card p-4 border-l-4 border-blue-500 bg-blue-500/5">
-              <p className="text-sm font-semibold text-[var(--color-text-secondary)]">Total Active Anomalies</p>
-              <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
-                {(anomalyStats?.openHighCount || 0) + (anomalyStats?.openMediumCount || 0)}
+          <div className="card overflow-hidden">
+            <div className="p-5 border-b border-[var(--color-border)] bg-gradient-to-r from-red-500/5 to-orange-500/5">
+              <h3 className="font-bold text-lg text-[var(--color-text)]">Community Reports ({reportedPosts.length})</h3>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                Review posts flagged by the community. Apply restrictions or dismiss reports.
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Average Resolution Time */}
-            <div className="card p-6">
-              <h4 className="font-semibold text-lg mb-4 text-[var(--color-text)]">Average Resolution Time</h4>
-              <div className="grid grid-cols-3 gap-4 text-center mt-6">
-                <div>
-                  <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider font-bold">HIGH Severity</p>
-                  <p className="text-3xl font-extrabold text-red-600 dark:text-red-400 mt-2">
-                    {anomalyStats?.avgResolutionTimes?.high !== undefined ? `${anomalyStats.avgResolutionTimes.high}m` : '0m'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider font-bold">MEDIUM Severity</p>
-                  <p className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">
-                    {anomalyStats?.avgResolutionTimes?.medium !== undefined ? `${anomalyStats.avgResolutionTimes.medium}m` : '0m'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider font-bold">LOW Severity</p>
-                  <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">
-                    {anomalyStats?.avgResolutionTimes?.low !== undefined ? `${anomalyStats.avgResolutionTimes.low}m` : '0m'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Weekly Trend Chart */}
-            <div className="card p-6">
-              <h4 className="font-semibold text-lg mb-2 text-[var(--color-text)]">Weekly Anomaly Trend (Last 4 Weeks)</h4>
-              <div className="flex items-end justify-between h-36 pt-4 px-2 border-b border-l border-[var(--color-border)]">
-                {anomalyStats?.trend && anomalyStats.trend.length > 0 ? (
-                  anomalyStats.trend.map((t, idx) => {
-                    const maxVal = Math.max(...anomalyStats.trend.map(item => item.count), 1);
-                    const percent = (t.count / maxVal) * 80 + 10;
-                    return (
-                      <div key={idx} className="flex flex-col items-center flex-1 group">
-                        <div className="text-xs font-semibold text-[var(--color-text)] mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {t.count}
-                        </div>
-                        <div 
-                          style={{ height: `${percent}%` }}
-                          className="w-8 sm:w-10 bg-gradient-to-t from-[var(--color-primary)] to-purple-500 rounded-t-lg shadow-md hover:from-purple-500 hover:to-[var(--color-primary)] transition-all duration-300"
-                        />
-                        <div className="text-[10px] text-[var(--color-text-secondary)] mt-2 font-medium">
-                          Week {t.week.split('-')[1] || t.week}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="w-full flex items-center justify-center text-sm text-[var(--color-text-muted)] h-full">
-                    No trend data available for the last 30 days
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Filters & Table */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">Anomalies Moderation Queue</h3>
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={anomalySeverityFilter}
-                  onChange={(e) => { setAnomalySeverityFilter(e.target.value); setAnomalyPage(1); }}
-                  className="border border-[var(--color-border)] rounded-xl px-3 py-1.5 bg-[var(--color-bg-secondary)] text-[var(--color-text)] text-xs"
-                >
-                  <option value="all">All Severities</option>
-                  <option value="high">High Only</option>
-                  <option value="medium">Medium Only</option>
-                  <option value="low">Low Only</option>
-                </select>
-
-                <select
-                  value={anomalyStatusFilter}
-                  onChange={(e) => { setAnomalyStatusFilter(e.target.value); setAnomalyPage(1); }}
-                  className="border border-[var(--color-border)] rounded-xl px-3 py-1.5 bg-[var(--color-bg-secondary)] text-[var(--color-text)] text-xs"
-                >
-                  <option value="all">All Statuses</option>
-                  <option value="unresolved">Unresolved Only</option>
-                  <option value="resolved">Resolved Only</option>
-                </select>
-
-                <select
-                  value={anomalySortBy}
-                  onChange={(e) => { setAnomalySortBy(e.target.value); setAnomalyPage(1); }}
-                  className="border border-[var(--color-border)] rounded-xl px-3 py-1.5 bg-[var(--color-bg-secondary)] text-[var(--color-text)] text-xs"
-                >
-                  <option value="time">Sort by Time (Newest)</option>
-                  <option value="severity">Sort by Severity (Score)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
-                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Severity</th>
-                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">User</th>
-                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Query Preview</th>
-                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Time Elapsed</th>
-                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Status</th>
-                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Actions</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left min-w-[900px]">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Post Type</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Post Preview</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Author</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Reason</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Flagged By</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Date</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)] text-right">Moderator Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {reportedPosts.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="text-center p-8 text-[var(--color-text-secondary)]">
+                        No reported content in database.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--color-border)]">
-                    {anomalies.length === 0 ? (
-                      <tr>
-                        <td colSpan="6" className="text-center py-8 text-[var(--color-text-secondary)]">
-                          No anomalies found matching the criteria.
-                        </td>
-                      </tr>
-                    ) : (
-                      anomalies.map(a => {
-                        const timeElapsed = Math.round((new Date() - new Date(a.createdAt)) / (1000 * 60));
-                        const displayTime = timeElapsed < 60 ? `${timeElapsed}m ago` : `${Math.round(timeElapsed / 60)}h ago`;
-                        
-                        return (
-                          <tr key={a._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${
-                                a.anomalySeverity === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                                a.anomalySeverity === 'medium' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
-                                'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                              }`}>
-                                {a.anomalySeverity} ({a.anomalyScore})
-                              </span>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div>
-                                <p className="font-medium text-[var(--color-text)]">{a.author?.displayName || a.author?.username || 'Anonymous'}</p>
-                                <p className="text-xs text-[var(--color-text-secondary)]">{a.author?.email}</p>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 max-w-xs">
-                              <a href={`/questions/${a._id}`} className="font-semibold text-primary-600 hover:underline block truncate">
-                                {a.title}
-                              </a>
-                              <p className="text-xs text-[var(--color-text-secondary)] truncate mt-0.5">{a.body}</p>
-                            </td>
-                            <td className="px-4 py-3 text-[var(--color-text-secondary)] text-xs">
-                              {displayTime}
-                            </td>
-                            <td className="px-4 py-3">
-                              {a.anomalyResolvedAt ? (
-                                <div className="text-xs">
-                                  <span className="badge-green">Resolved</span>
-                                  <p className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">by @{a.anomalyResolvedBy?.username}</p>
-                                </div>
+                  ) : (
+                    reportedPosts.map(rep => {
+                      const postAuthor = rep.postId?.author;
+                      return (
+                        <tr key={rep._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              rep.postType === 'Question' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                            }`}>
+                              {rep.postType}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 max-w-xs truncate" title={rep.postId?.title || rep.postId?.body}>
+                            {rep.postId ? (
+                              rep.postType === 'Question' ? (
+                                <a href={`/questions/${rep.postId._id}`} target="_blank" className="font-semibold hover:underline text-[var(--color-text)]">
+                                  {rep.postId.title}
+                                </a>
                               ) : (
-                                <span className="badge-red">Unresolved</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              {!a.anomalyResolvedAt && (
-                                <button
-                                  onClick={() => handleResolveAnomaly(a._id)}
-                                  className="btn-primary btn-sm px-3 py-1 text-xs"
-                                >
-                                  Mark Resolved
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              {anomalyPagination.pages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]">
-                  <button
-                    onClick={() => setAnomalyPage(p => Math.max(1, p - 1))}
-                    disabled={anomalyPage === 1}
-                    className="btn-secondary btn-sm disabled:opacity-50"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-xs text-[var(--color-text-secondary)]">
-                    Page {anomalyPage} of {anomalyPagination.pages}
-                  </span>
-                  <button
-                    onClick={() => setAnomalyPage(p => Math.min(anomalyPagination.pages, p + 1))}
-                    disabled={anomalyPage === anomalyPagination.pages}
-                    className="btn-secondary btn-sm disabled:opacity-50"
-                  >
-                    Next
-                  </button>
+                                <span className="text-[var(--color-text-secondary)] italic">{rep.postId.body}</span>
+                              )
+                            ) : (
+                              <span className="text-red-500 italic">Deleted / Missing Post</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {postAuthor ? (
+                              <div>
+                                <p className="font-medium text-[var(--color-text)]">@{postAuthor.username}</p>
+                                <p className="text-[10px] text-[var(--color-text-secondary)]">Score: {postAuthor.trustScore ?? 0} ({postAuthor.trustLevel || 'new'})</p>
+                              </div>
+                            ) : (
+                              <span className="text-[var(--color-text-muted)]">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="capitalize font-semibold text-red-600 dark:text-red-400 text-xs bg-red-100/30 px-2 py-0.5 rounded">
+                              {rep.reason}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-[var(--color-text-secondary)]">@{rep.reportedBy?.username}</td>
+                          <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">{formatDate(rep.createdAt)}</td>
+                          <td className="px-4 py-3 text-right">
+                            {postAuthor && (
+                              postAuthor._id === user?.id || postAuthor._id === user?._id || postAuthor.email === 'faqportal.in@gmail.com' ? (
+                                <span className="text-[10px] text-[var(--color-text-muted)] italic">System Account</span>
+                              ) : (
+                                <div className="inline-flex gap-1.5">
+                                  <button
+                                    onClick={() => handleUserAction(postAuthor._id, 'warn')}
+                                    className="px-2 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white rounded"
+                                  >
+                                    Warn
+                                  </button>
+                                  <button
+                                    onClick={() => handleUserAction(postAuthor._id, 'suspend')}
+                                    className="px-2 py-1 text-[10px] font-bold bg-orange-500 hover:bg-orange-600 text-white rounded"
+                                  >
+                                    Suspend
+                                  </button>
+                                  <button
+                                    onClick={() => handleUserAction(postAuthor._id, 'block')}
+                                    className="px-2 py-1 text-[10px] font-bold bg-red-600 hover:bg-red-700 text-white rounded"
+                                  >
+                                    Block
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">Flagged Questions ({flaggedQs.length})</h3>
+              {flaggedQs.length === 0 ? (
+                <div className="card p-4 text-sm text-[var(--color-text-secondary)]">No flagged questions</div>
+              ) : (
+                <div className="space-y-2">
+                  {flaggedQs.map(q => (
+                    <div key={q._id} className="card p-4">
+                      <p className="font-medium text-[var(--color-text)]">{q.title}</p>
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">Reason: {q.flagReason}</p>
+                      <p className="text-xs text-[var(--color-text-secondary)] mt-1">Flagged by: {q.flaggedBy?.username}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-text)] mb-3">Flagged Answers ({flaggedAs.length})</h3>
+              {flaggedAs.length === 0 ? (
+                <div className="card p-4 text-sm text-[var(--color-text-secondary)]">No flagged answers</div>
+              ) : (
+                <div className="space-y-2">
+                  {flaggedAs.map(a => (
+                    <div key={a._id} className="card p-4">
+                      <p className="text-sm text-[var(--color-text-secondary)] line-clamp-2">{a.body}</p>
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">Reason: {a.flagReason}</p>
+                      <p className="text-xs text-[var(--color-text-secondary)] mt-1">Flagged by: {a.flaggedBy?.username}</p>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -881,7 +833,7 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left min-w-[900px]">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Status</th>
@@ -1054,189 +1006,6 @@ export default function AdminPage() {
             )}
           </div>
         </div>
-      ) : tab === 'reportedPosts' ? (
-        <div className="card overflow-hidden">
-          <div className="p-5 border-b border-[var(--color-border)] bg-gradient-to-r from-red-500/5 to-orange-500/5">
-            <h3 className="font-bold text-lg text-[var(--color-text)]">Community Reports ({reportedPosts.length})</h3>
-            <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-              Review posts flagged by the community. Apply restrictions or dismiss reports.
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Post Type</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Post Preview</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Author</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Reason</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Flagged By</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Date</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)] text-right">Moderator Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {reportedPosts.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="text-center p-8 text-[var(--color-text-secondary)]">
-                      No reported content in database.
-                    </td>
-                  </tr>
-                ) : (
-                  reportedPosts.map(rep => {
-                    const postAuthor = rep.postId?.author;
-                    return (
-                      <tr key={rep._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            rep.postType === 'Question' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                          }`}>
-                            {rep.postType}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 max-w-xs truncate" title={rep.postId?.title || rep.postId?.body}>
-                          {rep.postId ? (
-                            rep.postType === 'Question' ? (
-                              <a href={`/questions/${rep.postId._id}`} target="_blank" className="font-semibold hover:underline text-[var(--color-text)]">
-                                {rep.postId.title}
-                              </a>
-                            ) : (
-                              <span className="text-[var(--color-text-secondary)] italic">{rep.postId.body}</span>
-                            )
-                          ) : (
-                            <span className="text-red-500 italic">Deleted / Missing Post</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {postAuthor ? (
-                            <div>
-                              <p className="font-medium text-[var(--color-text)]">@{postAuthor.username}</p>
-                              <p className="text-[10px] text-[var(--color-text-secondary)]">Score: {postAuthor.trustScore ?? 0} ({postAuthor.trustLevel || 'new'})</p>
-                            </div>
-                          ) : (
-                            <span className="text-[var(--color-text-muted)]">N/A</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="capitalize font-semibold text-red-600 dark:text-red-400 text-xs bg-red-100/30 px-2 py-0.5 rounded">
-                            {rep.reason}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-[var(--color-text-secondary)]">@{rep.reportedBy?.username}</td>
-                        <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">{formatDate(rep.createdAt)}</td>
-                        <td className="px-4 py-3 text-right">
-                          {postAuthor && (
-                            postAuthor._id === user?.id || postAuthor._id === user?._id || postAuthor.email === 'faqportal.in@gmail.com' ? (
-                              <span className="text-[10px] text-[var(--color-text-muted)] italic">System Account</span>
-                            ) : (
-                              <div className="inline-flex gap-1.5">
-                                <button
-                                  onClick={() => handleUserAction(postAuthor._id, 'warn')}
-                                  className="px-2 py-1 text-[10px] font-bold bg-amber-500 hover:bg-amber-600 text-white rounded"
-                                >
-                                  Warn
-                                </button>
-                                <button
-                                  onClick={() => handleUserAction(postAuthor._id, 'suspend')}
-                                  className="px-2 py-1 text-[10px] font-bold bg-orange-500 hover:bg-orange-600 text-white rounded"
-                                >
-                                  Suspend
-                                </button>
-                                <button
-                                  onClick={() => handleUserAction(postAuthor._id, 'block')}
-                                  className="px-2 py-1 text-[10px] font-bold bg-red-600 hover:bg-red-700 text-white rounded"
-                                >
-                                  Block
-                                </button>
-                              </div>
-                            )
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ) : tab === 'suspiciousActivities' ? (
-        <div className="card overflow-hidden">
-          <div className="p-5 border-b border-[var(--color-border)] bg-gradient-to-r from-red-500/5 to-amber-500/5">
-            <h3 className="font-bold text-lg text-[var(--color-text)]">Suspicious Activity Logs ({suspiciousActivities.length})</h3>
-            <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-              Tracks sybil accounts, duplicate IPs, or matching browser fingerprints.
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Type</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Shared Identifier</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Flagged Accounts</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Confidence</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Status</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Date</th>
-                  <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
-                {suspiciousActivities.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="text-center p-8 text-[var(--color-text-secondary)]">
-                      No suspicious activity flags detected.
-                    </td>
-                  </tr>
-                ) : (
-                  suspiciousActivities.map(act => (
-                    <tr key={act._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 capitalize">
-                          {act.activityType}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-[var(--color-text)]">{act.sharedValue}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {act.affectedUsers?.map(usr => (
-                            <span key={usr._id} className="text-xs bg-[var(--color-bg-secondary)] border border-[var(--color-border)] px-1.5 py-0.5 rounded text-[var(--color-text-secondary)]">
-                              @{usr.username}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-medium text-[var(--color-text)]">{act.confidenceScore}%</td>
-                      <td className="px-4 py-3">
-                        {act.isResolved ? (
-                          <div className="text-xs">
-                            <span className="badge-green">Resolved</span>
-                            {act.resolvedBy && (
-                              <p className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">by @{act.resolvedBy.username}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="badge-red">Unresolved</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">{formatDate(act.flagDate)}</td>
-                      <td className="px-4 py-3">
-                        {!act.isResolved && (
-                          <button
-                            onClick={() => handleResolveSuspicious(act._id)}
-                            className="btn-primary btn-sm px-3 py-1 text-xs"
-                          >
-                            Mark Resolved
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
       ) : tab === 'auditLogs' ? (
         <div className="card overflow-hidden">
           <div className="p-5 border-b border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/20">
@@ -1246,7 +1015,7 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left min-w-[800px]">
               <thead>
                 <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
                   <th className="px-4 py-3 font-semibold text-[var(--color-text)]">User/Admin</th>
@@ -1280,13 +1049,319 @@ export default function AdminPage() {
             </table>
           </div>
         </div>
+      ) : tab === 'escalations' ? (
+        <div className="space-y-8">
+          {/* Anomalies Stats & Trend Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="card p-4 border-l-4 border-red-500 bg-red-500/5">
+              <p className="text-sm font-semibold text-[var(--color-text-secondary)]">Open HIGH Alerts</p>
+              <p className="text-3xl font-extrabold text-red-600 dark:text-red-400 mt-1">{anomalyStats?.openHighCount || 0}</p>
+            </div>
+            <div className="card p-4 border-l-4 border-amber-500 bg-amber-500/5">
+              <p className="text-sm font-semibold text-[var(--color-text-secondary)]">Open MEDIUM Alerts</p>
+              <p className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{anomalyStats?.openMediumCount || 0}</p>
+            </div>
+            <div className="card p-4 border-l-4 border-blue-500 bg-blue-500/5">
+              <p className="text-sm font-semibold text-[var(--color-text-secondary)]">Total Active Anomalies</p>
+              <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-1">
+                {(anomalyStats?.openHighCount || 0) + (anomalyStats?.openMediumCount || 0)}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Average Resolution Time */}
+            <div className="card p-6">
+              <h4 className="font-semibold text-lg mb-4 text-[var(--color-text)]">Average Resolution Time</h4>
+              <div className="grid grid-cols-3 gap-4 text-center mt-6">
+                <div>
+                  <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider font-bold">HIGH Severity</p>
+                  <p className="text-3xl font-extrabold text-red-600 dark:text-red-400 mt-2">
+                    {anomalyStats?.avgResolutionTimes?.high !== undefined ? `${anomalyStats.avgResolutionTimes.high}m` : '0m'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider font-bold">MEDIUM Severity</p>
+                  <p className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">
+                    {anomalyStats?.avgResolutionTimes?.medium !== undefined ? `${anomalyStats.avgResolutionTimes.medium}m` : '0m'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--color-text-secondary)] uppercase tracking-wider font-bold">LOW Severity</p>
+                  <p className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">
+                    {anomalyStats?.avgResolutionTimes?.low !== undefined ? `${anomalyStats.avgResolutionTimes.low}m` : '0m'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Weekly Trend Chart */}
+            <div className="card p-6">
+              <h4 className="font-semibold text-lg mb-2 text-[var(--color-text)]">Weekly Anomaly Trend (Last 4 Weeks)</h4>
+              <div className="flex items-end justify-between h-36 pt-4 px-2 border-b border-l border-[var(--color-border)]">
+                {anomalyStats?.trend && anomalyStats.trend.length > 0 ? (
+                  anomalyStats.trend.map((t, idx) => {
+                    const maxVal = Math.max(...anomalyStats.trend.map(item => item.count), 1);
+                    const percent = (t.count / maxVal) * 80 + 10;
+                    return (
+                      <div key={idx} className="flex flex-col items-center flex-1 group">
+                        <div className="text-xs font-semibold text-[var(--color-text)] mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {t.count}
+                        </div>
+                        <div 
+                          style={{ height: `${percent}%` }}
+                          className="w-8 sm:w-10 bg-gradient-to-t from-[var(--color-primary)] to-purple-500 rounded-t-lg shadow-md hover:from-purple-500 hover:to-[var(--color-primary)] transition-all duration-300"
+                        />
+                        <div className="text-[10px] text-[var(--color-text-secondary)] mt-2 font-medium">
+                          Week {t.week.split('-')[1] || t.week}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="w-full flex items-center justify-center text-sm text-[var(--color-text-muted)] h-full">
+                    No trend data available for the last 30 days
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Escalated Queries Section */}
+          <div className="card overflow-hidden border border-[var(--color-border)] rounded-2xl shadow-xl bg-[var(--color-bg-secondary)] relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 via-red-500 to-pink-500" />
+            <div className="p-5 border-b border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/20">
+              <h3 className="font-bold text-lg text-[var(--color-text)] flex items-center gap-2">
+                <span>⚠️</span> Escalated Queries ({escalatedQs.length})
+              </h3>
+              <p className="text-xs text-[var(--color-text-secondary)] mt-1">
+                Persistent list of escalated queries that require administrative or moderator review and resolution.
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left min-w-[800px]">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Question Details</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Author</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Escalation Reason</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Date Escalated</th>
+                    <th className="px-4 py-3 font-semibold text-[var(--color-text)]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--color-border)]">
+                  {escalatedQs.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="text-center p-8 text-[var(--color-text-secondary)]">
+                        No escalated queries found.
+                      </td>
+                    </tr>
+                  ) : (
+                    escalatedQs.map(q => (
+                      <tr key={q._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                        <td className="px-4 py-3">
+                          <a href={`/questions/${q._id}`} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-600 hover:text-primary-700 hover:underline">
+                            {q.title}
+                          </a>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            <span className="badge-gray text-[10px]">{q.answerCount || 0} answers</span>
+                            {q.tagNames?.map(tag => (
+                              <span key={tag} className="badge-primary text-[10px]">{tag}</span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 font-medium text-[var(--color-text)] text-xs">
+                          {q.author ? `@${q.author.username || q.author.displayName}` : 'Anonymous'}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)] italic max-w-xs truncate" title={q.escalationReason}>
+                          {q.escalationReason || 'No response within 24 hours'}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">
+                          {formatDate(q.escalatedAt)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => handleResolveEscalation(q._id)}
+                            className="btn-warning btn-sm px-3 py-1 text-xs font-semibold rounded-lg shadow-sm"
+                          >
+                            Resolve Escalation
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {escalatedPagination.pages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]">
+                <button
+                  onClick={() => setEscalatedPage(p => Math.max(1, p - 1))}
+                  disabled={escalatedPage === 1}
+                  className="btn-secondary btn-sm disabled:opacity-50 text-xs px-2.5 py-1"
+                >
+                  Previous
+                </button>
+                <span className="text-xs text-[var(--color-text-secondary)]">
+                  Page {escalatedPage} of {escalatedPagination.pages}
+                </span>
+                <button
+                  onClick={() => setEscalatedPage(p => Math.min(escalatedPagination.pages, p + 1))}
+                  disabled={escalatedPage === escalatedPagination.pages}
+                  className="btn-secondary btn-sm disabled:opacity-50 text-xs px-2.5 py-1"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Anomalies Moderation Queue Section */}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h3 className="text-lg font-semibold text-[var(--color-text)]">Anomalies Moderation Queue</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={anomalySeverityFilter}
+                  onChange={(e) => { setAnomalySeverityFilter(e.target.value); setAnomalyPage(1); }}
+                  className="border border-[var(--color-border)] rounded-xl px-3 py-1.5 bg-[var(--color-bg-secondary)] text-[var(--color-text)] text-xs"
+                >
+                  <option value="all">All Severities</option>
+                  <option value="high">High Only</option>
+                  <option value="medium">Medium Only</option>
+                  <option value="low">Low Only</option>
+                </select>
+
+                <select
+                  value={anomalyStatusFilter}
+                  onChange={(e) => { setAnomalyStatusFilter(e.target.value); setAnomalyPage(1); }}
+                  className="border border-[var(--color-border)] rounded-xl px-3 py-1.5 bg-[var(--color-bg-secondary)] text-[var(--color-text)] text-xs"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="unresolved">Unresolved Only</option>
+                  <option value="resolved">Resolved Only</option>
+                </select>
+
+                <select
+                  value={anomalySortBy}
+                  onChange={(e) => { setAnomalySortBy(e.target.value); setAnomalyPage(1); }}
+                  className="border border-[var(--color-border)] rounded-xl px-3 py-1.5 bg-[var(--color-bg-secondary)] text-[var(--color-text)] text-xs"
+                >
+                  <option value="time">Sort by Time (Newest)</option>
+                  <option value="severity">Sort by Severity (Score)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="card overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[800px]">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
+                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Severity</th>
+                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">User</th>
+                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Query Preview</th>
+                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Time Elapsed</th>
+                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Status</th>
+                      <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border)]">
+                    {anomalies.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="text-center py-8 text-[var(--color-text-secondary)]">
+                          No anomalies found matching the criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      anomalies.map(a => {
+                        const timeElapsed = Math.round((new Date() - new Date(a.createdAt)) / (1000 * 60));
+                        const displayTime = timeElapsed < 60 ? `${timeElapsed}m ago` : `${Math.round(timeElapsed / 60)}h ago`;
+                        
+                        return (
+                          <tr key={a._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${
+                                a.anomalySeverity === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                a.anomalySeverity === 'medium' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                                'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                              }`}>
+                                {a.anomalySeverity} ({a.anomalyScore})
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div>
+                                <p className="font-medium text-[var(--color-text)]">{a.author?.displayName || a.author?.username || 'Anonymous'}</p>
+                                <p className="text-xs text-[var(--color-text-secondary)]">{a.author?.email}</p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 max-w-xs">
+                              <a href={`/questions/${a._id}`} className="font-semibold text-primary-600 hover:underline block truncate">
+                                {a.title}
+                              </a>
+                              <p className="text-xs text-[var(--color-text-secondary)] truncate mt-0.5">{a.body}</p>
+                            </td>
+                            <td className="px-4 py-3 text-[var(--color-text-secondary)] text-xs">
+                              {displayTime}
+                            </td>
+                            <td className="px-4 py-3">
+                              {a.anomalyResolvedAt ? (
+                                <div className="text-xs">
+                                  <span className="badge-green">Resolved</span>
+                                  <p className="text-[10px] text-[var(--color-text-secondary)] mt-0.5">by @{a.anomalyResolvedBy?.username}</p>
+                                </div>
+                              ) : (
+                                <span className="badge-red">Unresolved</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {!a.anomalyResolvedAt && (
+                                <button
+                                  onClick={() => handleResolveAnomaly(a._id)}
+                                  className="btn-primary btn-sm px-3 py-1 text-xs"
+                                >
+                                  Mark Resolved
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {anomalyPagination.pages > 1 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]">
+                  <button
+                    onClick={() => setAnomalyPage(p => Math.max(1, p - 1))}
+                    disabled={anomalyPage === 1}
+                    className="btn-secondary btn-sm disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  <span className="text-xs text-[var(--color-text-secondary)]">
+                    Page {anomalyPage} of {anomalyPagination.pages}
+                  </span>
+                  <button
+                    onClick={() => setAnomalyPage(p => Math.min(anomalyPagination.pages, p + 1))}
+                    disabled={anomalyPage === anomalyPagination.pages}
+                    className="btn-secondary btn-sm disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       ) : tab === 'emails' ? (
         <div className="space-y-6">
           <div className="card p-5 bg-gradient-to-r from-indigo-500/5 to-cyan-500/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h3 className="font-bold text-lg text-[var(--color-text)]">Email Notification System</h3>
+              <h3 className="font-bold text-lg text-[var(--color-text)]">Email Notification & Broadcast System</h3>
               <p className="text-xs text-[var(--color-text-secondary)] mt-1">
-                Monitor the outbound queue, view statistics, force processing, and manage permanent bounces.
+                Monitor the outbound queue, view statistics, manage permanent bounces, and broadcast announcements to all users.
               </p>
             </div>
             <div className="flex gap-2">
@@ -1334,97 +1409,161 @@ export default function AdminPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Email Queue Section */}
-            <div className="card lg:col-span-2 overflow-hidden flex flex-col justify-between">
-              <div>
-                <div className="p-4 border-b border-[var(--color-border)]">
-                  <h4 className="font-bold text-[var(--color-text)] text-sm">Active Queue Logs</h4>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead>
-                      <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
-                        <th className="px-4 py-2.5 font-semibold text-[var(--color-text)]">To</th>
-                        <th className="px-4 py-2.5 font-semibold text-[var(--color-text)]">Subject</th>
-                        <th className="px-4 py-2.5 font-semibold text-[var(--color-text)]">Status</th>
-                        <th className="px-4 py-2.5 font-semibold text-[var(--color-text)] text-center">Attempts</th>
-                        <th className="px-4 py-2.5 font-semibold text-[var(--color-text)]">Next Retry At</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--color-border)]">
-                      {emails.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="text-center p-8 text-[var(--color-text-secondary)]">
-                            No emails in queue.
-                          </td>
+            {/* Left Column: Broadcast Form & Queue Logs */}
+            <div className="lg:col-span-2 space-y-6">
+              
+              {/* Broadcast Email Form */}
+              <div className="card p-6 border border-[var(--color-border)] rounded-2xl shadow-md bg-[var(--color-bg-secondary)] relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400 via-purple-500 to-pink-500" />
+                <h4 className="font-bold text-[var(--color-text)] text-sm mb-2 flex items-center gap-2">
+                  <span>📧</span> Send Email Broadcast to All Users
+                </h4>
+                <p className="text-xs text-[var(--color-text-secondary)] mb-4 leading-relaxed">
+                  Compose and enqueue an email to all active, non-banned users registered on the platform. The outbound emails will be enqueued in the delivery system queue.
+                </p>
+                <form onSubmit={handleSendEmailBroadcast} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--color-text)] mb-1">
+                        Template Header Title
+                      </label>
+                      <input
+                        type="text"
+                        value={emailContentTitle}
+                        onChange={(e) => setEmailContentTitle(e.target.value)}
+                        placeholder="e.g. Admin Broadcast Announcement"
+                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2.5 text-xs text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--color-text)] mb-1">
+                        Email Subject
+                      </label>
+                      <input
+                        type="text"
+                        value={emailSubject}
+                        onChange={(e) => setEmailSubject(e.target.value)}
+                        placeholder="Enter email subject line..."
+                        required
+                        className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-2.5 text-xs text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--color-text)] mb-1">
+                      Email Body Message (HTML or Plain Text)
+                    </label>
+                    <textarea
+                      value={emailBody}
+                      onChange={(e) => setEmailBody(e.target.value)}
+                      placeholder="Compose the email body..."
+                      rows={4}
+                      required
+                      className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-xs text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={sendingEmail || !emailSubject.trim() || !emailBody.trim()}
+                    className="w-full btn-primary py-2.5 rounded-xl font-bold shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 transition-all duration-200 cursor-pointer text-xs"
+                  >
+                    {sendingEmail ? 'Enqueuing Emails...' : 'Send Broadcast Email Now'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Email Queue Section */}
+              <div className="card overflow-hidden flex flex-col justify-between">
+                <div>
+                  <div className="p-4 border-b border-[var(--color-border)]">
+                    <h4 className="font-bold text-[var(--color-text)] text-sm">Active Queue Logs</h4>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left min-w-[700px]">
+                      <thead>
+                        <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-[var(--color-border)]">
+                          <th className="px-4 py-2.5 font-semibold text-[var(--color-text)]">To</th>
+                          <th className="px-4 py-2.5 font-semibold text-[var(--color-text)]">Subject</th>
+                          <th className="px-4 py-2.5 font-semibold text-[var(--color-text)]">Status</th>
+                          <th className="px-4 py-2.5 font-semibold text-[var(--color-text)] text-center">Attempts</th>
+                          <th className="px-4 py-2.5 font-semibold text-[var(--color-text)]">Next Retry At</th>
                         </tr>
-                      ) : (
-                        emails.map(email => (
-                          <tr key={email._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 text-xs">
-                            <td className="px-4 py-3">
-                              <p className="font-medium text-[var(--color-text)]">{email.userName}</p>
-                              <p className="text-[var(--color-text-secondary)]">{email.to}</p>
-                            </td>
-                            <td className="px-4 py-3 max-w-xs truncate" title={email.subject}>
-                              {email.subject}
-                              {email.failReason && (
-                                <p className="text-[10px] text-red-500 font-medium mt-0.5 truncate" title={email.failReason}>
-                                  Err: {email.failReason}
-                                </p>
-                              )}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
-                                email.status === 'sent' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
-                                email.status === 'pending' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 animate-pulse' :
-                                email.status === 'bounced' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
-                                'bg-gray-500/10 text-gray-600 dark:text-gray-400'
-                              }`}>
-                                {email.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center text-[var(--color-text-secondary)]">
-                              {email.attempts} / {email.maxAttempts}
-                            </td>
-                            <td className="px-4 py-3 text-[var(--color-text-secondary)] text-[10px]">
-                              {email.status === 'pending' ? formatDate(email.nextRetryAt) : 'N/A'}
+                      </thead>
+                      <tbody className="divide-y divide-[var(--color-border)]">
+                        {emails.length === 0 ? (
+                          <tr>
+                            <td colSpan="5" className="text-center p-8 text-[var(--color-text-secondary)]">
+                              No emails in queue.
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          emails.map(email => (
+                            <tr key={email._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30 text-xs">
+                              <td className="px-4 py-3">
+                                <p className="font-medium text-[var(--color-text)]">{email.userName}</p>
+                                <p className="text-[var(--color-text-secondary)]">{email.to}</p>
+                              </td>
+                              <td className="px-4 py-3 max-w-xs truncate" title={email.subject}>
+                                {email.subject}
+                                {email.failReason && (
+                                  <p className="text-[10px] text-red-500 font-medium mt-0.5 truncate" title={email.failReason}>
+                                    Err: {email.failReason}
+                                  </p>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  email.status === 'sent' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' :
+                                  email.status === 'pending' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 animate-pulse' :
+                                  email.status === 'bounced' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400' :
+                                  'bg-gray-500/10 text-gray-600 dark:text-gray-400'
+                                }`}>
+                                  {email.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-center text-[var(--color-text-secondary)]">
+                                {email.attempts} / {email.maxAttempts}
+                              </td>
+                              <td className="px-4 py-3 text-[var(--color-text-secondary)] text-[10px]">
+                                {email.status === 'pending' ? formatDate(email.nextRetryAt) : 'N/A'}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
+                {emailPagination.pages > 1 && (
+                  <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]">
+                    <button
+                      onClick={() => setEmailPage(p => Math.max(1, p - 1))}
+                      disabled={emailPage === 1}
+                      className="btn-secondary btn-sm disabled:opacity-50 text-xs px-2.5 py-1"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs text-[var(--color-text-secondary)]">
+                      Page {emailPage} of {emailPagination.pages}
+                    </span>
+                    <button
+                      onClick={() => setEmailPage(p => Math.min(emailPagination.pages, p + 1))}
+                      disabled={emailPage === emailPagination.pages}
+                      className="btn-secondary btn-sm disabled:opacity-50 text-xs px-2.5 py-1"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
-              {emailPagination.pages > 1 && (
-                <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]">
-                  <button
-                    onClick={() => setEmailPage(p => Math.max(1, p - 1))}
-                    disabled={emailPage === 1}
-                    className="btn-secondary btn-sm disabled:opacity-50 text-xs px-2.5 py-1"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-xs text-[var(--color-text-secondary)]">
-                    Page {emailPage} of {emailPagination.pages}
-                  </span>
-                  <button
-                    onClick={() => setEmailPage(p => Math.min(emailPagination.pages, p + 1))}
-                    disabled={emailPage === emailPagination.pages}
-                    className="btn-secondary btn-sm disabled:opacity-50 text-xs px-2.5 py-1"
-                  >
-                    Next
-                  </button>
-                </div>
-              )}
             </div>
 
-            {/* Bounces Sidebar */}
-            <div className="card overflow-hidden">
+            {/* Right Column: Bounces Sidebar */}
+            <div className="card overflow-hidden h-fit">
               <div className="p-4 border-b border-[var(--color-border)]">
                 <h4 className="font-bold text-[var(--color-text)] text-sm">Permanent Bounces ({bounces.length})</h4>
               </div>
-              <div className="divide-y divide-[var(--color-border)] max-h-[400px] overflow-y-auto">
+              <div className="divide-y divide-[var(--color-border)] max-h-[600px] overflow-y-auto">
                 {bounces.length === 0 ? (
                   <p className="p-4 text-xs text-center text-[var(--color-text-secondary)]">
                     No permanent bounces registered.
@@ -1474,7 +1613,7 @@ export default function AdminPage() {
                 value={broadcastMessage}
                 onChange={(e) => setBroadcastMessage(e.target.value)}
                 placeholder="Type the message to broadcast..."
-                rows={4}
+                rows={5}
                 required
                 className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-sm text-[var(--color-text)] focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
               />
@@ -1484,9 +1623,110 @@ export default function AdminPage() {
               disabled={broadcasting || !broadcastMessage.trim()}
               className="w-full btn-primary py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 disabled:opacity-50 transition-all duration-200"
             >
-              {broadcasting ? 'Broadcasting...' : 'Broadcast Alert Now'}
+              {broadcasting ? 'Broadcasting...' : '🚨 Broadcast Alert Now'}
             </button>
           </form>
+        </div>
+      ) : tab === 'spurti' && user.role === 'admin' ? (
+        <div className="card p-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-[var(--color-text)]">Spurti Points Tracker</h2>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                Monitor all Spurti Point (Sp) transactions and incentive logs across the entire platform.
+              </p>
+            </div>
+            
+            {/* Search Input */}
+            <div className="flex gap-2 shrink-0">
+              <input
+                type="text"
+                value={spurtiSearch}
+                onChange={(e) => {
+                  setSpurtiSearch(e.target.value);
+                  fetchSpurtiLogs(1, e.target.value);
+                }}
+                placeholder="Search user..."
+                className="input py-2 text-sm max-w-xs"
+              />
+              <button
+                onClick={() => fetchSpurtiLogs(1, spurtiSearch)}
+                className="btn-primary btn-sm py-2"
+              >
+                Search
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto border border-[var(--color-border)]/50 rounded-xl shadow-sm">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead>
+                <tr className="bg-[var(--color-bg-tertiary)]/50 border-b border-[var(--color-border)]">
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">User</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Email</th>
+                  <th className="text-center px-4 py-3 font-medium text-[var(--color-text)]">Transaction</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Reason</th>
+                  <th className="text-center px-4 py-3 font-medium text-[var(--color-text)]">Sp Balance</th>
+                  <th className="text-left px-4 py-3 font-medium text-[var(--color-text)]">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--color-border)]/30 text-[var(--color-text-secondary)]">
+                {spurtiLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-8 text-xs text-[var(--color-text-muted)]">
+                      No Spurti Point transactions logged yet.
+                    </td>
+                  </tr>
+                ) : (
+                  spurtiLogs.map((log) => (
+                    <tr key={log._id} className="hover:bg-[var(--color-bg-tertiary)]/10">
+                      <td className="px-4 py-3">
+                        <span className="font-semibold text-[var(--color-text)]">
+                          {log.user?.displayName || log.user?.username || 'Unknown User'}
+                        </span>
+                        <span className="text-xs text-[var(--color-text-muted)] block">
+                          @{log.user?.username || 'unknown'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-xs">{log.user?.email || 'N/A'}</td>
+                      <td className={`px-4 py-3 text-center font-bold ${log.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {log.amount > 0 ? `+${log.amount}` : log.amount} Sp
+                      </td>
+                      <td className="px-4 py-3 text-xs italic">
+                        {log.reason}
+                      </td>
+                      <td className="px-4 py-3 text-center font-semibold text-[var(--color-text)]">
+                        {log.user?.spurtiPoints || 0} Sp
+                      </td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        {formatDate(log.createdAt)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {spurtiPagination && spurtiPagination.pages > 1 && (
+            <div className="flex justify-center gap-2 mt-6">
+              {Array.from({ length: spurtiPagination.pages }, (_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => {
+                    setSpurtiPage(i + 1);
+                    fetchSpurtiLogs(i + 1, spurtiSearch);
+                  }}
+                  className={`px-3 py-1 text-xs rounded ${
+                    spurtiPagination.page === i + 1 ? 'bg-primary-600 text-white font-bold' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
     </div>

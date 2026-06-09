@@ -43,7 +43,7 @@ export default function GuidelinesPage() {
 
               <div>
                 <h3 className="font-semibold text-[var(--color-text)] text-base mb-1">4. Use the "Solved My Doubt" Feature Honestly</h3>
-                <p>If another student's answer resolves your issue, click the <strong>Solved My Doubt</strong> button. This helps build reputation for helpful contributors and flags high-quality solutions for moderators.</p>
+                <p>If another student's answer resolves your issue, click the <strong>Solved My Doubt</strong> button. This helps award Spurti Points (Sp) to helpful contributors and flags high-quality solutions for moderators.</p>
               </div>
             </div>
           </section>

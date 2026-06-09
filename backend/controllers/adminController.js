@@ -6,6 +6,7 @@ const { paginate, buildPaginationMeta } = require('../utils/helpers');
 const { getDashboardStats, getUserAnalytics, getGlobalFAQAnalytics } = require('../services/analyticsService');
 const { banUser, unbanUser } = require('../services/moderationService');
 const { getRedis } = require('../config/redis');
+const { triggerAutoAnswer } = require('../services/autoAnswerService');
 
 exports.getDashboard = async (req, res, next) => {
   try {
@@ -384,9 +385,15 @@ exports.clearCache = async (req, res) => {
   try {
     const redis = getRedis();
     await redis.flushall();
-    res.json({ message: 'Cache cleared' });
+    try {
+      const { syncToElasticsearch } = require('../services/searchService');
+      await syncToElasticsearch();
+    } catch (esErr) {
+      console.error('Failed to sync ES indices during cache clear:', esErr.message);
+    }
+    res.json({ message: 'Cache and search indices cleared' });
   } catch (_) {
-    res.json({ message: 'Cache not available' });
+    res.json({ message: 'Cache or search not available' });
   }
 };
 
@@ -551,6 +558,13 @@ exports.approvePost = async (req, res, next) => {
         .populate('relatedQuestions', 'title answerCount');
       await indexQuestion(populated);
 
+      // Trigger AI auto-answer for newly-approved question (fire-and-forget)
+      setImmediate(() => {
+        triggerAutoAnswer(populated).catch(err =>
+          console.error('[AutoAnswer] approvePost trigger error:', err.message)
+        );
+      });
+
       // Email notification
       try {
         const { sendNewQuestionApprovedNotification } = require('../services/emailService');
@@ -582,7 +596,6 @@ exports.approvePost = async (req, res, next) => {
             referenceType: 'Answer',
             reference: post._id,
           });
-          emitToUser(q.author.toString(), 'notification:new', { answer: populated });
 
           // Send email notification to question author
           try {
@@ -626,7 +639,7 @@ exports.rejectPost = async (req, res, next) => {
     const AuditLog = require('../models/AuditLog');
 
     let post;
-    if (postType === 'Question') {
+    if (postType && postType.toLowerCase() === 'question') {
       post = await Question.findById(postId);
     } else {
       post = await Answer.findById(postId);
@@ -637,6 +650,22 @@ exports.rejectPost = async (req, res, next) => {
     post.visibility = 'hidden';
     post.isDeleted = true; // Mark as deleted so it won't appear
     await post.save();
+
+    if (postType && postType.toLowerCase() === 'question') {
+      const Answer = require('../models/Answer');
+      // Find all non-deleted answers before bulk-marking them deleted
+      const affectedAnswers = await Answer.find({ question: post._id, isDeleted: false }).select('author');
+      await Answer.updateMany({ question: post._id }, { isDeleted: true, visibility: 'hidden' });
+      // Decrement each answer author's answerCount
+      for (const a of affectedAnswers) {
+        if (a.author) {
+          await User.findByIdAndUpdate(a.author, { $inc: { answerCount: -1 } });
+        }
+      }
+    } else {
+      // Single answer rejected — decrement its author's answerCount
+      await User.findByIdAndUpdate(post.author, { $inc: { answerCount: -1 } });
+    }
 
     // Post rejection emails are disabled to prevent non-compliant outbound emails
 
@@ -813,70 +842,6 @@ exports.moderateUser = async (req, res, next) => {
   }
 };
 
-exports.getSuspiciousActivity = async (req, res, next) => {
-  try {
-    const SuspiciousActivity = require('../models/SuspiciousActivity');
-    const docs = await SuspiciousActivity.find()
-      .populate('affectedUsers', 'username displayName email')
-      .populate('resolvedBy', 'username displayName')
-      .sort({ flagDate: -1 })
-      .lean();
-
-    const activities = docs.map(act => {
-      let confidence = 50;
-      const userCount = act.affectedUsers ? act.affectedUsers.length : 0;
-      if (act.type === 'ip_abuse') {
-        confidence = Math.min(100, userCount * 20);
-      } else if (act.type === 'device_abuse') {
-        confidence = Math.min(100, userCount * 33);
-      }
-      return {
-        ...act,
-        activityType: act.type,
-        sharedValue: act.type === 'ip_abuse' ? act.ip : act.deviceId,
-        confidenceScore: confidence
-      };
-    });
-
-    res.json({ activities });
-  } catch (err) {
-    next(err);
-  }
-};
-
-exports.resolveSuspiciousActivity = async (req, res, next) => {
-  try {
-    const SuspiciousActivity = require('../models/SuspiciousActivity');
-    const activity = await SuspiciousActivity.findById(req.params.id);
-    if (!activity) throw new AppError('Suspicious activity log not found', 404);
-    
-    activity.isResolved = true;
-    activity.resolvedBy = req.user._id;
-    activity.resolvedAt = new Date();
-    await activity.save();
-
-    const AuditLog = require('../models/AuditLog');
-    await AuditLog.create({
-      adminId: req.user._id,
-      action: 'resolve_suspicious',
-      targetId: activity._id,
-      targetType: 'User',
-      reason: `Resolved suspicious activity of type: ${activity.type}`
-    });
-    
-    try {
-      const { emitToAdmin } = require('../socket');
-      emitToAdmin('moderation:updated', { action: 'resolve_suspicious', activityId: activity._id });
-    } catch (err) {
-      console.error('Socket notification error in resolveSuspiciousActivity:', err.message);
-    }
-    
-    res.json({ message: 'Suspicious activity resolved successfully', activity });
-  } catch (err) {
-    next(err);
-  }
-};
-
 exports.getAuditLogs = async (req, res, next) => {
   try {
     const AuditLog = require('../models/AuditLog');
@@ -1037,6 +1002,21 @@ exports.sendAdminAlert = async (req, res, next) => {
       console.error('Socket broadcast failed for admin alert:', socketErr.message);
     }
 
+    // 3b. Broadcast push notifications to all apps (even if closed)
+    try {
+      const { broadcastPushNotification } = require('../services/pushService');
+      broadcastPushNotification({
+        title: 'Admin Alert',
+        body: message,
+        data: {
+          link: '/notifications',
+          type: 'system'
+        }
+      });
+    } catch (pushErr) {
+      console.error('Push broadcast failed for admin alert:', pushErr.message);
+    }
+
     // 4. Also audit log this action
     const AuditLog = require('../models/AuditLog');
     await AuditLog.create({
@@ -1053,5 +1033,148 @@ exports.sendAdminAlert = async (req, res, next) => {
   }
 };
 
+exports.sendEmailBroadcast = async (req, res, next) => {
+  try {
+    const { subject, body, contentTitle } = req.body;
+    if (!subject || !body) {
+      throw new AppError('Subject and body are required', 400);
+    }
+
+    const User = require('../models/User');
+    const enqueueEmail = require('../utils/enqueueEmail');
+
+    // 1. Get all active, non-banned users with emails
+    const users = await User.find({ isBanned: false }).select('email displayName username');
+    
+    // 2. Enqueue emails for all users
+    let enqueuedCount = 0;
+    for (const u of users) {
+      if (u.email) {
+        await enqueueEmail({
+          to: u.email,
+          userName: u.displayName || u.username,
+          subject: subject,
+          body: body,
+          contentTitle: contentTitle || 'Admin Broadcast Announcement'
+        });
+        enqueuedCount++;
+      }
+    }
+
+    // 3. Log to Audit Log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'email_broadcast',
+      targetId: req.user._id,
+      targetType: 'User',
+      reason: `Sent email broadcast to ${enqueuedCount} users: "${subject}"`
+    });
+
+    res.json({ success: true, message: `Email broadcast enqueued for ${enqueuedCount} user(s)` });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.updateAppVersion = async (req, res, next) => {
+  try {
+    const { latestVersion, latestVersionCode, apkUrl, changelog, forceUpdate } = req.body;
+    if (!latestVersion || !latestVersionCode || !apkUrl) {
+      throw new AppError('latestVersion, latestVersionCode, and apkUrl are required', 400);
+    }
+
+    const AppVersion = require('../models/AppVersion');
+    let versionInfo = await AppVersion.findOne().sort({ createdAt: -1 });
+    
+    if (versionInfo) {
+      versionInfo.latestVersion = latestVersion;
+      versionInfo.latestVersionCode = parseInt(latestVersionCode);
+      versionInfo.apkUrl = apkUrl;
+      versionInfo.changelog = changelog || '';
+      versionInfo.forceUpdate = !!forceUpdate;
+      await versionInfo.save();
+    } else {
+      versionInfo = await AppVersion.create({
+        latestVersion,
+        latestVersionCode: parseInt(latestVersionCode),
+        apkUrl,
+        changelog: changelog || '',
+        forceUpdate: !!forceUpdate
+      });
+    }
+
+    // Broadcast update notification to all apps in real-time via Socket.IO
+    try {
+      const { broadcastAlert } = require('../socket');
+      broadcastAlert('app:update', {
+        latestVersion: versionInfo.latestVersion,
+        latestVersionCode: versionInfo.latestVersionCode,
+        changelog: versionInfo.changelog,
+        forceUpdate: versionInfo.forceUpdate,
+        apkUrl: versionInfo.apkUrl
+      });
+    } catch (socketErr) {
+      console.error('Socket broadcast failed for app update:', socketErr.message);
+    }
+
+    // Audit log
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'update_app_version',
+      targetId: versionInfo._id,
+      targetType: 'FAQ',
+      reason: `Updated app version to ${latestVersion} (${latestVersionCode})`
+    });
+
+    res.json({ success: true, message: 'App version updated and live broadcast sent', version: versionInfo });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getSpurtiLogs = async (req, res, next) => {
+  try {
+    const { page, limit, search } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 15;
+    const skip = (pageNum - 1) * limitNum;
+
+    let query = {};
+    if (search) {
+      const User = require('../models/User');
+      const users = await User.find({
+        $or: [
+          { username: { $regex: search, $options: 'i' } },
+          { displayName: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      const userIds = users.map(u => u._id);
+      query.user = { $in: userIds };
+    }
+
+    const SpurtiPointLog = require('../models/SpurtiPointLog');
+    const logs = await SpurtiPointLog.find(query)
+      .populate('user', 'username displayName avatar email spurtiPoints')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await SpurtiPointLog.countDocuments(query);
+
+    res.json({
+      logs,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        total
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 

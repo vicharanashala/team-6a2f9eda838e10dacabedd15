@@ -1,10 +1,10 @@
 'use client';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
-import { auth, googleProvider, signInWithPopup, GoogleAuthProvider, isFirebaseConfigured } from '@/lib/firebase';
+import { auth, googleProvider, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, isFirebaseConfigured } from '@/lib/firebase';
 
 function AuthPageContent() {
   const searchParams = useSearchParams();
@@ -14,6 +14,44 @@ function AuthPageContent() {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+
+  // Handle redirect login result on mount
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+
+    let isMounted = true;
+    const checkRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && isMounted) {
+          setLoading(true);
+          const idToken = await result.user.getIdToken();
+          if (!idToken) {
+            throw new Error('Could not retrieve Google ID token.');
+          }
+          await loginWithGoogle(idToken);
+          router.push('/');
+        }
+      } catch (err) {
+        console.error("Google Sign-In Redirect Error:", err);
+        if (isMounted) {
+          setError(err.message || 'Google Sign-in failed');
+          toast.error(err.message || 'Google Sign-in failed');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    checkRedirect();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isFirebaseConfigured, loginWithGoogle, router]);
 
   if (user) {
     router.push('/');
@@ -37,9 +75,49 @@ function AuthPageContent() {
       }
       return;
     }
+
     setError('');
     setLoading(true);
     try {
+      const isCapacitor = typeof window !== 'undefined' && window.Capacitor;
+      if (isCapacitor) {
+        console.log('[Google Auth] Capacitor detected. Attempting native Google Sign-In...');
+        try {
+          const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+          
+          try {
+            await GoogleAuth.initialize({
+              clientId: '927820350675-uf8p3dpe9m4o6e93v320hdbu942j4pvt.apps.googleusercontent.com',
+              scopes: ['profile', 'email'],
+              grantOfflineAccess: true,
+            });
+          } catch (initErr) {
+            console.warn('[Google Auth] Initialize error (might be already initialized):', initErr);
+          }
+
+          const googleUser = await GoogleAuth.signIn();
+          const nativeIdToken = googleUser.authentication.idToken;
+          
+          if (!nativeIdToken) {
+            throw new Error('Native Google sign-in did not return an ID token.');
+          }
+
+          const { signInWithCredential, GoogleAuthProvider } = await import('firebase/auth');
+          const credential = GoogleAuthProvider.credential(nativeIdToken);
+          const result = await signInWithCredential(auth, credential);
+          
+          const idToken = await result.user.getIdToken();
+          await loginWithGoogle(idToken);
+          router.push('/');
+          return;
+        } catch (nativeErr) {
+          console.error('[Google Auth] Native sign-in failed, falling back to Webview redirect:', nativeErr);
+          await signInWithRedirect(auth, googleProvider);
+          return; // Redirect navigates the WebView
+        }
+      }
+
+      // Try popup first (most reliable on all web platforms, including Safari and PWA, when triggered from user click)
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
       if (!idToken) {
@@ -48,22 +126,15 @@ function AuthPageContent() {
       await loginWithGoogle(idToken);
       router.push('/');
     } catch (err) {
-      console.error(err);
-      if (err.code === 'auth/network-request-failed' || err.message?.includes('network-request-failed')) {
-        const email = prompt('Google Sign-in encountered a network error. Enter an email to perform a simulated Google Sign-in:', 'google-user@example.com');
-        if (email) {
-          try {
-            await loginWithGoogle(`mock_google_token_${email}`);
-            router.push('/');
-            return;
-          } catch (mockErr) {
-            setError(mockErr.message || 'Simulated Google Sign-in failed');
-            toast.error(mockErr.message || 'Simulated Google Sign-in failed');
-          }
-        }
+      console.warn('[Google Auth] Popup failed or blocked, trying redirect:', err);
+      // Fallback: signInWithRedirect if popup is blocked or fails
+      try {
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectErr) {
+        console.error('[Google Auth] Redirect also failed:', redirectErr);
+        setError('Google Sign-in failed.');
+        toast.error('Google Sign-in failed.');
       }
-      setError(err.message || 'Google Sign-in failed');
-      toast.error(err.message || 'Google Sign-in failed');
     } finally {
       setLoading(false);
     }
@@ -116,7 +187,7 @@ function AuthPageContent() {
             type="button"
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-[var(--color-border)]/60 hover:bg-[var(--color-bg-tertiary)] rounded-xl font-medium text-sm text-[var(--color-text)] transition-colors mb-6 shadow-sm disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-[var(--color-border)]/60 hover:bg-[var(--color-bg-tertiary)] rounded-xl font-medium text-sm text-[var(--color-text)] transition-colors mb-2 shadow-sm disabled:opacity-50 cursor-pointer"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path
@@ -138,6 +209,7 @@ function AuthPageContent() {
             </svg>
             Sign in with Google
           </button>
+
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
@@ -202,7 +274,6 @@ function AuthPageContent() {
               )}
             </button>
           </form>
-
           <div className="mt-6 text-center text-sm text-[var(--color-text-secondary)]">
             {mode === 'login' ? (
               <>

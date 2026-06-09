@@ -1,7 +1,6 @@
 const User = require('../models/User');
 const Question = require('../models/Question');
 const Answer = require('../models/Answer');
-const SuspiciousActivity = require('../models/SuspiciousActivity');
 const blocklist = require('../config/blocklist');
 const topicWhitelist = require('../config/topicWhitelist');
 
@@ -54,30 +53,7 @@ const trackUserIpAndDevice = async (user, req) => {
     await user.save();
   }
 
-  // Suspicious flags check
-  if (ip) {
-    const ipUsers = await User.find({ ipHistory: ip });
-    if (ipUsers.length >= 5) {
-      const affectedUserIds = ipUsers.map(u => u._id);
-      await SuspiciousActivity.findOneAndUpdate(
-        { type: 'ip_abuse', ip },
-        { affectedUsers: affectedUserIds },
-        { upsert: true, new: true }
-      );
-    }
-  }
-
-  if (deviceId) {
-    const deviceUsers = await User.find({ deviceFingerprints: deviceId });
-    if (deviceUsers.length >= 3) {
-      const affectedUserIds = deviceUsers.map(u => u._id);
-      await SuspiciousActivity.findOneAndUpdate(
-        { type: 'device_abuse', deviceId },
-        { affectedUsers: affectedUserIds },
-        { upsert: true, new: true }
-      );
-    }
-  }
+// Suspicious flags check removed
 };
 
 const handleViolation = async (user) => {

@@ -60,6 +60,16 @@ const answerSchema = new mongoose.Schema({
     ref: 'User'
   }],
   triggeredRule: { type: String },
+  attachments: [{
+    filename: { type: String, required: true },
+    content: { type: String, required: true },
+    mimetype: { type: String },
+    size: { type: Number }
+  }],
+  links: [{
+    title: { type: String },
+    url: { type: String, required: true }
+  }],
 }, { timestamps: true });
 
 answerSchema.index({ question: 1, createdAt: 1 });

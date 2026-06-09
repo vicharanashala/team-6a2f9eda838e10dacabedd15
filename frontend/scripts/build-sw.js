@@ -72,6 +72,11 @@ console.log(`[Build SW] Found ${assetsArray.length} assets to cache.`);
 
 let swContent = fs.readFileSync(swPath, 'utf8');
 
+// Increment Cache Names with a unique build timestamp to force PWA cache update on build
+const buildTimestamp = Date.now();
+swContent = swContent.replace(/const CACHE_NAME = '[^']+';/, `const CACHE_NAME = 'prashnasarathi-pwa-cache-${buildTimestamp}';`);
+swContent = swContent.replace(/const DATA_CACHE_NAME = '[^']+';/, `const DATA_CACHE_NAME = 'prashnasarathi-data-cache-${buildTimestamp}';`);
+
 // Replace STATIC_ASSETS array definition
 const startMarker = 'const STATIC_ASSETS = [';
 const endMarker = '];';
@@ -83,7 +88,7 @@ if (startIndex !== -1) {
     const replacement = `const STATIC_ASSETS = ${JSON.stringify(assetsArray, null, 2)};`;
     swContent = swContent.substring(0, startIndex) + replacement + swContent.substring(endIndex + endMarker.length);
     fs.writeFileSync(swPath, swContent, 'utf8');
-    console.log('[Build SW] public/sw.js updated successfully.');
+    console.log(`[Build SW] public/sw.js updated successfully (Cache Version: ${buildTimestamp}).`);
   } else {
     console.error('[Build SW] Could not find end marker in sw.js');
   }

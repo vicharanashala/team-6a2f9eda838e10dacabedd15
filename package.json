@@ -1,0 +1,9 @@
+{
+  "name": "cs32-root",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev",
+    "start": "npm --prefix frontend start"
+  }
+}

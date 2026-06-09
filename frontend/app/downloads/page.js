@@ -1,238 +1,206 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import usePWA from '@/pwa/usePWA';
 
 export default function DownloadCenter() {
-  const { isInstallable, installApp } = usePWA();
-  const [versionInfo, setVersionInfo] = useState({
-    latestVersion: '1.1.0',
-    latestVersionCode: 2,
-    changelog: 'Performance improvements, smoother client-side navigation transitions, and native deep linking support.',
-    updateDate: 'June 5, 2026'
-  });
-
-  useEffect(() => {
-    const fetchVersion = async () => {
-      try {
-        const response = await fetch('/api/app-version');
-        if (response.ok) {
-          const data = await response.json();
-          setVersionInfo({
-            latestVersion: data.latestVersion,
-            latestVersionCode: data.latestVersionCode,
-            changelog: data.changelog,
-            updateDate: 'June 5, 2026' // Matches the date of today's release cycle
-          });
-        }
-      } catch (err) {
-        console.error('Failed to load version details:', err);
-      }
-    };
-    fetchVersion();
-  }, []);
+  const { isInstallable, installApp, isInstalled } = usePWA();
+  const [activeTab, setActiveTab] = useState('android'); // 'android' | 'ios' | 'desktop'
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto flex flex-col gap-10">
+      <div className="max-w-3xl mx-auto flex flex-col gap-10">
         
         {/* Title / Hero section */}
         <div className="text-center flex flex-col gap-3">
           <h1 className="text-3xl font-extrabold tracking-tight text-[var(--color-text)] sm:text-4xl">
-            Download PrashnaSārathi
+            Install PrashnaSārathi App
           </h1>
           <p className="max-w-xl mx-auto text-sm text-[var(--color-text-secondary)] leading-relaxed">
-            Access the community doubt-solving and FAQ portal from any device. Choose your platform below to get started.
+            Get the full native-like experience on your mobile device, tablet, or desktop computer. PrashnaSārathi is a Progressive Web App (PWA) that works beautifully everywhere.
           </p>
         </div>
 
-        {/* Support Grid Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          
-          {/* Web App Card */}
-          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-6 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-[var(--color-text)]">Web App (PWA)</h2>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Instant browser app shell</p>
-                </div>
-              </div>
+        {/* Dynamic Action Card */}
+        <div className="bg-gradient-to-tr from-[var(--color-primary)]/10 via-purple-500/5 to-transparent border border-[var(--color-border)] rounded-2xl p-8 shadow-xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--color-primary)]/10 rounded-full blur-3xl group-hover:scale-110 transition-all duration-500" />
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-[var(--color-text)] mb-2 flex items-center gap-2">
+                <span>⚡</span> Quick Install
+              </h2>
               <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                Add to your device home screen directly from your browser. Includes offline caching support and quick launching.
+                Install PrashnaSārathi directly on this device. Standalone window mode, offline database caching, and instant startup.
               </p>
             </div>
-            <div className="mt-6">
-              {isInstallable ? (
+            <div className="shrink-0 w-full md:w-auto">
+              {isInstalled ? (
+                <div className="w-full text-center md:text-right">
+                  <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
+                    ✓ Installed on this Device
+                  </span>
+                </div>
+              ) : isInstallable ? (
                 <button
                   onClick={installApp}
-                  className="w-full py-2.5 text-xs font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-xl transition-all shadow-md shadow-emerald-500/10 cursor-pointer flex items-center justify-center gap-1.5"
+                  className="w-full md:w-auto px-6 py-3 text-xs font-bold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 rounded-xl transition-all shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-xl hover:shadow-[var(--color-primary)]/30 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
                 >
-                  Install Web App
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  Install App Now
                 </button>
               ) : (
-                <button
-                  disabled
-                  className="w-full py-2.5 text-xs font-semibold text-[var(--color-text-muted)] bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5"
-                >
-                  Installed / Supported natively
-                </button>
+                <div className="w-full text-center md:text-right">
+                  <span className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] border border-[var(--color-border)]">
+                    Supported in browser options
+                  </span>
+                </div>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Android APK Card */}
-          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-6 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-full blur-2xl group-hover:bg-green-500/10 transition-all" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-500/10 text-green-500 rounded-xl">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-[var(--color-text)]">Android Application</h2>
-                  <p className="text-xs text-[var(--color-text-secondary)]">APK Package Installer</p>
-                </div>
-              </div>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                Native app built using Capacitor. Supports push notifications, deep links, image uploads, and system camera access.
-              </p>
-            </div>
-            <div className="mt-6">
-              <a
-                href="/downloads/prashnasarathi-app.apk"
-                download
-                className="w-full py-2.5 text-xs font-semibold text-white bg-green-500 hover:bg-green-600 rounded-xl transition-all shadow-md shadow-green-500/10 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                Download APK
-              </a>
-            </div>
+        {/* Installation Instructions by Platform */}
+        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)]/80 rounded-2xl p-6 shadow-md">
+          <h2 className="text-base font-bold text-[var(--color-text)] mb-4">Device Installation Guides</h2>
+          
+          {/* Tab buttons */}
+          <div className="flex border-b border-[var(--color-border)] pb-px gap-1 mb-6">
+            <button
+              onClick={() => setActiveTab('android')}
+              className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
+                activeTab === 'android'
+                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                  : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              }`}
+            >
+              <span>🤖</span> Android
+            </button>
+            <button
+              onClick={() => setActiveTab('ios')}
+              className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
+                activeTab === 'ios'
+                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                  : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              }`}
+            >
+              <span>🍏</span> iOS (iPhone/iPad)
+            </button>
+            <button
+              onClick={() => setActiveTab('desktop')}
+              className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
+                activeTab === 'desktop'
+                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
+                  : 'border-transparent text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+              }`}
+            >
+              <span>💻</span> Desktop / PC
+            </button>
           </div>
 
-          {/* iOS Card */}
-          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-6 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925-3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 002.25 12c0 2.071 1.679 3.75 3.75 3.75h6z" />
-                  </svg>
+          {/* Tab Content */}
+          {activeTab === 'android' && (
+            <div className="space-y-4">
+              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                PrashnaSārathi installs instantly on Android devices using Chrome, Edge, or other Chromium-based mobile browsers.
+              </p>
+              <div className="space-y-3 pt-2">
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    Open this website in <strong>Google Chrome</strong> or <strong>Microsoft Edge</strong> on your Android phone.
+                  </p>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-[var(--color-text)]">iOS Application</h2>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Safari PWA Install</p>
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    A banner should appear at the bottom saying <strong>"Add PrashnaSārathi to Home Screen"</strong>. Tap it.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    If no banner appears, tap the <strong>three dots (Menu)</strong> icon in the top right corner of Chrome, then select <strong>"Install app"</strong>.
+                  </p>
                 </div>
               </div>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                Install directly on your iPhone or iPad without any third-party app stores or sideloading tools.
-              </p>
             </div>
-            <div className="mt-6 border border-dashed border-blue-500/30 rounded-xl p-3 bg-blue-500/5">
-              <h3 className="text-xs font-semibold text-blue-400 mb-1">How to Install on iOS:</h3>
-              <ol className="text-[10px] text-[var(--color-text-secondary)] list-decimal list-inside space-y-1">
-                <li>Open this site in <strong>Safari</strong></li>
-                <li>Tap the <strong>Share</strong> button (bottom bar)</li>
-                <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
-              </ol>
-            </div>
-          </div>
+          )}
 
-          {/* Windows Card */}
-          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-6 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-all" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-indigo-500/10 text-indigo-500 rounded-xl">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-[var(--color-text)]">Windows Application</h2>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Single Setup Installer (.exe)</p>
-                </div>
-              </div>
+          {activeTab === 'ios' && (
+            <div className="space-y-4">
               <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                Native Windows client for laptop and desktop users. Download and run the single setup file to install the app and create shortcuts automatically.
+                iOS uses Safari to install PWAs. The installation takes less than 15 seconds and doesn't require the App Store.
               </p>
-              
-              <div className="mt-1 border border-amber-500/20 rounded-xl p-3 bg-amber-500/5 text-[10px] text-amber-400/90 leading-relaxed">
-                <span className="font-semibold block mb-0.5">⚠️ Security Note:</span>
-                Since this is a custom, unsigned application, Chrome may show an &quot;uncommon download&quot; or &quot;suspicious&quot; alert, and Windows SmartScreen might pop up. This is expected. Click <strong>Keep</strong> / <strong>More Info &gt; Run anyway</strong> to install safely.
+              <div className="space-y-3 pt-2">
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    Open this website in the <strong>Safari</strong> browser on your iPhone or iPad.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    Tap the <strong>Share</strong> button (the square icon with an arrow pointing up) in the bottom navigation bar.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    Scroll down the share sheet menu and tap <strong>"Add to Home Screen"</strong>, then confirm by tapping <strong>"Add"</strong>.
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="mt-6">
-              <a
-                href="/downloads/prashnasarathi-win.exe"
-                download
-                className="w-full py-2.5 text-xs font-semibold text-white bg-indigo-500 hover:bg-indigo-600 rounded-xl transition-all shadow-md shadow-indigo-500/10 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                Download Setup Installer
-              </a>
-            </div>
-          </div>
+          )}
 
-          {/* macOS Card */}
-          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-6 shadow-md hover:shadow-lg transition-all flex flex-col justify-between group relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl group-hover:bg-rose-500/10 transition-all" />
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-rose-500/10 text-rose-500 rounded-xl">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925-3.546 5.974 5.974 0 01-2.133-1A3.75 3.75 0 002.25 12c0 2.071 1.679 3.75 3.75 3.75h6z" />
-                  </svg>
+          {activeTab === 'desktop' && (
+            <div className="space-y-4">
+              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                Run PrashnaSārathi in its own standalone window with shortcuts on your Desktop and Start Menu/Dock.
+              </p>
+              <div className="space-y-3 pt-2">
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    Open this website in <strong>Google Chrome</strong>, <strong>Microsoft Edge</strong>, or <strong>Brave</strong> on your PC, Mac, or Linux computer.
+                  </p>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-[var(--color-text)]">macOS Application</h2>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Apple DMG Installer</p>
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    Look at the right side of the address bar at the top of the browser. Click the <strong>"Install" icon</strong> (a screen with a down arrow, or overlapping squares).
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                    Confirm by clicking <strong>"Install"</strong>. The app will open in a clean, native window and add an icon to your desktop.
+                  </p>
                 </div>
               </div>
-              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-                Native macOS client optimized for Apple Silicon (M1/M2/M3) and Intel devices with system notification support.
-              </p>
             </div>
-            <div className="mt-6">
-              <a
-                href="/downloads/prashnasarathi-mac.dmg"
-                download
-                className="w-full py-2.5 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-all shadow-md shadow-rose-500/10 cursor-pointer flex items-center justify-center gap-1.5"
-              >
-                Download for macOS
-              </a>
-            </div>
-          </div>
+          )}
 
         </div>
 
-        {/* Release Notes section */}
-        <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-2xl p-6 shadow-md flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
-            <div>
-              <h2 className="text-base font-bold text-[var(--color-text)]">Release Information</h2>
-              <p className="text-[10px] text-[var(--color-text-muted)] font-mono uppercase tracking-wider mt-0.5">
-                Version: {versionInfo.latestVersion} &bull; Build Code: {versionInfo.latestVersionCode}
-              </p>
-            </div>
-            <span className="px-2.5 py-1 text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-              Updated: {versionInfo.updateDate}
-            </span>
+        {/* Benefits Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/50 rounded-2xl p-5 text-center">
+            <span className="text-2xl block mb-2">⚡</span>
+            <h3 className="text-xs font-bold text-[var(--color-text)] mb-1">Ultra-Lightweight</h3>
+            <p className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed">Installs in seconds. Uses almost zero storage space compared to traditional native apps.</p>
           </div>
-          <div>
-            <h3 className="text-xs font-bold text-[var(--color-text)] mb-1.5">What's New in this Release:</h3>
-            <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed font-normal">
-              {versionInfo.changelog}
-            </p>
+          <div className="bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/50 rounded-2xl p-5 text-center">
+            <span className="text-2xl block mb-2">🔄</span>
+            <h3 className="text-xs font-bold text-[var(--color-text)] mb-1">Auto-Updates</h3>
+            <p className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed">No manual updates required. The app stays updated with the latest fixes automatically on load.</p>
           </div>
-          <div className="text-[10px] text-[var(--color-text-muted)] mt-1 font-medium italic">
-            Note: Non-PWA native installers must be installed manually. For Android, enable "Install from Unknown Sources" in settings if prompted.
+          <div className="bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/50 rounded-2xl p-5 text-center">
+            <span className="text-2xl block mb-2">🔔</span>
+            <h3 className="text-xs font-bold text-[var(--color-text)] mb-1">Push Notifications</h3>
+            <p className="text-[10px] text-[var(--color-text-secondary)] leading-relaxed">Receive real-time alerts when your questions are answered, even when the app is closed.</p>
           </div>
         </div>
 

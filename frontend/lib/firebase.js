@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
@@ -27,4 +27,4 @@ if (isFirebaseConfigured) {
   }
 }
 
-export { auth, googleProvider, signInWithPopup, GoogleAuthProvider, isFirebaseConfigured };
+export { auth, googleProvider, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, isFirebaseConfigured };

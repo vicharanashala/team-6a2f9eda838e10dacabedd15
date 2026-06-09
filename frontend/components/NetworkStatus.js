@@ -1,9 +1,16 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
+import api from '@/lib/api';
+
 
 export default function NetworkStatus() {
   const [status, setStatus] = useState('good');
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  useEffect(() => {
+    setIsDismissed(false);
+  }, [status]);
 
   useEffect(() => {
     const checkNetwork = () => {
@@ -41,7 +48,7 @@ export default function NetworkStatus() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 4000);
         // fetch /api/health through our domain
-        const res = await fetch('/api/health', { signal: controller.signal, cache: 'no-store' });
+        const res = await fetch(`${api.baseUrl}/health`, { signal: controller.signal, cache: 'no-store' });
         clearTimeout(timeoutId);
         
         const duration = Date.now() - start;
@@ -91,21 +98,7 @@ export default function NetworkStatus() {
     const statusChanged = prevStatusRef.current !== status;
     prevStatusRef.current = status;
 
-    if (status === 'offline') {
-      toast.error('You are offline. Serving cached FAQ and Questions data.', {
-        id: 'network-status-toast',
-        duration: 4000,
-        position: 'top-right',
-        icon: '🔌'
-      });
-    } else if (status === 'slow') {
-      toast.error('Network connection is slow. Performance may be degraded.', {
-        id: 'network-status-toast',
-        duration: 4000,
-        position: 'top-right',
-        icon: '⚠️'
-      });
-    } else if (status === 'good' && statusChanged) {
+    if (status === 'good' && statusChanged) {
       toast.success('Back online! Live synchronization restored.', {
         id: 'network-status-toast',
         duration: 3500,
@@ -115,31 +108,53 @@ export default function NetworkStatus() {
     }
   }, [status, isReady]);
 
-  if (status === 'good') return null;
+  if (status === 'good' || isDismissed) return null;
 
   return (
-    <div className="fixed bottom-24 left-6 z-50 max-w-sm w-full sm:w-auto animate-fade-in-up">
+    <div className="fixed top-16 left-4 right-4 bottom-auto md:top-auto md:bottom-24 md:left-6 md:right-auto z-50 max-w-none md:max-w-sm w-auto animate-fade-in-up">
       {status === 'offline' ? (
-        <div className="bg-red-500 text-white px-4 py-3 rounded-xl shadow-lg border border-red-600 flex items-center gap-3 backdrop-blur-md bg-opacity-95">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-lg shrink-0">
-            🔌
+        <div className="bg-red-500 text-white px-4 py-3 rounded-xl shadow-lg border border-red-600 flex items-center justify-between gap-3 backdrop-blur-md bg-opacity-95">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-lg shrink-0">
+              🔌
+            </div>
+            <div>
+              <p className="text-xs font-bold">You are offline</p>
+              <p className="text-[10px] text-red-100">Check your internet connection.</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-bold">You are offline</p>
-            <p className="text-[10px] text-red-100">Check your internet connection.</p>
-          </div>
+          <button
+            onClick={() => setIsDismissed(true)}
+            className="p-1 text-red-100 hover:text-white hover:bg-white/10 rounded-md transition-colors shrink-0"
+            title="Dismiss warning"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       ) : (
-        <div className="bg-amber-500 text-amber-950 px-4 py-3 rounded-xl shadow-lg border border-amber-600 flex items-center gap-3 backdrop-blur-md bg-opacity-95">
-          <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center text-lg shrink-0 animate-pulse">
-            ⚠️
+        <div className="bg-amber-500 text-amber-950 px-4 py-3 rounded-xl shadow-lg border border-amber-600 flex items-center justify-between gap-3 backdrop-blur-md bg-opacity-95">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center text-lg shrink-0 animate-pulse">
+              ⚠️
+            </div>
+            <div>
+              <p className="text-xs font-bold">Network connection is slow</p>
+              <p className="text-[10px] text-amber-900 leading-snug">
+                The network in your area is low. Please be patient or move to an area with good network.
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-bold">Network connection is slow</p>
-            <p className="text-[10px] text-amber-900 leading-snug">
-              The network in your area is low. Please be patient or move to an area with good network.
-            </p>
-          </div>
+          <button
+            onClick={() => setIsDismissed(true)}
+            className="p-1.5 text-amber-900 hover:text-amber-950 hover:bg-black/5 rounded-md transition-colors shrink-0"
+            title="Dismiss warning"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
     </div>

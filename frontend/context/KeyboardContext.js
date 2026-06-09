@@ -1,11 +1,12 @@
 'use client';
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import SearchModal from '@/components/SearchModal';
+import { useVoiceCommand } from '@/context/VoiceCommandContext';
 
 const KeyboardContext = createContext(null);
 
 export function KeyboardProvider({ children }) {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { isSearchOpen, openSearch, closeSearch, autoStart } = useVoiceCommand();
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -13,20 +14,19 @@ export function KeyboardProvider({ children }) {
     const handleKeyDown = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setIsSearchOpen(true);
+        openSearch();
         return;
       }
 
       if (e.key === '/' && !isInputFocused()) {
         e.preventDefault();
-        setIsSearchOpen(true);
+        openSearch();
         return;
       }
 
       if (e.key === 'Escape') {
         if (isSearchOpen) {
-          setIsSearchOpen(false);
-          setSelectedIndex(-1);
+          closeSearch();
         }
         return;
       }
@@ -34,18 +34,7 @@ export function KeyboardProvider({ children }) {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchOpen]);
-
-  const openSearch = useCallback(() => {
-    setIsSearchOpen(true);
-    setSearchQuery('');
-    setSelectedIndex(-1);
-  }, []);
-
-  const closeSearch = useCallback(() => {
-    setIsSearchOpen(false);
-    setSelectedIndex(-1);
-  }, []);
+  }, [isSearchOpen, openSearch, closeSearch]);
 
   const moveSelectionDown = useCallback(() => {
     setSelectedIndex(prev => prev + 1);
@@ -76,6 +65,7 @@ export function KeyboardProvider({ children }) {
       <SearchModal
         isOpen={isSearchOpen}
         onClose={closeSearch}
+        autoStart={autoStart}
       />
     </KeyboardContext.Provider>
   );

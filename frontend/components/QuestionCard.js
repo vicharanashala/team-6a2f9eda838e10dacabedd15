@@ -9,23 +9,26 @@ import DownvoteReasonModal from './DownvoteReasonModal';
 
 export default function QuestionCard({ question, absoluteDate = false }) {
   const { user } = useAuth();
-  const [upvotes, setUpvotes] = useState(question.upvotes || 0);
-  const [downvotes, setDownvotes] = useState(question.downvotes || 0);
+  const [upvotes, setUpvotes] = useState(question?.upvotes || 0);
+  const [downvotes, setDownvotes] = useState(question?.downvotes || 0);
   const [userVote, setUserVote] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [meTooCount, setMeTooCount] = useState(question.meTooCount || 0);
-  const [hasMeToo, setHasMeToo] = useState(question.hasMeToo || false);
+  const [meTooCount, setMeTooCount] = useState(question?.meTooCount || 0);
+  const [hasMeToo, setHasMeToo] = useState(question?.hasMeToo || false);
   const [meTooLoading, setMeTooLoading] = useState(false);
   const [showDownvoteModal, setShowDownvoteModal] = useState(false);
   const [pendingDownvote, setPendingDownvote] = useState(false);
+  const [escalating, setEscalating] = useState(false);
 
   useEffect(() => {
-    if (user && question._id) {
+    if (user && question?._id) {
       api.get(`/votes/batch`, { ids: question._id, targetType: 'Question' })
         .then(data => setUserVote(data[question._id] || null))
         .catch(() => {});
     }
-  }, [user, question._id]);
+  }, [user, question?._id]);
+
+  if (!question) return null;
 
   const handleVote = async (e, voteType, reasonData = null) => {
     e.preventDefault();
@@ -75,6 +78,32 @@ export default function QuestionCard({ question, absoluteDate = false }) {
       setMeTooLoading(false);
     }
   };
+
+  const canEscalate = () => {
+    if (!user) return false;
+    const isOwner = question.isOwner || (question.author && (question.author._id === user._id || question.author._id === user.id));
+    if (!isOwner) return false;
+    if (question.isEscalated || question.resolutionStatus === 'escalated') return false;
+    if (question.answerCount > 0) return false;
+    return true;
+  };
+
+  const handleEscalate = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const reason = window.prompt('Reason for escalation (optional):');
+    if (reason === null) return; // user cancelled
+    setEscalating(true);
+    try {
+      await api.patch(`/questions/${question._id}/escalate`, { reason: reason || '' });
+      toast.success('Question escalated. A moderator will review it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to escalate');
+    } finally {
+      setEscalating(false);
+    }
+  };
+
 
   const score = upvotes - downvotes;
 
@@ -187,6 +216,16 @@ export default function QuestionCard({ question, absoluteDate = false }) {
             )}
             <span>asked {formatDate(question.createdAt, absoluteDate)}</span>
             <span className="text-[var(--color-text-muted)]">{question.viewCount || 0} views</span>
+            {canEscalate() && (
+              <button
+                onClick={handleEscalate}
+                disabled={escalating}
+                className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded border border-orange-400/60 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors disabled:opacity-50"
+                title="Escalate this question to a moderator"
+              >
+                {escalating ? '…' : '⚡ Escalate'}
+              </button>
+            )}
           </div>
         </div>
       </div>

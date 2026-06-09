@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import MarkdownRenderer from '@/components/MarkdownRenderer';
 import SimpleEditor from '@/components/SimpleEditor';
@@ -12,6 +12,7 @@ import RecommendedFAQs from '@/components/RecommendedFAQs';
 
 export default function FAQDetailPage() {
   const { slug } = useParams();
+  const router = useRouter();
   const { user } = useAuth();
   const [faq, setFaq] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,12 +58,13 @@ export default function FAQDetailPage() {
         const index = faq.items.findIndex(item => item._id === hashId);
         if (index !== -1) {
           setActiveItem(index);
+          setOpenItems(prev => ({ ...prev, [index]: true }));
           setTimeout(() => {
             const element = document.getElementById(hashId);
             if (element) {
               element.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-          }, 100);
+          }, 150);
         }
       }
     };
@@ -114,6 +116,68 @@ export default function FAQDetailPage() {
       }
     } catch (err) {
       toast.error(err.message);
+    }
+  };
+
+  const handleDeleteFAQ = async () => {
+    if (!confirm('Are you sure you want to delete this entire FAQ category? This will delete all questions under it.')) return;
+    try {
+      await api.delete(`/faqs/${faq._id}`);
+      toast.success('FAQ category deleted successfully');
+      router.push('/faqs');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete FAQ category');
+    }
+  };
+
+  const handleReportFAQ = async () => {
+    if (!user) {
+      toast.error('Please login to report this FAQ page');
+      return;
+    }
+    const reason = prompt(`Please specify your reason for reporting this FAQ "${faq.title}":`);
+    if (!reason || !reason.trim()) return;
+
+    try {
+      await api.post('/admin/reports', {
+        subject: `Report FAQ Page: ${faq.title}`,
+        description: reason.trim(),
+        pageUrl: `/faqs/${faq.slug}`
+      });
+      toast.success('FAQ page reported successfully. Our team will review it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit report');
+    }
+  };
+
+  const handleReportFAQItem = async (item) => {
+    if (!user) {
+      toast.error('Please login to report this question');
+      return;
+    }
+    const reason = prompt(`Please specify your reason for reporting the question "${item.question}":`);
+    if (!reason || !reason.trim()) return;
+
+    try {
+      await api.post('/admin/reports', {
+        subject: `Report FAQ Item: ${item.question}`,
+        description: reason.trim(),
+        pageUrl: `/faqs/${faq.slug}#${item._id}`
+      });
+      toast.success('Question reported successfully. Our team will review it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit report');
+    }
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    if (!confirm('Are you sure you want to delete this question?')) return;
+    try {
+      const data = await api.delete(`/faqs/${faq._id}/items/${itemId}`);
+      setFaq(data.faq);
+      toast.success('Question deleted successfully');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete question');
     }
   };
 
@@ -191,10 +255,18 @@ export default function FAQDetailPage() {
               </div>
               <div className="flex gap-2">
                 {isAdminOrMod && (
-                  <button onClick={() => setShowAddQuestion(true)} className="btn-secondary btn-sm h-7 !px-2.5 !py-1 text-xs shrink-0">
-                    + Add Question
-                  </button>
+                  <>
+                    <button onClick={() => setShowAddQuestion(true)} className="btn-secondary btn-sm h-7 !px-2.5 !py-1 text-xs shrink-0">
+                      + Add Question
+                    </button>
+                    <button onClick={handleDeleteFAQ} className="btn-secondary btn-sm h-7 !px-2.5 !py-1 text-xs shrink-0 text-red-500 hover:text-white hover:bg-red-500 transition-colors border-red-500/30">
+                      Delete FAQ
+                    </button>
+                  </>
                 )}
+                <button onClick={handleReportFAQ} className="btn-secondary btn-sm h-7 !px-2.5 !py-1 text-xs shrink-0 text-amber-500 hover:text-white hover:bg-amber-500 transition-colors border-amber-500/30">
+                  Report
+                </button>
                 <button onClick={handleSave} className="btn-secondary btn-sm h-7 !px-2.5 !py-1 text-xs shrink-0">
                   {isSaved ? 'Saved' : 'Save'}
                 </button>
@@ -280,22 +352,46 @@ export default function FAQDetailPage() {
                           </div>
                         )}
 
-                        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)] font-mono">
-                          <span>Was this helpful?</span>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleFeedback(item._id, true); }}
-                            className={`flex items-center gap-1 ${localVotes[item._id] === 'helpful' ? 'text-green-500 font-semibold' : 'hover:text-green-500'}`}
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" /></svg>
-                            Yes ({item.helpfulCount || 0})
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleFeedback(item._id, false); }}
-                            className={`flex items-center gap-1 ${localVotes[item._id] === 'notHelpful' ? 'text-red-500 font-semibold' : 'hover:text-red-500'}`}
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" /></svg>
-                            No ({item.notHelpfulCount || 0})
-                          </button>
+                        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)] font-mono">
+                          <div className="flex items-center gap-4">
+                            <span>Was this helpful?</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleFeedback(item._id, true); }}
+                              className={`flex items-center gap-1 ${localVotes[item._id] === 'helpful' ? 'text-green-500 font-semibold' : 'hover:text-green-500'}`}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" /></svg>
+                              Yes ({item.helpfulCount || 0})
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleFeedback(item._id, false); }}
+                              className={`flex items-center gap-1 ${localVotes[item._id] === 'notHelpful' ? 'text-red-500 font-semibold' : 'hover:text-red-500'}`}
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" /></svg>
+                              No ({item.notHelpfulCount || 0})
+                            </button>
+                            
+                            <span className="text-[var(--color-text-muted)]">|</span>
+                            
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleReportFAQItem(item); }}
+                              className="flex items-center gap-1 hover:text-amber-500 transition-colors text-[var(--color-text-muted)]"
+                              title="Report question or answer"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                              </svg>
+                              Report
+                            </button>
+                          </div>
+                          {isAdminOrMod && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteItem(item._id); }}
+                              className="flex items-center gap-1 text-red-500 hover:text-red-600 transition-colors font-semibold ml-auto cursor-pointer"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                              Delete Question
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>

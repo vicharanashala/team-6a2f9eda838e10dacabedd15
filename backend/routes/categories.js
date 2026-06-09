@@ -52,11 +52,29 @@ router.put('/:id', auth, moderatorOrAdmin, async (req, res, next) => {
 
 router.delete('/:id', auth, moderatorOrAdmin, async (req, res, next) => {
   try {
-    const category = await Category.findByIdAndDelete(req.params.id);
+    const category = await Category.findById(req.params.id);
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
     }
-    res.json({ message: 'Category deleted' });
+
+    const FAQ = require('../models/FAQ');
+    const Question = require('../models/Question');
+
+    const AuditLog = require('../models/AuditLog');
+    await Promise.all([
+      FAQ.updateMany({ category: category.name }, { $set: { category: '' } }),
+      Question.updateMany({ category: category.name }, { $set: { category: '' } }),
+      Category.findByIdAndDelete(req.params.id),
+      AuditLog.create({
+        adminId: req.user._id,
+        action: 'delete_category',
+        targetId: category._id,
+        targetType: 'Category',
+        reason: `Category "${category.name}" deleted`
+      })
+    ]);
+
+    res.json({ message: 'Category deleted successfully' });
   } catch (err) {
     next(err);
   }

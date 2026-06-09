@@ -13,6 +13,23 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('[ErrorBoundary] Caught runtime exception:', error, errorInfo);
+    
+    // Auto-reload on ChunkLoadError to fetch the latest assets
+    const isChunkError = 
+      error?.message?.includes('ChunkLoadError') || 
+      error?.message?.includes('loading chunk') ||
+      error?.name === 'ChunkLoadError';
+      
+    if (isChunkError) {
+      const lastReload = sessionStorage.getItem('last_chunk_error_reload');
+      const now = Date.now();
+      // Only reload if we haven't reloaded in the last 10 seconds to prevent infinite reload loops
+      if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+        sessionStorage.setItem('last_chunk_error_reload', now.toString());
+        console.warn('[ErrorBoundary] ChunkLoadError detected. Auto-reloading page to load latest version...');
+        window.location.reload();
+      }
+    }
   }
 
   handleRetry = () => {

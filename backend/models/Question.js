@@ -146,6 +146,16 @@ const questionSchema = new mongoose.Schema({
     enum: ["onboarding", "week1", "week2", "week3", "final", "certificate"]
   },
   archivedAt: { type: Date },
+  attachments: [{
+    filename: { type: String, required: true },
+    content: { type: String, required: true },
+    mimetype: { type: String },
+    size: { type: Number }
+  }],
+  links: [{
+    title: { type: String },
+    url: { type: String, required: true }
+  }],
 }, { timestamps: true });
 
 questionSchema.index({ title: 'text', body: 'text' });

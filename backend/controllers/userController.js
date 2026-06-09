@@ -14,9 +14,22 @@ exports.getUserProfile = async (req, res, next) => {
     const user = await User.findOne({ username: { $regex: new RegExp(`^${safeUsername}$`, 'i') } });
     if (!user || user.isBanned || user.status === 'blocked') throw new AppError('User not found', 404);
 
-    const [questions, answers, questionLikes, answerLikes, questionVotes, answerVotes, savedQuestionsCount, savedFaqsCount] = await Promise.all([
+    const [questions, answersCountResult, questionLikes, answerLikes, questionVotes, answerVotes, savedQuestionsCount, savedFaqsCount] = await Promise.all([
       Question.countDocuments({ author: user._id, isDeleted: false }),
-      Answer.countDocuments({ author: user._id, isDeleted: false }),
+      Answer.aggregate([
+        { $match: { author: user._id, isDeleted: { $ne: true } } },
+        {
+          $lookup: {
+            from: 'questions',
+            localField: 'question',
+            foreignField: '_id',
+            as: 'qDoc'
+          }
+        },
+        { $unwind: '$qDoc' },
+        { $match: { 'qDoc.isDeleted': { $ne: true } } },
+        { $count: 'count' }
+      ]),
       Question.aggregate([
         { $match: { author: user._id, isDeleted: false } },
         { $group: { _id: null, total: { $sum: '$upvotes' } } }
@@ -37,9 +50,16 @@ exports.getUserProfile = async (req, res, next) => {
       SavedFAQ.countDocuments({ user: user._id })
     ]);
 
+    const answers = answersCountResult[0]?.count || 0;
     const totalLikes = (questionLikes[0]?.total || 0) + (answerLikes[0]?.total || 0);
     const totalVotes = (questionVotes[0]?.up || 0) + (questionVotes[0]?.down || 0) + (answerVotes[0]?.up || 0) + (answerVotes[0]?.down || 0);
     const totalBookmarks = savedQuestionsCount + savedFaqsCount;
+
+    if (user.answerCount !== answers || user.questionCount !== questions) {
+      await User.updateOne({ _id: user._id }, { $set: { answerCount: answers, questionCount: questions } });
+      user.answerCount = answers;
+      user.questionCount = questions;
+    }
 
     res.json({
       user: {
@@ -86,17 +106,57 @@ exports.getUserAnswers = async (req, res, next) => {
     if (!user || user.isBanned || user.status === 'blocked') throw new AppError('User not found', 404);
 
     const { page, limit, skip } = paginate(req.query.page, req.query.limit);
-    const [answers, total] = await Promise.all([
-      Answer.find({ author: user._id, isDeleted: false })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: 'question', select: 'title slug', match: { isDeleted: false } })
-        .select('body upvotes isAccepted createdAt'),
-      Answer.countDocuments({ author: user._id, isDeleted: false }),
+
+    const baseQuery = [
+      { $match: { author: user._id, isDeleted: { $ne: true } } },
+      {
+        $lookup: {
+          from: 'questions',
+          localField: 'question',
+          foreignField: '_id',
+          as: 'questionDoc'
+        }
+      },
+      { $unwind: '$questionDoc' },
+      { $match: { 'questionDoc.isDeleted': { $ne: true } } }
+    ];
+
+    const [totalResult, answers] = await Promise.all([
+      Answer.aggregate([...baseQuery, { $count: 'count' }]),
+      Answer.aggregate([
+        ...baseQuery,
+        { $sort: { createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            body: 1,
+            upvotes: 1,
+            isAccepted: 1,
+            createdAt: 1,
+            question: {
+              _id: { $arrayElemAt: ['$questionDoc._id', 0] },
+              title: { $arrayElemAt: ['$questionDoc.title', 0] },
+              slug: { $arrayElemAt: ['$questionDoc.slug', 0] }
+            }
+          }
+        }
+      ])
     ]);
 
-    res.json({ answers: answers.filter(a => a.question), pagination: buildPaginationMeta(total, page, limit) });
+    const total = totalResult[0]?.count || 0;
+    
+    // Convert to standard format that matches populate expectations in frontend
+    const formattedAnswers = answers.map(a => ({
+      ...a,
+      question: {
+        _id: a.question?._id || a.question,
+        title: a.question?.title,
+        slug: a.question?.slug
+      }
+    }));
+
+    res.json({ answers: formattedAnswers, pagination: buildPaginationMeta(total, page, limit) });
   } catch (err) {
     next(err);
   }
@@ -336,6 +396,96 @@ exports.getModerators = async (req, res, next) => {
       .select('username displayName avatar avatarUrl role reputation bio badges createdAt')
       .sort({ reputation: -1, createdAt: 1 });
     res.json({ moderators });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getSpurtiLogs = async (req, res, next) => {
+  try {
+    const { page, limit } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 15;
+    const skip = (pageNum - 1) * limitNum;
+
+    const SpurtiPointLog = require('../models/SpurtiPointLog');
+    const logs = await SpurtiPointLog.find({ user: req.user._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNum);
+
+    const total = await SpurtiPointLog.countDocuments({ user: req.user._id });
+
+    // Calculate detailed stats for the Spurti Bank UI
+    const totalUsers = await User.countDocuments({ isBanned: { $ne: true } });
+    const userSpurtiPoints = req.user.spurtiPoints || 0;
+    const rank = (await User.countDocuments({ isBanned: { $ne: true }, spurtiPoints: { $gt: userSpurtiPoints } })) + 1;
+    
+    const avgResult = await User.aggregate([
+      { $match: { isBanned: { $ne: true } } },
+      { $group: { _id: null, avgSp: { $avg: '$spurtiPoints' } } }
+    ]);
+    const cohortAvg = avgResult[0] ? Math.round(avgResult[0].avgSp * 10) / 10 : 0;
+
+    const top50User = await User.find({ isBanned: { $ne: true } })
+      .sort({ spurtiPoints: -1 })
+      .skip(Math.min(49, Math.max(0, totalUsers - 1)))
+      .limit(1)
+      .select('spurtiPoints');
+    const top50Cutoff = top50User[0]?.spurtiPoints || 0;
+
+    const top10User = await User.find({ isBanned: { $ne: true } })
+      .sort({ spurtiPoints: -1 })
+      .skip(Math.min(9, Math.max(0, totalUsers - 1)))
+      .limit(1)
+      .select('spurtiPoints');
+    const top10Cutoff = top10User[0]?.spurtiPoints || 0;
+
+    const nextUser = await User.find({
+      isBanned: { $ne: true },
+      spurtiPoints: { $gt: userSpurtiPoints }
+    })
+      .sort({ spurtiPoints: 1 })
+      .limit(1)
+      .select('spurtiPoints');
+    const nextRankSpNeeded = nextUser[0] ? (nextUser[0].spurtiPoints - userSpurtiPoints) : 0;
+    const top50SpNeeded = Math.max(0, top50Cutoff - userSpurtiPoints);
+
+    // Build chronological historical trend
+    const trendLogs = await SpurtiPointLog.find({ user: req.user._id })
+      .sort({ createdAt: 1 })
+      .limit(50)
+      .select('amount createdAt');
+    
+    let tempSp = 0;
+    const trend = trendLogs.map(l => {
+      tempSp += l.amount;
+      return {
+        date: l.createdAt,
+        sp: tempSp
+      };
+    });
+
+    res.json({
+      logs,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(total / limitNum),
+        total
+      },
+      stats: {
+        userSpurtiPoints,
+        rank,
+        totalUsers,
+        cohortAvg,
+        top50Cutoff,
+        top10Cutoff,
+        nextRankSpNeeded,
+        top50SpNeeded,
+        trend
+      }
+    });
   } catch (err) {
     next(err);
   }

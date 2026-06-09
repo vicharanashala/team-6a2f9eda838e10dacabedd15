@@ -36,9 +36,10 @@ router.post('/moderation/approve', auth, moderatorOrAdmin, ctrl.approvePost);
 router.post('/moderation/reject', auth, moderatorOrAdmin, ctrl.rejectPost);
 router.get('/moderation/reported', auth, moderatorOrAdmin, ctrl.getReportedPosts);
 router.post('/moderation/action', auth, moderatorOrAdmin, ctrl.moderateUser);
-router.get('/moderation/suspicious', auth, moderatorOrAdmin, ctrl.getSuspiciousActivity);
-router.post('/moderation/suspicious/:id/resolve', auth, moderatorOrAdmin, ctrl.resolveSuspiciousActivity);
 router.get('/moderation/audit-logs', auth, moderatorOrAdmin, ctrl.getAuditLogs);
 router.post('/alert', auth, adminOnly, ctrl.sendAdminAlert);
+router.post('/emails/broadcast', auth, adminOnly, ctrl.sendEmailBroadcast);
+router.post('/app-version', auth, adminOnly, ctrl.updateAppVersion);
+router.get('/spurti-logs', auth, adminOnly, ctrl.getSpurtiLogs);
 
 module.exports = router;

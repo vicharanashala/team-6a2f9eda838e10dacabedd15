@@ -300,8 +300,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
             query: cleanedQuery,
             fields: ['username^3', 'displayName^2', 'bio'],
             type: 'best_fields',
-            fuzziness: 1,
-            minimum_should_match: '2<70%',
+            fuzziness: 'AUTO',
           },
         });
       } else if (type === 'questions') {
@@ -310,8 +309,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
             query: cleanedQuery,
             fields: ['title^3', 'body^2', 'tags', 'authorName'],
             type: 'best_fields',
-            fuzziness: 1,
-            minimum_should_match: '2<70%',
+            fuzziness: 'AUTO',
           },
         });
       } else if (type === 'faqs') {
@@ -320,8 +318,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
             query: cleanedQuery,
             fields: ['title^3', 'description^2', 'question^4', 'answer', 'tags'],
             type: 'best_fields',
-            fuzziness: 1,
-            minimum_should_match: '2<70%',
+            fuzziness: 'AUTO',
           },
         });
       } else {
@@ -330,8 +327,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
             query: cleanedQuery,
             fields: ['title^3', 'body^2', 'question^4', 'answer', 'description', 'tags', 'username^2', 'displayName', 'bio', 'authorName'],
             type: 'best_fields',
-            fuzziness: 1,
-            minimum_should_match: '2<70%',
+            fuzziness: 'AUTO',
           },
         });
       }
@@ -428,12 +424,10 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
       const qFilter = { isDeleted: false };
       if (tagIds.length > 0) qFilter.tags = { $in: tagIds };
       if (terms.length > 0) {
-        qFilter.$and = terms.map(term => ({
-          $or: [
-            { title: { $regex: term, $options: 'i' } },
-            { body: { $regex: term, $options: 'i' } }
-          ]
-        }));
+        qFilter.$or = terms.flatMap(term => [
+          { title: { $regex: term, $options: 'i' } },
+          { body: { $regex: term, $options: 'i' } }
+        ]);
       }
       promises.push(
         Question.find(qFilter)
@@ -445,7 +439,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
               id: q._id.toString(),
               title: q.title,
               body: q.body,
-              tags: q.tags || [],
+              tags: q.tagNames || [],
               authorName: q.author ? (q.author.displayName || q.author.username) : 'anonymous',
               createdAt: q.createdAt,
               _type: 'question',
@@ -463,14 +457,12 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
       const fFilter = { isPublished: true };
       if (tags && tags.length > 0) fFilter.tags = { $in: tags.map(t => t.toLowerCase()) };
       if (terms.length > 0) {
-        fFilter.$and = terms.map(term => ({
-          $or: [
-            { title: { $regex: term, $options: 'i' } },
-            { description: { $regex: term, $options: 'i' } },
-            { 'items.question': { $regex: term, $options: 'i' } },
-            { 'items.answer': { $regex: term, $options: 'i' } }
-          ]
-        }));
+        fFilter.$or = terms.flatMap(term => [
+          { title: { $regex: term, $options: 'i' } },
+          { description: { $regex: term, $options: 'i' } },
+          { 'items.question': { $regex: term, $options: 'i' } },
+          { 'items.answer': { $regex: term, $options: 'i' } }
+        ]);
       }
       promises.push(
         FAQ.find(fFilter)
@@ -479,7 +471,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
           .then(faqs => {
             const items = [];
             for (const f of faqs) {
-              const pageMatches = terms.length === 0 || terms.every(term => 
+              const pageMatches = terms.length === 0 || terms.some(term => 
                 f.title.toLowerCase().includes(term) || 
                 (f.description && f.description.toLowerCase().includes(term))
               );
@@ -501,7 +493,7 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
               }
               for (const item of f.items || []) {
                 if (!item.isPublished) continue;
-                const itemMatches = terms.length === 0 || terms.every(term => 
+                const itemMatches = terms.length === 0 || terms.some(term => 
                   item.question.toLowerCase().includes(term) || 
                   item.answer.toLowerCase().includes(term)
                 );
@@ -533,13 +525,11 @@ const searchAll = async ({ query, tags, type, page = 1, limit = 20 }) => {
     if (!type || type === 'users') {
       const uFilter = {};
       if (terms.length > 0) {
-        uFilter.$and = terms.map(term => ({
-          $or: [
-            { username: { $regex: term, $options: 'i' } },
-            { displayName: { $regex: term, $options: 'i' } },
-            { bio: { $regex: term, $options: 'i' } }
-          ]
-        }));
+        uFilter.$or = terms.flatMap(term => [
+          { username: { $regex: term, $options: 'i' } },
+          { displayName: { $regex: term, $options: 'i' } },
+          { bio: { $regex: term, $options: 'i' } }
+        ]);
       }
       promises.push(
         User.find(uFilter)

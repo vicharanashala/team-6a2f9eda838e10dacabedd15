@@ -37,6 +37,45 @@ function FAQsPageContent() {
   const [newFAQAnswer, setNewFAQAnswer] = useState('');
   const [newFAQCategory, setNewFAQCategory] = useState('');
   const [addingFAQ, setAddingFAQ] = useState(false);
+  const [reloadCount, setReloadCount] = useState(0);
+  const [dbCategories, setDbCategories] = useState([]);
+
+  const handleDeleteCategory = async (catName) => {
+    if (!confirm(`Are you sure you want to delete the category "${catName}"? This will unset this category on all questions and FAQs.`)) return;
+    const matchedCat = dbCategories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+    try {
+      if (matchedCat) {
+        await api.delete(`/categories/${matchedCat._id}`);
+      } else {
+        toast.error('Category configuration document not found.');
+        return;
+      }
+      toast.success('Category deleted successfully');
+      setReloadCount(c => c + 1);
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete category');
+    }
+  };
+
+  const handleReportCategory = async (catName) => {
+    if (!user) {
+      toast.error('Please login to report a category');
+      return;
+    }
+    const reason = prompt(`Please specify your reason for reporting the category "${catName}":`);
+    if (!reason || !reason.trim()) return;
+
+    try {
+      await api.post('/admin/reports', {
+        subject: `Report Category: ${catName}`,
+        description: reason.trim(),
+        pageUrl: `/faqs?category=${encodeURIComponent(catName)}`
+      });
+      toast.success('Category reported successfully. Our team will review it.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to submit report');
+    }
+  };
 
   const fetchSavedFaqs = useCallback(async () => {
     if (!user) return;
@@ -61,15 +100,17 @@ function FAQsPageContent() {
     Promise.all([
       api.get('/faqs', { page, category, sort }),
       api.get('/faqs', { limit: 100, sort: 'newest' }),
-    ]).then(([data, all]) => {
+      api.get('/categories').catch(() => ({ categories: [] }))
+    ]).then(([data, all, catData]) => {
       setFaqs(data.faqs || []);
       setPagination(data.pagination);
       const cats = [...new Set((all.faqs || []).map(f => f.category).filter(Boolean))];
       setCategories(cats);
+      setDbCategories(catData.categories || []);
     })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [page, category, sort]);
+  }, [page, category, sort, reloadCount]);
 
   useEffect(() => {
     fetchSavedFaqs();
@@ -220,19 +261,59 @@ function FAQsPageContent() {
         >
           All
         </Link>
-        {categories.map(cat => (
-          <Link
-            key={cat}
-            href={`/faqs?category=${cat}`}
-            className={`px-4 py-2 text-xs font-semibold rounded-xl border capitalize transition-all ${
-              category === cat 
-                ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md shadow-[var(--color-primary)]/10' 
-                : 'bg-[var(--color-bg-secondary)]/80 text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:text-[var(--color-text)]'
-            }`}
-          >
-            {cat}
-          </Link>
-        ))}
+        {categories.map(cat => {
+          const isSelected = category === cat;
+          return (
+            <div
+              key={cat}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border capitalize transition-all ${
+                isSelected 
+                  ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)] shadow-md shadow-[var(--color-primary)]/10' 
+                  : 'bg-[var(--color-bg-secondary)]/80 text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:text-[var(--color-text)]'
+              }`}
+            >
+              <Link href={`/faqs?category=${cat}`} className="text-xs font-semibold select-none leading-none">
+                {cat}
+              </Link>
+              
+              {/* Report Category */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleReportCategory(cat);
+                }}
+                className={`p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0 ${
+                  isSelected ? 'text-white/80 hover:text-white' : 'text-[var(--color-text-muted)] hover:text-amber-500'
+                }`}
+                title="Report Category"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+                </svg>
+              </button>
+
+              {/* Delete Category */}
+              {isAdminOrMod && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDeleteCategory(cat);
+                  }}
+                  className={`p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0 ${
+                    isSelected ? 'text-white/80 hover:text-white' : 'text-[var(--color-text-muted)] hover:text-red-500'
+                  }`}
+                  title="Delete Category"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          );
+        })}
         {isAdminOrMod && (
           <button
             onClick={() => setShowCategoryModal(true)}
@@ -267,6 +348,7 @@ function FAQsPageContent() {
                 faq={{ ...faq, isSaved: savedFaqIds.has(faq._id) }}
                 isSelected={selectedIndex === idx}
                 onSelect={() => setSelectedIndex(idx)}
+                onDeleteSuccess={() => setReloadCount(c => c + 1)}
               />
             ))}
           </div>

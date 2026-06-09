@@ -38,7 +38,9 @@ exports.createAnswer = async (req, res, next) => {
       author: req.user._id,
       confidenceLevel: req.body.confidenceLevel || null,
       visibility,
-      triggeredRule: req.body.triggeredRule || undefined
+      triggeredRule: req.body.triggeredRule || undefined,
+      attachments: req.body.attachments || [],
+      links: req.body.links || [],
     });
 
     const AuditLog = require('../models/AuditLog');
@@ -71,7 +73,6 @@ exports.createAnswer = async (req, res, next) => {
           referenceType: 'Answer',
           reference: answer._id,
         });
-        emitToUser(question.author.toString(), 'notification:new', { answer: populated });
 
         // Send email notification to question author
         try {
@@ -160,6 +161,8 @@ exports.getAnswers = async (req, res, next) => {
           'author.displayName': 1,
           'author.avatar': 1,
           'author.reputation': 1,
+          attachments: 1,
+          links: 1,
         },
       },
     ];
@@ -221,6 +224,9 @@ exports.deleteAnswer = async (req, res, next) => {
     answer.status = 'deleted';
     await answer.save();
 
+    // Decrement the author's answerCount so the profile stat stays accurate
+    await User.findByIdAndUpdate(answer.author, { $inc: { answerCount: -1 } });
+
     const AuditLog = require('../models/AuditLog');
     const Question = require('../models/Question');
     const parentQuestion = await Question.findById(answer.question);
@@ -236,6 +242,16 @@ exports.deleteAnswer = async (req, res, next) => {
 
     const { recalculateAnswerCount } = require('../utils/helpers');
     await recalculateAnswerCount(answer.question);
+
+    try {
+      const { emitToAdmin } = require('../socket');
+      emitToAdmin('moderation:updated', { action: 'delete_answer', answerId: answer._id });
+      const { broadcastLeaderboard } = require('../services/leaderboardService');
+      await broadcastLeaderboard();
+    } catch (err) {
+      console.error('Socket notification error in deleteAnswer:', err.message);
+    }
+
     res.json({ message: 'Answer deleted' });
   } catch (err) {
     next(err);
@@ -277,7 +293,29 @@ exports.acceptAnswer = async (req, res, next) => {
     if (authorUser) {
       authorUser.reputation += 15;
       authorUser.trustScore += 5;
+      authorUser.spurtiPoints = (authorUser.spurtiPoints || 0) + 1;
       await authorUser.save();
+
+      const SpurtiPointLog = require('../models/SpurtiPointLog');
+      await SpurtiPointLog.create({
+        user: authorUser._id,
+        amount: 1,
+        action: 'reward',
+        reason: `Answer accepted on question: "${question.title}"`,
+        referenceType: 'Answer',
+        referenceId: answer._id
+      });
+
+      // Notify the answer author about Spurti Points earned
+      await Notification.create({
+        recipient: authorUser._id,
+        type: 'spurti_points',
+        title: '🎉 You earned Spurti Points!',
+        message: `+1 Sp awarded — your answer on "${question.title}" was accepted.`,
+        link: `/questions/${question._id}`,
+        referenceType: 'Answer',
+        reference: answer._id,
+      });
     }
 
     await Notification.create({
@@ -289,7 +327,6 @@ exports.acceptAnswer = async (req, res, next) => {
       referenceType: 'Answer',
       reference: answer._id,
     });
-    emitToUser(answer.author.toString(), 'notification:new', { accepted: true });
 
     if (question.meTooUsers && question.meTooUsers.length > 0) {
       const meTooNotifications = question.meTooUsers.map(userId => ({
@@ -302,9 +339,6 @@ exports.acceptAnswer = async (req, res, next) => {
         reference: question._id,
       }));
       await Notification.insertMany(meTooNotifications);
-      question.meTooUsers.forEach(userId => {
-        emitToUser(userId.toString(), 'notification:new', { questionAnswered: true });
-      });
 
       // Doubt solved email notifications are disabled to prevent non-compliant outbound emails
     }
@@ -350,7 +384,18 @@ exports.unacceptAnswer = async (req, res, next) => {
     if (authorUser) {
       authorUser.reputation = Math.max(0, authorUser.reputation - 15);
       authorUser.trustScore = Math.max(0, authorUser.trustScore - 5);
+      authorUser.spurtiPoints = Math.max(0, (authorUser.spurtiPoints || 0) - 1);
       await authorUser.save();
+
+      const SpurtiPointLog = require('../models/SpurtiPointLog');
+      await SpurtiPointLog.create({
+        user: authorUser._id,
+        amount: -1,
+        action: 'deduction',
+        reason: `Answer unaccepted on question: "${question.title}"`,
+        referenceType: 'Answer',
+        referenceId: answer._id
+      });
     }
 
     await broadcastLeaderboard();

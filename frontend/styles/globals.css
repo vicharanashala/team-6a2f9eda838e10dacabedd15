@@ -3,6 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-size: 16.5px;
+  }
   :root {
     --color-bg: #f8fafc;
     --color-bg-secondary: #ffffff;

@@ -31,8 +31,8 @@ const config = {
   clientUrl: cleanEnv(process.env.CLIENT_URL) || 'http://localhost:3000',
   webPush: {
     subject: cleanEnv(process.env.VAPID_SUBJECT) || 'mailto:admin@quorafaq.com',
-    publicKey: cleanEnv(process.env.VAPID_PUBLIC_KEY),
-    privateKey: cleanEnv(process.env.VAPID_PRIVATE_KEY),
+    publicKey: cleanEnv(process.env.VAPID_PUBLIC_KEY) || 'BN0Wi1zWP6LkN25bI_c9Fo7YJKqjuslbjF2lB3Qslc59YsIp7PM48k56fRcSsIamXVnag5Bu2dazjhsdOQJC5Uc',
+    privateKey: cleanEnv(process.env.VAPID_PRIVATE_KEY) || '5PmrXpU-msoypetPodmJqENnH8T1LKmRtCiNWrxbXE0',
   },
   firebase: {
     apiKey: cleanEnv(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),

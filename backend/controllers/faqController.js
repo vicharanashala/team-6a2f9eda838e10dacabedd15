@@ -138,6 +138,16 @@ exports.deleteFAQ = async (req, res, next) => {
     if (!faq) throw new AppError('FAQ not found', 404);
     await FAQ.findByIdAndDelete(req.params.id);
     await deleteFAQIndex(req.params.id);
+
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'delete_faq',
+      targetId: faq._id,
+      targetType: 'FAQ',
+      reason: `FAQ "${faq.title}" deleted`
+    });
+
     res.json({ message: 'FAQ deleted' });
   } catch (err) {
     next(err);
@@ -195,9 +205,23 @@ exports.deleteFAQItem = async (req, res, next) => {
   try {
     const faq = await FAQ.findById(req.params.id);
     if (!faq) throw new AppError('FAQ not found', 404);
+
+    const item = faq.items.id(req.params.itemId);
+    const itemQuestion = item ? item.question : req.params.itemId;
+
     faq.items.pull({ _id: req.params.itemId });
     await faq.save();
     await deleteFAQItemIndex(req.params.id, req.params.itemId);
+
+    const AuditLog = require('../models/AuditLog');
+    await AuditLog.create({
+      adminId: req.user._id,
+      action: 'delete_faq_item',
+      targetId: faq._id,
+      targetType: 'FAQ',
+      reason: `FAQ Question deleted: "${itemQuestion}" from FAQ "${faq.title}"`
+    });
+
     res.json({ faq });
   } catch (err) {
     next(err);

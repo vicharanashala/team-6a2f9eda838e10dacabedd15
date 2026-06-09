@@ -13,7 +13,7 @@ const PHASE_LABELS = {
   completed: 'Alumni / Completed',
 };
 
-export default function RecommendedFAQs({ limit = 6, layout = 'grid' }) {
+export default function RecommendedFAQs({ limit = 6, layout = 'grid', category = 'All Categories' }) {
   const { user } = useAuth();
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,7 @@ export default function RecommendedFAQs({ limit = 6, layout = 'grid' }) {
       const params = user ? { userId: user.id } : {};
       const data = await api.get('/faqs/recommended', params);
       const recommendedList = data.faqs || [];
-      setFaqs(recommendedList.slice(0, limit));
+      setFaqs(recommendedList);
 
       // Determine phase context label
       if (user && user.currentPhase) {
@@ -102,6 +102,19 @@ export default function RecommendedFAQs({ limit = 6, layout = 'grid' }) {
     );
   }
 
+  const filtered = category === 'All Categories'
+    ? faqs
+    : faqs.filter(faq => faq.category === category);
+
+  const recommendedOnly = user
+    ? (user.currentPhase
+        ? filtered.filter(faq => faq.phaseMatch || (faq.matchingTagsCount && faq.matchingTagsCount > 0))
+        : filtered.filter(faq => faq.isOfficial || (faq.matchingTagsCount && faq.matchingTagsCount > 0))
+      )
+    : filtered.filter(faq => faq.isOfficial);
+
+  const slicedFaqs = recommendedOnly.slice(0, limit);
+
   // Guest or no-phase: show a gentle CTA to set phase, then show official/trending FAQs
   if (isGuestOrNoPhase) {
     return (
@@ -137,13 +150,21 @@ export default function RecommendedFAQs({ limit = 6, layout = 'grid' }) {
           </div>
         )}
 
-        {faqs.length === 0 ? null : renderFAQList(faqs)}
+        {slicedFaqs.length === 0 ? (
+          <div className="text-center py-12 bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/40 rounded-md text-[var(--color-text-secondary)] text-xs">
+            No FAQs found in this category.
+          </div>
+        ) : renderFAQList(slicedFaqs)}
       </div>
     );
   }
 
-  if (faqs.length === 0) {
-    return null;
+  if (slicedFaqs.length === 0) {
+    return (
+      <div className="text-center py-12 bg-[var(--color-bg-secondary)]/50 border border-[var(--color-border)]/40 rounded-md text-[var(--color-text-secondary)] text-xs">
+        No recommended FAQs found in this category.
+      </div>
+    );
   }
 
   return (
@@ -157,7 +178,7 @@ export default function RecommendedFAQs({ limit = 6, layout = 'grid' }) {
           <span className="text-[10px] text-[var(--color-text-muted)]">Based on your phase &amp; activity</span>
         </div>
       )}
-      {renderFAQList(faqs)}
+      {renderFAQList(slicedFaqs)}
     </div>
   );
 

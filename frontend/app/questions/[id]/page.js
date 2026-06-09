@@ -35,6 +35,53 @@ export default function QuestionDetailPage() {
   const [selectedFAQ, setSelectedFAQ] = useState('');
   const [addingToFAQ, setAddingToFAQ] = useState(false);
 
+  // States and helpers for Answer Attachments & Links
+  const [answerAttachments, setAnswerAttachments] = useState([]);
+  const [answerLinks, setAnswerLinks] = useState([]);
+  const [answerLinkForm, setAnswerLinkForm] = useState({ title: '', url: '' });
+
+  const handleAnswerFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error(`File "${file.name}" exceeds the 2MB limit.`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAnswerAttachments(prev => [
+          ...prev,
+          {
+            filename: file.name,
+            content: reader.result, // base64 string
+            mimetype: file.type,
+            size: file.size
+          }
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = null; // Reset input
+  };
+
+  const removeAnswerAttachment = (index) => {
+    setAnswerAttachments(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  const addAnswerLink = () => {
+    if (!answerLinkForm.url) return;
+    let url = answerLinkForm.url.trim();
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+    }
+    setAnswerLinks(prev => [...prev, { title: answerLinkForm.title.trim() || url, url }]);
+    setAnswerLinkForm({ title: '', url: '' });
+  };
+
+  const removeAnswerLink = (index) => {
+    setAnswerLinks(prev => prev.filter((_, idx) => idx !== index));
+  };
+
   const fetchQuestion = useCallback(async () => {
     try {
       const data = await api.get(`/questions/${id}`);
@@ -232,11 +279,19 @@ export default function QuestionDetailPage() {
 
     setAnswering(true);
     try {
-      const data = await api.post(`/answers/question/${id}`, { body: newAnswer, confidenceLevel });
+      const data = await api.post(`/answers/question/${id}`, {
+        body: newAnswer,
+        confidenceLevel,
+        attachments: answerAttachments,
+        links: answerLinks
+      });
       setRecentlyPostedId(data.answer._id);
       setAnswers(prev => [data.answer, ...prev]);
       setNewAnswer('');
       setConfidenceLevel(null);
+      setAnswerAttachments([]);
+      setAnswerLinks([]);
+      setAnswerLinkForm({ title: '', url: '' });
       toast.success('Answer posted!');
     } catch (err) {
       toast.error(err.message || 'Failed to post answer');
@@ -295,14 +350,16 @@ export default function QuestionDetailPage() {
 
   const canEscalate = () => {
     if (!user) return false;
-    const isModOrAdmin = user.role === 'admin' || user.role === 'moderator';
+    // Escalate must show to users who raised the question only
+    const isOwner = question.isOwner || (question.author && (question.author._id === user._id || question.author === user._id));
+    if (!isOwner) return false;
     if (question.isEscalated || question.resolutionStatus === 'escalated') return false;
-    if (isModOrAdmin) return true;
-    if (question.isOwner) {
-      const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
-      return new Date(question.createdAt).getTime() < twentyFourHoursAgo;
-    }
-    return false;
+
+    // Check if there are answers from other users
+    const hasOtherAnswers = answers.some(a => a.author && a.author._id !== user._id && !a.isDeleted);
+    if (hasOtherAnswers) return false;
+
+    return true;
   };
 
   const handleDelete = async () => {
@@ -510,6 +567,39 @@ export default function QuestionDetailPage() {
         </div>
       )}
 
+      {/* Escalation Status Banner */}
+      {question.isEscalated && (
+        <div className={`mb-4 p-4 border rounded-lg shadow-sm ${
+          question.resolutionStatus === 'escalated'
+            ? 'bg-amber-50/90 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/50 text-amber-800 dark:text-amber-400'
+            : 'bg-emerald-50/90 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/50 text-emerald-800 dark:text-green-400'
+        }`}>
+          <div className="flex items-start gap-3">
+            {question.resolutionStatus === 'escalated' ? (
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">
+                {question.resolutionStatus === 'escalated' 
+                  ? 'This doubt has been escalated' 
+                  : 'Escalation resolved'}
+              </p>
+              <p className="text-xs mt-1 leading-relaxed opacity-90">
+                {question.resolutionStatus === 'escalated'
+                  ? `Your query is escalated to the moderator queue. Escalation Reason: "${question.escalationReason || 'No response received within 24 hours'}"`
+                  : 'A moderator has reviewed and addressed this escalation.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Anomaly Detection Banners */}
       {question.anomalySeverity === 'high' && (
         <div className="mb-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-lg shadow-sm animate-pulse">
@@ -657,6 +747,50 @@ export default function QuestionDetailPage() {
             <MarkdownRenderer content={question.body} />
           </div>
 
+          {/* Question attachments & links */}
+          {(question.attachments?.length > 0 || question.links?.length > 0) && (
+            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/40 border border-[var(--color-border)] rounded-xl space-y-3 mb-6">
+              {question.attachments?.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)] mb-2">Attached Files</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {question.attachments.map((file, idx) => (
+                      <a
+                        key={idx}
+                        href={file.content}
+                        download={file.filename}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-[var(--color-border)] rounded-lg text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 transition-colors"
+                      >
+                        <span>📁</span>
+                        <span className="truncate max-w-[200px]">{file.filename}</span>
+                        {file.size && <span className="text-[10px] text-[var(--color-text-secondary)]">({(file.size / 1024).toFixed(1)} KB)</span>}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {question.links?.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-secondary)] mb-2">Reference Links</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {question.links.map((link, idx) => (
+                      <a
+                        key={idx}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-[var(--color-border)] rounded-lg text-xs font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 transition-colors"
+                      >
+                        <span>🔗</span>
+                        <span className="truncate max-w-[200px]">{link.title || link.url}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Answer count */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-[var(--color-text)]">
@@ -684,8 +818,10 @@ export default function QuestionDetailPage() {
             </div>
           ) : (
             <div className="space-y-4 mb-6">
-              {answers.map(answer => (
-                <div key={answer._id} className={`card p-6 ${answer.isAccepted ? 'border-green-300 ring-1 ring-green-200' : ''}`}>
+              {answers.map(answer => {
+                const isAiBot = answer.isOfficial && answer.body && answer.body.includes('PrashnaSarathi AI Bot');
+                return (
+                <div key={answer._id} className={`card p-6 ${answer.isAccepted ? 'border-green-300 ring-1 ring-green-200' : isAiBot ? 'border-purple-500/40 ring-1 ring-purple-400/20' : ''}`}>
                   <div className="flex gap-4">
                     <div className="hidden sm:flex flex-col items-center gap-1">
                       <button onClick={() => handleVote('Answer', answer._id, 'upvote')} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 hover:text-green-600">
@@ -697,7 +833,58 @@ export default function QuestionDetailPage() {
                       </button>
                     </div>
                     <div className="flex-1">
+                      {/* AI Bot Answer Header */}
+                      {answer.isOfficial && answer.body && answer.body.includes('PrashnaSarathi AI Bot') && (
+                        <div className="mb-3 -mx-2 px-3 py-2.5 bg-gradient-to-r from-purple-900/30 to-indigo-900/20 border border-purple-500/30 rounded-xl flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center shadow-sm shrink-0">
+                            <span className="text-sm">🤖</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-purple-300 leading-none">PrashnaSarathi AI Bot</p>
+                            <p className="text-[10px] text-purple-400/80 mt-0.5 leading-none">AI-generated · Based on official knowledge base</p>
+                          </div>
+                          <span className="shrink-0 text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-medium">Auto Answer</span>
+                        </div>
+                      )}
                       <MarkdownRenderer content={answer.body} />
+
+                      {/* Answer attachments & links */}
+                      {(answer.attachments?.length > 0 || answer.links?.length > 0) && (
+                        <div className="mt-3 p-3 bg-gray-50/50 dark:bg-gray-800/20 border border-[var(--color-border)] rounded-lg space-y-2">
+                          {answer.attachments?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {answer.attachments.map((file, idx) => (
+                                <a
+                                  key={idx}
+                                  href={file.content}
+                                  download={file.filename}
+                                  className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-gray-800 border border-[var(--color-border)] rounded-md text-[11px] font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 transition-colors"
+                                >
+                                  <span>📁</span>
+                                  <span className="truncate max-w-[150px]">{file.filename}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                          {answer.links?.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {answer.links.map((link, idx) => (
+                                <a
+                                  key={idx}
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 px-2.5 py-1 bg-white dark:bg-gray-800 border border-[var(--color-border)] rounded-md text-[11px] font-medium text-primary-600 dark:text-primary-400 hover:bg-gray-50 transition-colors"
+                                >
+                                  <span>🔗</span>
+                                  <span className="truncate max-w-[150px]">{link.title || link.url}</span>
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                           <Link href={`/users/${answer.author?.username}`} className="flex items-center gap-1.5 hover:text-primary-600 transition-colors">
@@ -780,7 +967,9 @@ export default function QuestionDetailPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
+
             </div>
           )}
 
@@ -797,6 +986,93 @@ export default function QuestionDetailPage() {
                   placeholder="Write your answer in Markdown..."
                   maxLength={50000}
                 />
+
+                {/* Attachments Section */}
+                <div className="border border-[var(--color-border)] rounded-lg p-3 bg-gray-50/50 dark:bg-gray-800/20 mb-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-[var(--color-text)]">Attachments (Optional)</label>
+                    <span className="text-[10px] text-[var(--color-text-secondary)]">Max 2MB per file</span>
+                  </div>
+                  
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleAnswerFileChange}
+                    className="hidden"
+                    id="answer-file-upload"
+                  />
+                  <label
+                    htmlFor="answer-file-upload"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 border border-[var(--color-border)] hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium text-[var(--color-text)] rounded-md cursor-pointer transition-colors shadow-sm"
+                  >
+                    <span>📁</span> Choose Files
+                  </label>
+
+                  {answerAttachments.length > 0 && (
+                    <div className="space-y-1">
+                      {answerAttachments.map((file, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-1.5 bg-white dark:bg-gray-800 border border-[var(--color-border)] rounded-md text-[11px]">
+                          <span className="font-medium text-[var(--color-text)] truncate max-w-[200px]">{file.filename}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeAnswerAttachment(idx)}
+                            className="text-red-500 hover:text-red-750 font-bold px-1.5"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Reference Links Section */}
+                <div className="border border-[var(--color-border)] rounded-lg p-3 bg-gray-50/50 dark:bg-gray-800/20 mb-3 space-y-2">
+                  <label className="text-xs font-semibold text-[var(--color-text)]">Reference Links (Optional)</label>
+                  
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={answerLinkForm.title}
+                      onChange={(e) => setAnswerLinkForm({ ...answerLinkForm, title: e.target.value })}
+                      className="input text-xs py-1 px-2"
+                      placeholder="Title"
+                    />
+                    <input
+                      type="text"
+                      value={answerLinkForm.url}
+                      onChange={(e) => setAnswerLinkForm({ ...answerLinkForm, url: e.target.value })}
+                      className="input text-xs py-1 px-2 flex-1"
+                      placeholder="URL"
+                    />
+                    <button
+                      type="button"
+                      onClick={addAnswerLink}
+                      className="btn-primary text-xs py-1 px-3"
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {answerLinks.length > 0 && (
+                    <div className="space-y-1">
+                      {answerLinks.map((link, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-1.5 bg-white dark:bg-gray-800 border border-[var(--color-border)] rounded-md text-[11px]">
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary-600 hover:underline truncate max-w-[200px]">
+                            {link.title || link.url}
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => removeAnswerLink(idx)}
+                            className="text-red-500 hover:text-red-750 font-bold px-1.5"
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 {/* Confidence Level Picker */}
                 <div className="mb-4">
