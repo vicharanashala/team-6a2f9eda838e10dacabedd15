@@ -58,6 +58,19 @@ const SearchModal = forwardRef(function SearchModal({ isOpen, onClose, autoStart
   const handleVoiceInput = () => {
     if (typeof window === 'undefined') return;
 
+    if (listening) {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {
+          console.error(e);
+        }
+        recognitionRef.current = null;
+      }
+      setListening(false);
+      return;
+    }
+
     // Attempt native SpeechRecognition first
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -117,10 +130,12 @@ const SearchModal = forwardRef(function SearchModal({ isOpen, onClose, autoStart
         }
       };
       recognition.onerror = (e) => {
-        console.error('Speech recognition error', e);
-        toast.error('Voice input error');
-        // Fallback to AI transcription if microphone captured audio
-        fallbackToAI();
+        if (e.error !== 'aborted') {
+          console.error('Speech recognition error', e);
+          toast.error('Voice input error');
+          // Fallback to AI transcription if microphone captured audio
+          fallbackToAI();
+        }
       };
       recognition.onend = () => {
         clearTimeout(silenceTimer);

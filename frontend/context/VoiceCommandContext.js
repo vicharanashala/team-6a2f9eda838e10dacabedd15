@@ -44,68 +44,72 @@ export const VoiceCommandProvider = ({ children }) => {
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN'; // Use Indian English for better recognition of local names
-    recognition.interimResults = true; // Use interim results to open search instantly
-    recognition.continuous = true;
-    recognition.maxAlternatives = 3;
-
     let isActive = false;
     let hasPermission = true;
+    let shouldRestart = true;
 
     // Lenient activation phrase to match "Hey PrashnaSarathi" and common speech-to-text misrecognitions
     const activationPhrase = /(hey\s+)?(prashna|prasna|prishna|prisna|prasanna|krishna|prashan|prasan)\s*(sarathi|sarthi|sarati)/i;
 
-    recognition.onresult = (event) => {
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript.trim();
-        if (activationPhrase.test(transcript)) {
-          toast.success("Hey PrashnaSārathi: Voice Search Activated!", {
-            id: 'voice-activate',
-            icon: '🎙️'
-          });
-          openSearch();
-          break;
-        }
-      }
-    };
-
-    recognition.onerror = (e) => {
-      if (e.error !== 'aborted') {
-        console.error('Global voice command error', e);
-      }
-      if (e.error === 'not-allowed') {
-        hasPermission = false;
-      }
-      isActive = false;
-    };
-
-    recognition.onend = () => {
-      isActive = false;
-      // Keep wake word listener alive forever unless search modal is open or permission is denied
-      if (!isSearchOpen && hasPermission) {
-        setTimeout(startRecognition, 500);
-      }
-    };
-
     const startRecognition = () => {
-      if (isSearchOpen) return;
+      if (isSearchOpen || isActive) return;
       try {
+        // Instantiate a brand new SpeechRecognition object on each start to bypass dead instance restriction
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'en-IN';
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        recognition.maxAlternatives = 3;
+
+        recognition.onresult = (event) => {
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript.trim();
+            if (activationPhrase.test(transcript)) {
+              toast.success("Hey PrashnaSārathi: Voice Search Activated!", {
+                id: 'voice-activate',
+                icon: '🎙️'
+              });
+              openSearch();
+              break;
+            }
+          }
+        };
+
+        recognition.onerror = (e) => {
+          if (e.error !== 'aborted') {
+            console.error('Global voice command error', e.error, e);
+          }
+          if (e.error === 'not-allowed') {
+            hasPermission = false;
+          }
+          isActive = false;
+        };
+
+        recognition.onend = () => {
+          isActive = false;
+          // Keep wake word listener alive forever unless search modal is open, permission is denied, or context destroyed
+          if (!isSearchOpen && hasPermission && shouldRestart) {
+            setTimeout(startRecognition, 500);
+          }
+        };
+
         recognition.start();
         isActive = true;
+        recognitionRef.current = recognition;
       } catch (err) {
-        // Already started or blocked by browser permission policy
+        console.error('Failed to start global SpeechRecognition:', err);
+        isActive = false;
       }
     };
 
     // Initial start attempt
     startRecognition();
-    recognitionRef.current = recognition;
 
     // User gesture listener to request permissions and start recognition if blocked
     const handleInteraction = async () => {
+      if (isSearchOpen) return;
       hasPermission = true;
-      if (!isActive && recognitionRef.current) {
+      if (!isActive) {
         try {
           await navigator.mediaDevices.getUserMedia({ audio: true });
         } catch (e) {
@@ -119,6 +123,7 @@ export const VoiceCommandProvider = ({ children }) => {
     window.addEventListener('touchstart', handleInteraction);
 
     return () => {
+      shouldRestart = false;
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
       if (recognitionRef.current) {
