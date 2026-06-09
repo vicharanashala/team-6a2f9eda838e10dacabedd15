@@ -100,15 +100,18 @@ export default function MascotCompanion() {
         finalLevel = 0;
         toast(`Welcome! ${currentMascotName} is now active. Log in daily to grow!`, { icon: '🐣' });
       } else {
-        finalExp = currentExp + 15;
         if (checkIsYesterday(savedLastLogin)) {
           // Daily login continued
           finalStreak += 1;
+          finalExp = currentExp + 15;
           toast.success(`Daily Login Claimed! Streak: ${finalStreak} days. +15 EXP`, { icon: '🔥' });
         } else {
-          // Streak broken
+          // Streak broken - reset progress entirely!
           finalStreak = 1;
-          toast(`Login streak reset to 1 day, but ${currentMascotName} welcomed you back with +15 EXP!`, { icon: '🌅' });
+          finalExp = 0;
+          finalLevel = 0;
+          currentStageVal = 'junior';
+          toast(`Oh no! You missed a day. Your login streak and ${currentMascotName}'s progress reset to Level 0!`, { icon: '🌅', duration: 5000 });
         }
       }
 
