@@ -51,6 +51,7 @@ export const VoiceCommandProvider = ({ children }) => {
     recognition.maxAlternatives = 3;
 
     let isActive = false;
+    let hasPermission = true;
 
     // Lenient activation phrase to match "Hey PrashnaSarathi" and common speech-to-text misrecognitions
     const activationPhrase = /(hey\s+)?(prashna|prasna|prishna|prisna|prasanna|krishna|prashan|prasan)\s*(sarathi|sarthi|sarati)/i;
@@ -59,6 +60,10 @@ export const VoiceCommandProvider = ({ children }) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript.trim();
         if (activationPhrase.test(transcript)) {
+          toast.success("Hey PrashnaSārathi: Voice Search Activated!", {
+            id: 'voice-activate',
+            icon: '🎙️'
+          });
           openSearch();
           break;
         }
@@ -69,11 +74,18 @@ export const VoiceCommandProvider = ({ children }) => {
       if (e.error !== 'aborted') {
         console.error('Global voice command error', e);
       }
+      if (e.error === 'not-allowed') {
+        hasPermission = false;
+      }
       isActive = false;
     };
 
     recognition.onend = () => {
       isActive = false;
+      // Keep wake word listener alive forever unless search modal is open or permission is denied
+      if (!isSearchOpen && hasPermission) {
+        setTimeout(startRecognition, 500);
+      }
     };
 
     const startRecognition = () => {
@@ -90,9 +102,15 @@ export const VoiceCommandProvider = ({ children }) => {
     startRecognition();
     recognitionRef.current = recognition;
 
-    // User gesture listener to restart recognition if blocked by browser autoplay/autoplay restriction
-    const handleInteraction = () => {
+    // User gesture listener to request permissions and start recognition if blocked
+    const handleInteraction = async () => {
+      hasPermission = true;
       if (!isActive && recognitionRef.current) {
+        try {
+          await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+          console.warn("User dismissed or denied microphone access prompt:", e);
+        }
         startRecognition();
       }
     };
