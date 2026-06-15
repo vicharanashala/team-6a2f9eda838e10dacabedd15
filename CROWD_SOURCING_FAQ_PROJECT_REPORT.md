@@ -20,18 +20,18 @@ In educational institutions and community learning hubs, students frequently enc
 2. **Repetitive Workload:** Teachers and administrators are often overwhelmed by the same questions being asked repeatedly, leading to delayed responses and scattered information.
 
 ### 2.2 The Solution: PrashnaSārathi
-**PrashnaSārathi** is an intelligent, community-driven Q&A and FAQ platform designed to make learning collaborative, engaging, and efficient. It acts as a digital bridge where users can ask questions freely, find verified answers instantly, and help their peers. 
-
-The platform addresses the core problems using three main approaches:
-* **Anonymous & Safe Q&A:** Students can choose to post questions anonymously, removing the fear of judgment and increasing platform participation.
-* **AI-Powered Assistance:** When a user types a new question, the platform automatically scans for similar existing doubts to prevent duplicates. If the question is new, an AI model instantly generates a baseline answer to reduce wait times.
-* **Interactive Gamification:** A friendly, floating companion mascot named *Pyro*, combined with daily streaks, points, and accessory shops, makes asking and answering questions feel like a rewarding game.
+**PrashnaSārathi** is an intelligent, community-driven Q&A and FAQ platform designed to make learning collaborative, engaging, and efficient. The platform organizes its functionalities into five key areas:
+* **Core Q&A Module:** Supports anonymous posting to remove the fear of asking, similar question warnings to prevent duplicates, automated content quality checks, confidence indicators on replies, and an AI Auto-Answer service that generates baseline replies instantly.
+* **FAQ System Module:** Organizes official institutional knowledge into category-based accordion views, monitors FAQ helpfulness via a feedback tracker, and tags verified answers with official badges.
+* **Gamification Module:** Encourages student participation through daily streaks with hardcore penalty resets, a reputation/Spurti Points (SP) reward economy, and a dynamic leaderboard ranking top contributors.
+* **Search & Discovery Module:** Features a fast Ctrl+K instant search modal, powered by a hybrid Elasticsearch/Mongoose engine, and Redis caching for trending search queries.
+* **Admin & Moderation Module:** Equips moderators with dashboard statistics, role/user management with audit logs, and a cache manager to push updates instantly.
 
 ### 2.3 Key Outcomes & Impact
 By deploying PrashnaSārathi, communities can achieve:
-* **Higher Engagement:** Gamified progression encourages students to actively help one another, building a self-sustaining knowledge base.
-* **Reduced Overhead:** Blocking duplicate questions and auto-answering standard FAQs saves time for teachers and moderators.
-* **High-Speed Knowledge Access:** Instant search indexes make finding information simple and immediate, whether on a desktop browser or mobile device.
+* **Deliberate Quality Control:** Zero-shot AI filtering blocks spam while similarity searches guide students to existing answers before they submit a duplicate.
+* **Friendly Peer Competition:** Streaks and points incentivize users to write high-quality answers and climb the leaderboard rankings.
+* **Rapid Doubt Resolution:** Real-time AI auto-answers and cached search queries ensure students get accurate guidance in seconds, saving valuable instructor time.
 
 ---
 
@@ -141,12 +141,8 @@ The screen recording below showcases the interface styling, navigation, interact
 
 ### 🌟 Detailed Feature Breakdown
 
-We have categorized the features into 6 core modules to keep the explanation simple, clear, and easy to understand.
-
 #### 6.1 Core Q&A Module
-* **Ask Questions easily:** Students can create questions with titles, descriptive bodies, and topic tags.
-  * *Purpose:* Simplify doubt creation.
-  * *Real-world Usefulness:* Allows students to describe their exact issues and organize them by topics for easier discovery.
+
 * **Anonymous Posting:** Option to post questions anonymously.
   * *Purpose:* Protect student privacy and encourage questioning.
   * *Real-world Usefulness:* Helps shy students ask simple or sensitive doubts without fear of judgment from peers.
@@ -156,17 +152,18 @@ We have categorized the features into 6 core modules to keep the explanation sim
 * **Content Quality Checker:** An AI service that scans new questions to filter out gibberish or spam.
   * *Purpose:* Keep the community platform clean.
   * *Real-world Usefulness:* Instantly rejects random strings (like "aaaaa" or keyboard-smash text) before they get posted.
-* **Confidence Indicators on Answers:** When submitting an answer, users pick their level of confidence: *🤔 I think so*, *👍 Pretty sure*, or *💯 I know this*.
+* **Confidence Indicators on Answers:** When submitting an answer, users pick their level of confidence: `🤔 I think so`, `👍 Pretty sure`, or `💯 I know this`.
   * *Purpose:* Inform readers of answer certainty.
   * *Real-world Usefulness:* Helps students evaluate the reliability of peer answers.
 * **"Me Too" and "Solved My Doubt" Indicators:**
   * *Purpose:* Track user interest and genuine problem resolution.
   * *Real-world Usefulness:* "Me Too" boosts the priority of unanswered doubts. "Solved My Doubt" tracks how many students were actually helped, providing a better success metric than generic upvotes.
-* **Confetti Accepted-Answer Celebration:** When an answer is officially accepted, it triggers a visual confetti explosion on the screen.
-  * *Purpose:* Delight users and confirm the resolution.
-  * *Real-world Usefulness:* Marks the canonical solution clearly and rewards the responder visually.
+* **AI Auto-Answer Service:** Backend service that automatically generates context-grounded baseline replies for student questions.
+  * *Purpose:* Decrease reply wait times.
+  * *Real-world Usefulness:* Students get a helpful AI-driven response within seconds, resolving common doubts instantly.
 
 #### 6.2 FAQ System Module
+
 * **Category Browsing:** FAQs are organized by subject categories in clean accordion views.
   * *Purpose:* Make official institutional information easily browsable.
   * *Real-world Usefulness:* Quick navigation for standard issues like NOC applications, exam rules, or fee guidelines.
@@ -177,14 +174,12 @@ We have categorized the features into 6 core modules to keep the explanation sim
   * *Purpose:* Establish trust markers for verified content.
   * *Real-world Usefulness:* Students instantly recognize answers published by professors or administrators.
 
-#### 6.3 Gamification & Mascot (Pyro) Module
-* **Draggable Glassmorphic Mascot (Pyro):** An interactive companion floating on the screen that remembers its dragged position.
-  * *Purpose:* Make the learning platform interactive and engaging.
-  * *Real-world Usefulness:* Retains viewport location coordinates across different sessions so Pyro is always where you left him.
+#### 6.3 Gamification Module
+
 * **Daily Login Streaks & Progression:** A streak tracker that awards +15 EXP points for daily logins. Pyro evolves into different stages (Junior $\to$ Evolved $\to$ Ultimate) depending on user level thresholds.
   * *Purpose:* Retain daily active users.
-  * *Real-world Usefulness:* **Hardcore Reset Penalty** resets user level and EXP to 0 if they miss a single day, introducing game mechanics to keep students logging in.
-* **Spurti Points (SP) Shop:** A reward economy where students earn points for answering doubts and spend them on accessories for Pyro (e.g., Shark Hat, Balloons).
+  * *Real-world Usefulness:* Hardcore Reset Penalty resets user level and EXP to 0 if they miss a single day, introducing game mechanics to keep students logging in.
+* **Spurti Points (SP):** A reward economy where students earn points for answering doubts and spend them on accessories for Pyro (e.g., Shark Hat, Balloons).
   * *Purpose:* Incentivize community contribution.
   * *Real-world Usefulness:* Encourages students to write high-quality answers to earn virtual rewards.
 * **Dynamic Contribution Leaderboard:** A live board ranking top users in the community.
@@ -192,7 +187,8 @@ We have categorized the features into 6 core modules to keep the explanation sim
   * *Real-world Usefulness:* Ranks students based on their accumulated reputation and Spurti Points, allowing administrators to reward the most helpful peers.
 
 #### 6.4 Search and Discovery Module
-* **Instant Search Modal (`Ctrl+K`):** A global search overlay accessible from anywhere on the platform by pressing `Ctrl+K` or `/`.
+
+* **Instant Search Modal (Ctrl+K):** A global search overlay accessible from anywhere on the platform by pressing Ctrl+K or /.
   * *Purpose:* Provide fast access to knowledge.
   * *Real-world Usefulness:* Search across questions, FAQs, and users instantly without reloading pages.
 * **Hybrid Search Engine:** Powered by Elasticsearch with a fallback to database queries.
@@ -202,15 +198,8 @@ We have categorized the features into 6 core modules to keep the explanation sim
   * *Purpose:* Speed up common searches and reduce database load.
   * *Real-world Usefulness:* Instant loading of popular queries during peak exam preparation times.
 
-#### 6.5 Voice Commands & AI Assistant Module
-* **Voice Activation ("Hey PrashnaSarathi"):** The website listens for the wake-up phrase to open the search bar.
-  * *Purpose:* Hands-free accessibility.
-  * *Real-world Usefulness:* Students can speak their queries directly without navigating to search buttons.
-* **AI Auto-Answer Service:** Backend service that automatically generates context-grounded baseline replies for student questions.
-  * *Purpose:* Decrease reply wait times.
-  * *Real-world Usefulness:* Students get a helpful AI-driven response within seconds, resolving common doubts instantly.
+#### 6.5 Admin & Moderation Module
 
-#### 6.6 Admin & Moderation Module
 * **Admin Dashboard Stats:** Live charts showing daily active users (DAU), question volumes, and pending moderation queues.
   * *Purpose:* Keep track of community health.
   * *Real-world Usefulness:* Provides administrative overview at a glance.
