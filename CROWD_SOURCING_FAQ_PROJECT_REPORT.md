@@ -242,9 +242,14 @@ The screen recording below showcases the interface styling, navigation, interact
 
 ## 7. Challenges & Limitations
 
-* **AI Model Response Times (Speed vs. Accuracy):** Running the zero-shot classifier for spam filtering and semantic analysis requires high CPU power. On basic web hosting plans, this can cause a brief delay (1-2 seconds) when a student submits a question while the model processes the text.
-* **Mascot Position Syncing (Across Different Screens):** The draggable mascot (Pyro) stores its screen location in the browser's memory so it stays where the user left it. However, if a user drags Pyro on a large desktop screen and then logs in from a small mobile phone, the saved position coordinates can sometimes place Pyro off-screen or over crucial buttons.
-* **SMTP Email Delivery Limits (Third-Party Quotas):** Delivering automated email notifications for daily streak reminders and leaderboard updates requires SMTP email servers. Under free tier limits, sending massive batches of emails during high-activity campus events can hit rate limits, causing delivery delays or failed messages.
+* **AI Model Processing Latency (Speed vs. Server Costs):**
+  Running Hugging Face machine learning models (like DistilBART for zero-shot spam filtering and SentenceTransformers for vector comparison) requires significant CPU and memory resources. On standard, budget-friendly hosting platforms without dedicated GPU hardware, these Python FastAPI microservices experience "cold-start" delays. When a user submits a question after a period of inactivity, it can take 2 to 3 seconds for the model to load and respond, which temporarily slows down the real-time submission flow.
+  
+* **Real-time Database and Search Index Sync (MongoDB & Elasticsearch):**
+  To enable high-speed fuzzy search, the system replicates question and FAQ data from the primary MongoDB database to the Elasticsearch index. The key challenge is keeping these two databases perfectly synchronized. When questions are added, updated, or deleted, the changes must immediately reflect in the Elasticsearch search index. If a network delay or minor server glitch occurs during replication, the search results can become temporarily outdated, showing stale or deleted questions.
+
+* **Concurrence & Cache Invalidation (Socket.IO & Redis):**
+  PrashnaSārathi relies on Socket.IO to broadcast real-time state changes (like upvote tallies, daily streaks, "Me Too" clicks, and answer acceptance notifications) to all active users. At the same time, Redis caches search results for 60 seconds to reduce database strain. The challenge is ensuring that the Redis cache is instantly cleared or updated the moment a question's state changes (e.g., when a doubt is marked as solved). If cache invalidation fails, users might see old solved/unsolved statuses when searching, even though the real-time board has updated.
 
 ---
 
