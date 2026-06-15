@@ -1,7 +1,7 @@
 # Crowd Sourcing FAQ Project Report: PrashnaSārathi (प्रश्नसारथि)
 
 <div align="center">
-  <img src="file:///d:/clone/screenshots/logo/logo-banner.png" alt="PrashnaSārathi Logo" width="40%">
+  <img src="screenshots/logo/logo-banner.png" alt="PrashnaSārathi Logo" width="40%">
 </div>
 
 ---
@@ -71,15 +71,15 @@ graph TD
     FastAPI_Vector["FastAPI Search Helper<br>(SentenceTransformer Vector Embeddings)"]
 
     %% Connections
-    User <-->|HTTP / WebSockets| Frontend
-    Frontend <-->|Port 3000 / 5000| Nginx
-    Nginx <-->|Reverse Proxy API Calls| Backend
-    Backend <-->|Cache Reads/Writes| Redis
-    Backend <-->|Sync & Queries| Elasticsearch
-    Backend <-->|CRUD Operations| MongoDB
-    Backend <-->|AI Auto-Answer Generation| GeminiAI
-    Backend <-->|POST /validate (Gibberish Check)| FastAPI_Classifier
-    Backend <-->|POST /search (Vector Comparison)| FastAPI_Vector
+    User -->|"HTTP / WebSockets"| Frontend
+    Frontend <-->|"Port 3000 / 5000"| Nginx
+    Nginx <-->|"Reverse Proxy API Calls"| Backend
+    Backend <-->|"Cache Reads/Writes"| Redis
+    Backend <-->|"Sync & Queries"| Elasticsearch
+    Backend <-->|"CRUD Operations"| MongoDB
+    Backend <-->|"AI Auto-Answer Generation"| GeminiAI
+    Backend <-->|"POST /validate (Gibberish Check)"| FastAPI_Classifier
+    Backend <-->|"POST /search (Vector Comparison)"| FastAPI_Vector
 ```
 
 ### 4.2 Question Creation and AI Guardrail Flowchart
@@ -136,7 +136,7 @@ Here we showcase standout innovations that distinguish this application from gen
 ### 🎥 Walkthrough Video & Animations
 The screen recording below showcases the interface styling, navigation, interactive mascot, real-time responses, and the AI search panel:
 
-![Walkthrough Video](file:///d:/clone/screenshots/prashnasarathi_demo.webp)
+![Walkthrough Video](screenshots/prashnasarathi_demo.webp)
 
 > [!NOTE]
 > *The cumulative duration of the walkthrough recording is exactly 60 seconds, displaying the real-time transitions, search features, and mascot dragging.*
