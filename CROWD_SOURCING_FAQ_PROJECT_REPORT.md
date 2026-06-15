@@ -37,14 +37,39 @@ By deploying PrashnaSārathi, communities can achieve:
 
 ## 3. Introduction
 
-**PrashnaSārathi** (derived from Sanskrit, meaning *"The Question Guide"* or *"Doubt Charioteer"*) is a modern web platform designed to streamline knowledge sharing and doubt resolution within schools, universities, and learning communities. It serves as a unified hub where students can seek help, contributors can share knowledge, and administrators can manage official information.
+### 3.1 Background & Context
+In modern educational institutions and learning communities, doubt resolution is one of the most critical parts of academic success. However, traditional communication methods are often fragmented. Important academic information, course FAQs, and students' doubts end up scattered across emails, chat groups, and local message boards. This fragmentation leads to:
+* **Information Loss:** Highly valuable answers provided by professors or senior peers are lost in chat histories, meaning the same questions must be answered repeatedly.
+* **Student Hesitation:** Many students feel intimidated to ask questions in large groups or public forums due to the fear of peer judgment or social anxiety.
+* **Instructor Burnout:** Faculty members and course moderators spend excessive hours answering duplicate questions instead of focusing on complex doubts.
 
-Rather than being a traditional message board, the platform is built on four simple pillars to make learning interactive and stress-free:
+**PrashnaSārathi** (Sanskrit for *"The Question Guide"* or *"Doubt Charioteer"*) was created to solve these challenges. It establishes a centralized, structured, and intelligent "single source of truth" for academic doubts and official institutional information.
 
-* **A Safe Space to Ask:** By offering anonymous posting options, PrashnaSārathi ensures that no student is held back by anxiety or the fear of looking silly in front of their peers.
-* **Instant Information Access:** Students get answers immediately through a combination of high-speed search filters, pre-verified institutional FAQs, and automated AI assistance.
-* **Healthy Community Habits:** Through gamification mechanics—including daily streaks, reputation points, and accessories—the platform transforms answering questions into a collaborative game that rewards helpful students.
-* **Maintained Content Quality:** The platform keeps the community space clean and high-quality by automatically detecting spam, gibberish inputs, and duplicate questions before they are published.
+---
+
+### 3.2 The Core Pillars of PrashnaSārathi
+To bridge the gap between students, educators, and knowledge, the platform is designed around four key operational pillars:
+
+#### 1. Safe & Inclusive Q&A (Removing the Fear of Asking)
+Social anxiety is a real barrier to learning. PrashnaSārathi offers an **Anonymous Posting** toggle for both questions and answers. Students can ask simple, foundational, or sensitive questions without revealing their identity to their peers. This creates a safe learning environment where the only priority is finding the solution.
+
+#### 2. Instant Search & Automated Answering (Accelerating Resolution)
+Students expect fast answers. The platform uses a hybrid architecture to ensure doubts are resolved in seconds:
+* **Pre-Submission Similarity Check:** As a user types, the system instantly cross-references their text with existing questions to warn them of duplicates.
+* **Instant Ctrl+K Search:** A global autocomplete panel allows users to search across FAQs, questions, and users instantly.
+* **AI Auto-Answers:** For newly posted questions, the platform triggers a background AI service to generate a context-grounded baseline reply immediately, providing students with instant guidance.
+
+#### 3. Healthy Engagement Mechanics (Gamifying Academic Help)
+Traditional forums feel dry and transactional. PrashnaSārathi introduces game mechanics to encourage active peer-to-peer assistance:
+* **The Mascot Companion (Pyro):** An evolvable creature representing the user's progress.
+* **Streaks & Progression:** A daily login streak tracker keeps students returning. EXP is awarded for daily activity, but a **Hardcore Penalty** resets progress if a day is missed.
+* **Reward Economy:** Users earn **Spurti Points (SP)** for writing helpful answers, which they can spend in the shop to purchase accessories for Pyro.
+* **Leaderboards:** Ranks top community contributors, highlighting active peer helpers.
+
+#### 4. Automated Quality Assurance (Protecting Community Value)
+To prevent the platform from turning into a chaotic chatroom, PrashnaSārathi features automated quality controls:
+* **FastAPI Spam Microservice:** An AI-powered classification pipeline checks new questions for spam, single-character keyboards smashes, and off-topic noise before they get published.
+* **Moderation Suite:** Administrators and moderators can flag inappropriate content, modify user roles, ban toxic accounts, and clear cache storage to keep information clean and safe.
 
 ---
 
