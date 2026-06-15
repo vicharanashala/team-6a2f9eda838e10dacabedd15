@@ -172,6 +172,9 @@ We have categorized the features into 6 core modules to keep the explanation sim
 * **Spurti Points (SP) Shop:** A reward economy where students earn points for answering doubts and spend them on accessories for Pyro (e.g., Shark Hat, Balloons).
   * *Purpose:* Incentivize community contribution.
   * *Real-world Usefulness:* Encourages students to write high-quality answers to earn virtual rewards.
+* **Dynamic Contribution Leaderboard:** A live board ranking top users in the community.
+  * *Purpose:* Foster friendly competition and highlight top helpers.
+  * *Real-world Usefulness:* Ranks students based on their accumulated reputation and Spurti Points, allowing administrators to reward the most helpful peers.
 
 #### 6.4 Search and Discovery Module
 * **Instant Search Modal (`Ctrl+K`):** A global search overlay accessible from anywhere on the platform by pressing `Ctrl+K` or `/`.
