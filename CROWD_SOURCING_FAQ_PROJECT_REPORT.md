@@ -257,10 +257,17 @@ The screen recording below showcases the interface styling, navigation, interact
 
 ## 8. Future Enhancements
 
-* **Doubt Resolution Dashboard (`/my-doubts`):** A centralized page for students to monitor all their open questions, resolution states, and pending replies.
-* **Similar Solved Doubts Sidebar:** A panel using sentence embeddings to recommend solved answers to related topics while reading a question.
-* **Weekly Doubt Digest:** Automated email summaries highlighting top resolved answers and active community contributors.
-* **Threaded Follow-Up Discussions:** Structured nested threads under answers to allow direct follow-up questions without cluttering the main page.
+* **Doubt Resolution Dashboard (`/my-doubts`):**
+  A centralized, personalized workspace for students to track all of their active and historical doubts. Instead of searching through multiple pages, students can view a unified checklist showing whether their questions are currently being processed by the AI service, have been escalated to a human moderator, have received new replies, or are marked as solved. It will also display individual learning stats, such as total doubts resolved and help points accumulated.
+
+* **"Similar Solved Doubts" Sidebar Recommendations:**
+  An intelligent side panel that automatically suggests related, already-answered questions while a student is reading a post. By comparing the context of the active question with the historical database, the system can instantly guide students to verified solutions to similar problems, allowing them to learn continuously without having to trigger new searches.
+
+* **Weekly Academic Doubt Digest (Automated Summaries):**
+  A scheduled weekly email report customized for both students and instructors. For students, it will highlight the most viewed questions, top solved doubts, and trending academic topics of the week. For teachers, it will provide a brief summary of the most common issues students faced (e.g., recurring doubts about a specific assignment), helping them identify topics that need more explanation in class.
+
+* **Threaded Follow-Up Discussions (Nested Replies):**
+  A clean, nested messaging thread directly under individual answers. This will allow students to ask quick clarifying questions (e.g., asking for an explanation of a specific line of code or step in a formula) directly under a response without cluttering the main page or posting duplicate general answers.
 
 ---
 
