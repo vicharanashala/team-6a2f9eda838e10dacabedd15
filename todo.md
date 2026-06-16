@@ -35,6 +35,7 @@
 - ✅ Full‑text search across questions, FAQs, users
 - ✅ SearchModal (Ctrl+K or /) with voice‑to‑text support
 - ✅ **Voice search activated on button press** to open search and start listening on demand
+- ✅ **Voice Search Activation** via custom wake-up command ("Hey PrashnaSarathi")
 - ✅ Trending searches (Redis)
 - ✅ Search result caching (Redis 60 s)
 - ✅ Tag browsing and filtering
@@ -54,7 +55,7 @@
 ### Gamification & Mascot (Pyro)
 - ✅ Draggable glassmorphic floating Mascot companion
 - ✅ Persistent viewport coordinate storage across sessions
-- ✅ Daily login streak tracking (focused & mount evaluation)
+- ✅ Daily login streak tracking (+15 EXP, evolves Junior → Evolved → Ultimate)
 - ✅ **Hardcore streak reset penalty** (missed logins reset level to 0, EXP to 0)
 - ✅ Automatic evolutionary stages (Junior, Evolved, Ultimate) based on levels
 - ✅ Accessory shop customization (Shark Hat, Balloons) powered by Spurti Points (SP)
@@ -105,7 +106,7 @@
 
 ## Folder Structure
 - `backend/` – Express API server (port 5000) with controllers, models, routes, services (auto-answer, etc.), socket configuration.
-- `frontend/` – Next.js 14 App Router (port 3000) with app pages, components (MascotCompanion, ReportIssueButton, etc.), context, hooks, lib, public, pwa, services, styles.
+- `frontend/` – Next.js 14 App Router (port 3000) with app pages, components (MascotCompanion, OnboardingModal, SearchModal, Tiptap editor, etc.), context, hooks, lib, public, pwa, services, styles.
 - `FastAPI_python_model/` – Python FastAPI spam and noise classification microservice.
 - `docker-compose.yml` – Docker/Podman orchestration configuration.
 - `nginx/` – Nginx reverse proxy configurations.
