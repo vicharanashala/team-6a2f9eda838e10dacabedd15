@@ -10,7 +10,7 @@
 
 * **Project Name:** PrashnaSārathi (प्रश्नसारथि) — Community Q&A and FAQ Platform
 * **Deployment/Demo URL:** [https://prashnasarathi.vercel.app/](https://prashnasarathi.vercel.app/)
-* **Repository Link:** [https://github.com/editor-shannu/team-6a2f9eda838e10dacabedd15](https://github.com/editor-shannu/team-6a2f9eda838e10dacabedd15)
+* **Repository Link:** [https://github.com/vicharanashala/team-6a2f9eda838e10dacabedd15](https://github.com/vicharanashala/team-6a2f9eda838e10dacabedd15)
 * **Team Members:**
 
 | Name | Email |
