@@ -20,22 +20,22 @@
 
 ## Team Members
 
-| Name | Email |
-|------|-------|
-| Tsp Amiitesh (Team Lead) | tspamiitesh@gmail.com |
-| Medisetty Shanmukh | medisettyshanmukh@gmail.com |
-| Dhruv Malu | dhruvmalu6@gmail.com |
-| Divyanshi Mishra | divyanshimishra480@gmail.com |
-| Niranjan Praveen | niranjanbpraveen@gmail.com |
-| Rohit Wadettiwar | rohitwadettiwar.ds24@sbjit.edu.in |
-| Mudimadugula Srija | msrija2002@gmail.com |
-| Shawshank Redemp | shawshank.redemp5@gmail.com |
-| Isha Dudhatra | ishadudhatra@gmail.com |
-| Kinnera Swetha | Kinneraswetha04@gmail.com |
-| Yash Raj Patel | shyamjiniranjan913@gmail.com |
-| Abhignya Gottumukkala | 323103310081@gvpce.ac.in |
-| Ishan Vandita | ishanvandita16@gmail.com |
-| Priteenanda Das | cse.23bcsh44@silicon.ac.in |
+| Name | Role | Email |
+| :--- | :--- | :--- |
+| **Tsp Amiitesh** | Team Lead | tspamiitesh@gmail.com |
+| **Medisetty Shanmukh** | Core Developer | medisettyshanmukh@gmail.com |
+| **Dhruv Malu** | Frontend Architect | dhruvmalu6@gmail.com |
+| **Divyanshi Mishra** | Backend Developer | divyanshimishra480@gmail.com |
+| **Niranjan Praveen** | Database & Search Engineer | niranjanbpraveen@gmail.com |
+| **Rohit Wadettiwar** | DevOps / Docker Admin | rohitwadettiwar.ds24@sbjit.edu.in |
+| **Mudimadugula Srija** | Backend Developer | msrija2002@gmail.com |
+| **Shawshank Redemp** | QA & AI Model Engineer | shawshank.redemp5@gmail.com |
+| **Isha Dudhatra** | Frontend Developer | ishadudhatra@gmail.com |
+| **Kinnera Swetha** | Content Management | Kinneraswetha04@gmail.com |
+| **Yash Raj Patel** | QA / Email Integration | shyamjiniranjan913@gmail.com |
+| **Abhignya Gottumukkala** | UI/UX Designer | 323103310081@gvpce.ac.in |
+| **Ishan Vandita** | Frontend Designer | ishanvandita16@gmail.com |
+| **Priteenanda Das** | Documentation Specialist | cse.23bcsh44@silicon.ac.in |
 
 ---
 
@@ -48,6 +48,7 @@
 | Search    | Elasticsearch                                   |
 | Realtime  | Socket.IO                                       |
 | Events    | Kafka (optional)                                |
+| AI / ML   | FastAPI (Python 3), DistilBART Classifier, SentenceTransformers |
 | Infra     | Podman / Docker, Nginx                          |
 
 ---

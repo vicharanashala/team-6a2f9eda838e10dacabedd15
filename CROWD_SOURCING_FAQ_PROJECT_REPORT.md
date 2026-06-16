@@ -10,6 +10,25 @@
 
 * **Project Name:** PrashnaSārathi (प्रश्नसारथि) — Community Q&A and FAQ Platform
 * **Deployment/Demo URL:** [https://prashnasarathi.vercel.app/](https://prashnasarathi.vercel.app/)
+* **Repository Link:** [GitHub Repository](https://github.com/editor-shannu/team-6a2f9eda838e10dacabedd15.git)
+* **Team Members:**
+
+| Name | Role | Email |
+| :--- | :--- | :--- |
+| **Tsp Amiitesh** | Team Lead | tspamiitesh@gmail.com |
+| **Medisetty Shanmukh** | Core Developer | medisettyshanmukh@gmail.com |
+| **Dhruv Malu** | Frontend Architect | dhruvmalu6@gmail.com |
+| **Divyanshi Mishra** | Backend Developer | divyanshimishra480@gmail.com |
+| **Niranjan Praveen** | Database & Search Engineer | niranjanbpraveen@gmail.com |
+| **Rohit Wadettiwar** | DevOps / Docker Admin | rohitwadettiwar.ds24@sbjit.edu.in |
+| **Mudimadugula Srija** | Backend Developer | msrija2002@gmail.com |
+| **Shawshank Redemp** | QA & AI Model Engineer | shawshank.redemp5@gmail.com |
+| **Isha Dudhatra** | Frontend Developer | ishadudhatra@gmail.com |
+| **Kinnera Swetha** | Content Management | Kinneraswetha04@gmail.com |
+| **Yash Raj Patel** | QA / Email Integration | shyamjiniranjan913@gmail.com |
+| **Abhignya Gottumukkala** | UI/UX Designer | 323103310081@gvpce.ac.in |
+| **Ishan Vandita** | Frontend Designer | ishanvandita16@gmail.com |
+| **Priteenanda Das** | Documentation Specialist | cse.23bcsh44@silicon.ac.in |
 ---
 
 ## 2. Executive Summary
