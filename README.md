@@ -20,21 +20,18 @@
 
 ## Team Members
 
-| Name | Role | Email |
-| :--- | :--- | :--- |
-| **Tsp Amiitesh** | Team Lead | tspamiitesh@gmail.com |
-| **Medisetty Shanmukh** | Core Developer | medisettyshanmukh@gmail.com |
-| **Dhruv Malu** | Frontend Architect | dhruvmalu6@gmail.com |
-| **Divyanshi Mishra** | Backend Developer | divyanshimishra480@gmail.com |
-| **Niranjan Praveen** | Database & Search Engineer | niranjanbpraveen@gmail.com |
-| **Rohit Wadettiwar** | DevOps / Docker Admin | rohitwadettiwar.ds24@sbjit.edu.in |
-| **Shawshank Redemp** | QA & AI Model Engineer | shawshank.redemp5@gmail.com |
-| **Isha Dudhatra** | Frontend Developer | ishadudhatra@gmail.com |
-| **Kinnera Swetha** | Content Management | Kinneraswetha04@gmail.com |
-| **Yash Raj Patel** | QA / Email Integration | shyamjiniranjan913@gmail.com |
-| **Abhignya Gottumukkala** | UI/UX Designer | 323103310081@gvpce.ac.in |
-| **Ishan Vandita** | Frontend Designer | ishanvandita16@gmail.com |
-| **Priteenanda Das** | Documentation Specialist | cse.23bcsh44@silicon.ac.in |
+| Name | Email |
+| :--- | :--- |
+| **Niranjan Praveen** | [niranjanbpraveen@gmail.com](mailto:niranjanbpraveen@gmail.com) (Team Lead) |
+| **Medisetty Shanmukh** | [medisettyshanmukh@gmail.com](mailto:medisettyshanmukh@gmail.com) |
+| **Divyanshi Mishra** | [divyanshimishra480@gmail.com](mailto:divyanshimishra480@gmail.com) |
+| **Dhruv Malu** | [dhruvmalu6@gmail.com](mailto:dhruvmalu6@gmail.com) |
+| **Mudimadugula Srija** | [msrija2002@gmail.com](mailto:msrija2002@gmail.com) |
+| **Rohit Wadettiwar** | [rohitwadettiwar.ds24@sbjit.edu.in](mailto:rohitwadettiwar.ds24@sbjit.edu.in) |
+| **Shawshank Redemp** | [shawshank.redemp5@gmail.com](mailto:shawshank.redemp5@gmail.com) |
+| **Tsp Amiitesh** | [tspamiitesh@gmail.com](mailto:tspamiitesh@gmail.com) |
+| **Kinnera Swetha** | [Kinneraswetha04@gmail.com](mailto:Kinneraswetha04@gmail.com) |
+| **Priteenanda Das** | [cse.23bcsh44@silicon.ac.in](mailto:cse.23bcsh44@silicon.ac.in) |
 
 ---
 
